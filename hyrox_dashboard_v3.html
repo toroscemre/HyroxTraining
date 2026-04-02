@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYROX Rotterdam 2027 — Training Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D0F14;
+  --surface:#161921;
+  --surface2:#1E2230;
+  --border:#272B3A;
+  --border2:#32384F;
+  --text:#F0F2F8;
+  --sub:#B0B8D0;
+  --muted:#6B7490;
+  --accent:#F97316;
+  --accent2:#C2410C;
+
+  --found:#22C55E; --build:#3B82F6; --peak:#EF4444;
+  --p1:#4ADE80; --p2:#FACC15; --p3:#FB923C; --p4:#A78BFA;
+
+  --c-legs-rl:#93C5FD; --bg-legs-rl:#0F2444;
+  --c-legs-bss:#C4B5FD; --bg-legs-bss:#160F38;
+  --c-strength:#FCD34D; --bg-strength:#251A00;
+  --c-zone2:#6EE7B7; --bg-zone2:#052016;
+  --c-zone2r:#86EFAC; --bg-zone2r:#072010;
+  --c-yoga:#F9A8D4; --bg-yoga:#220018;
+  --c-bike:#6EE7B7; --bg-bike:#042014;
+  --c-longrun:#FCA5A5; --bg-longrun:#280A00;
+
+  --radius:10px;
+  --sidebar:268px;
+}
+*{box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
+
+/* ── TOPBAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:200;height:60px;
+  background:rgba(13,15,20,0.95);backdrop-filter:blur(16px);
+  border-bottom:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px 0 calc(var(--sidebar)+24px);
+}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--accent)}
+.logo span{color:var(--text)}
+.date-chip{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:20px;padding:5px 16px;font-size:13px;color:var(--sub);
+}
+.date-chip strong{color:var(--text);font-weight:700}
+.countdown-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);line-height:1;letter-spacing:2px}
+.countdown-sub{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);
+  background:var(--surface);border-right:1px solid var(--border);
+  padding-top:60px;display:flex;flex-direction:column;overflow-y:auto;z-index:100;
+}
+.sb-top{padding:16px 20px 10px}
+.sb-section{padding:14px 20px 5px;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.sb-item{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 20px;
+  cursor:pointer;font-size:12.5px;font-weight:500;color:var(--sub);
+  border-left:3px solid transparent;transition:all 0.15s;
+}
+.sb-item:hover{background:var(--surface2);color:var(--text)}
+.sb-item.active{background:rgba(249,115,22,0.10);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.sb-label{flex:1;line-height:1.4}
+.sb-badge{font-size:9px;font-weight:700;padding:1px 7px;border-radius:8px;margin-top:2px;display:inline-block}
+.sb-sub{
+  display:flex;align-items:center;gap:8px;padding:6px 20px 6px 38px;
+  cursor:pointer;font-size:11.5px;color:var(--muted);border-left:3px solid transparent;transition:all 0.15s;
+}
+.sb-sub:hover{color:var(--sub)}
+.sb-sub.active{color:var(--text);border-left-color:var(--border2)}
+.sb-footer{margin:auto 0 0;padding:16px 20px;border-top:1px solid var(--border)}
+.sb-stat{font-family:'DM Mono',monospace;font-size:28px;color:var(--accent);line-height:1}
+.sb-stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.prog-bar{height:4px;background:var(--border2);border-radius:2px;margin-top:10px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--p1),var(--accent));border-radius:2px;transition:width 0.5s}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar);padding-top:60px;min-height:100vh}
+.view{display:none;padding:28px}
+.view.active{display:block}
+
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;color:var(--text);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--sub);margin-bottom:22px}
+
+/* ── STAT CARDS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+.stat-lbl{font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1;letter-spacing:1px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── WEEK NAV ── */
+.week-nav{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:space-between;padding:14px 20px;margin-bottom:16px;
+}
+.wk-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);
+  background:var(--surface2);cursor:pointer;color:var(--sub);font-size:20px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.wk-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.wk-center{text-align:center}
+.wk-num{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:2px;line-height:1}
+.wk-dates{font-size:12px;color:var(--sub);margin-top:3px}
+.wk-pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 12px;border-radius:12px;color:#fff;margin-top:5px;letter-spacing:1px}
+
+.planner-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.ps-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.ps-n{font-family:'DM Mono',monospace;font-size:26px;color:var(--text)}
+.ps-n.accent{color:var(--accent)}
+.ps-l{font-size:10px;letter-spacing:1px;color:var(--muted);margin-top:3px}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.day-col{display:flex;flex-direction:column;gap:6px}
+.day-hdr{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 4px;text-align:center;
+}
+.day-hdr.today{border-color:var(--accent);background:rgba(249,115,22,0.08)}
+.day-name{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted)}
+.day-date-n{font-family:'DM Mono',monospace;font-size:20px;color:var(--text);line-height:1.2}
+.day-hdr.today .day-date-n{color:var(--accent)}
+.day-mo{font-size:9px;color:var(--muted);margin-top:1px}
+.wknd-lbl{
+  text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;
+  color:var(--c-longrun);background:rgba(194,65,12,0.12);
+  border:1px dashed rgba(194,65,12,0.4);border-radius:5px;padding:4px;
+}
+.drop-zone{
+  flex:1;min-height:220px;border:1.5px dashed var(--border2);border-radius:8px;
+  padding:5px;display:flex;flex-direction:column;gap:5px;
+  transition:background 0.15s,border-color 0.15s;
+}
+.drop-zone.drag-over{background:rgba(249,115,22,0.06);border-color:var(--accent);border-style:solid}
+
+/* ── SESSION CARDS ── */
+.sess{
+  border-radius:8px;padding:10px 11px 9px;cursor:grab;
+  border-left:4px solid transparent;
+  transition:transform 0.15s,box-shadow 0.15s,opacity 0.15s;
+  user-select:none;
+}
+.sess:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.4)}
+.sess.dragging{opacity:0.25;cursor:grabbing}
+.sess.done{opacity:0.6}
+
+.sess[data-t="LEGS_RL"]  {background:var(--bg-legs-rl);  border-left-color:var(--c-legs-rl)}
+.sess[data-t="LEGS_BSS"] {background:var(--bg-legs-bss); border-left-color:var(--c-legs-bss)}
+.sess[data-t="STRENGTH"] {background:var(--bg-strength); border-left-color:var(--c-strength)}
+.sess[data-t="ZONE2"]    {background:var(--bg-zone2);    border-left-color:var(--c-zone2)}
+.sess[data-t="ZONE2_RUN"]{background:var(--bg-zone2r);   border-left-color:var(--c-zone2r)}
+.sess[data-t="YOGA"]     {background:var(--bg-yoga);     border-left-color:var(--c-yoga)}
+.sess[data-t="BIKE"]     {background:var(--bg-bike);     border-left-color:var(--c-bike)}
+.sess[data-t="LONG_RUN"] {background:var(--bg-longrun);  border-left-color:var(--c-longrun)}
+
+.sess-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sess-icon{font-size:14px}
+.sess-title{font-weight:700;font-size:12px;flex:1;line-height:1.2}
+.sess[data-t="LEGS_RL"]  .sess-title{color:var(--c-legs-rl)}
+.sess[data-t="LEGS_BSS"] .sess-title{color:var(--c-legs-bss)}
+.sess[data-t="STRENGTH"] .sess-title{color:var(--c-strength)}
+.sess[data-t="ZONE2"]    .sess-title{color:var(--c-zone2)}
+.sess[data-t="ZONE2_RUN"].sess-title{color:var(--c-zone2r)}
+.sess[data-t="YOGA"]     .sess-title{color:var(--c-yoga)}
+.sess[data-t="BIKE"]     .sess-title{color:var(--c-bike)}
+.sess[data-t="LONG_RUN"] .sess-title{color:var(--c-longrun)}
+
+.sess-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.sess-detail{font-size:11px;color:var(--sub);line-height:1.5;margin-top:3px}
+.sess-reps{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);line-height:1.6;margin-top:3px;
+  background:rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px}
+.sess-note{font-size:10.5px;color:var(--sub);font-style:italic;margin-top:4px;
+  border-top:1px solid rgba(255,255,255,0.07);padding-top:4px;line-height:1.4}
+.sess-actions{display:flex;gap:6px;margin-top:7px;align-items:center}
+.chk{
+  width:18px;height:18px;border-radius:4px;flex-shrink:0;
+  border:1.5px solid var(--muted);cursor:pointer;background:transparent;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#fff;font-weight:900;transition:all 0.15s;
+}
+.chk.on{background:var(--accent);border-color:var(--accent)}
+.note-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:2px 8px;
+  border-radius:5px;border:1px solid var(--border2);background:transparent;transition:all 0.15s}
+.note-btn:hover{background:var(--surface2);color:var(--text)}
+
+/* ── PLAN TABLE ── */
+.plan-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.plan-tbl th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;
+  color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface)}
+.plan-tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.plan-tbl tr:hover td{background:var(--surface2)}
+.plan-tbl tr.cur-wk td{background:rgba(249,115,22,0.07)}
+.wk-pill{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.ex-tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;margin:2px}
+.cue-txt{font-size:11px;font-style:italic;color:var(--sub);max-width:260px;line-height:1.5}
+
+/* ── PHASE DETAIL ── */
+.phase-wk{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.phase-wk-hdr{padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.phase-wk-num{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.phase-wk-dt{font-size:11px;color:rgba(255,255,255,0.55);margin-left:12px}
+.phase-wk-t{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#fff}
+.phase-wk-body{padding:14px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.ex-box{border-radius:8px;padding:12px;border-left:3px solid}
+.ex-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;margin-bottom:5px}
+.ex-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500}
+.cue-block{margin:0 20px 14px;padding:12px 16px;border-radius:8px;background:var(--surface2);border-left:3px solid}
+.cue-pre{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px}
+.cue-text{font-size:13px;font-style:italic;line-height:1.6;color:var(--text)}
+
+/* ── STATIONS ── */
+.station-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.station-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.st-num{font-size:9px;letter-spacing:1.5px;color:var(--muted)}
+.st-name{font-size:17px;font-weight:700;margin-top:4px;margin-bottom:12px}
+.st-target{background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:12px}
+.st-tl{font-size:9px;color:var(--muted);letter-spacing:1px}
+.st-tv{font-size:16px;font-weight:700;color:#FACC15;margin-top:3px}
+.st-cue{font-size:12px;color:var(--sub);border-left:2px solid var(--border2);padding-left:10px;line-height:1.6}
+.runs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.run-box{background:var(--surface2);border-radius:8px;padding:14px;text-align:center}
+.run-n{color:#60A5FA;font-weight:700;font-size:18px}
+.run-d{color:var(--sub);font-size:12px;margin-top:4px}
+.run-t{color:var(--muted);font-size:10px;margin-top:2px}
+
+/* ── BENCHMARKS ── */
+.bench-row{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;
+}
+.bench-icon{font-size:28px;min-width:36px;text-align:center}
+.bench-info{flex:1;min-width:160px}
+.bench-phase{font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px}
+.bench-label{font-size:15px;font-weight:700}
+.bench-target{background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);
+  border-radius:8px;padding:9px 16px;text-align:center;min-width:120px}
+.bench-tl{font-size:9px;color:#D97706;letter-spacing:1px}
+.bench-tv{font-size:15px;font-weight:800;color:#FACC15;margin-top:3px}
+.bench-result{background:var(--surface2);border:1.5px solid var(--border2);border-radius:8px;
+  padding:9px 16px;text-align:center;min-width:120px;transition:border-color 0.2s}
+.bench-result:focus-within{border-color:var(--accent)}
+.bench-rl{font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
+.bench-input{
+  background:transparent;border:none;outline:none;
+  font-family:'DM Mono',monospace;font-size:16px;font-weight:500;
+  color:var(--accent);width:110px;text-align:center;
+  cursor:text;caret-color:var(--accent);
+}
+.bench-input::placeholder{color:var(--border2)}
+
+/* ── LOG ── */
+.log-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:13px 18px;display:flex;align-items:flex-start;gap:14px;margin-bottom:7px}
+.log-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);min-width:95px}
+.log-sport{font-weight:600;font-size:13px}
+.log-note{font-size:11px;color:var(--sub);font-style:italic;margin-top:3px}
+.log-ts{font-size:10px;color:var(--muted)}
+
+/* ── OVERVIEW ── */
+.ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.ov-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.ov-lbl{font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px}
+.ov-val{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1}
+.ov-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.why-card{background:linear-gradient(135deg,rgba(30,27,75,0.5),var(--surface));
+  border:1px solid rgba(100,80,200,0.3);border-radius:var(--radius);padding:24px;margin-bottom:22px}
+.why-lbl{font-size:9px;letter-spacing:2px;color:#A78BFA;margin-bottom:10px}
+.why-text{font-size:14px;line-height:1.8;color:#CBD5E1}
+.milestones{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.ms{background:rgba(30,41,59,0.7);border-radius:8px;padding:11px 14px}
+.ms-ph{color:#A78BFA;font-size:11px;font-weight:700;margin-bottom:3px}
+.ms-goal{color:var(--muted);font-size:11px}
+.tl-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:12px 0}
+.tl-seg{transition:opacity 0.2s}
+.tl-marker{position:relative;height:24px}
+.tl-pin{position:absolute;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%)}
+.tl-line{width:1px;height:12px;background:var(--accent)}
+.tl-lbl{font-size:9px;color:var(--accent);white-space:nowrap;letter-spacing:1px;margin-top:2px}
+.checklist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+.check-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all 0.2s}
+.check-item.done{background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.35)}
+.chk-box{width:20px;height:20px;border-radius:5px;flex-shrink:0;border:2px solid var(--muted2,#555);
+  background:transparent;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;transition:all 0.2s}
+.check-item.done .chk-box{background:var(--found);border-color:var(--found);color:#fff}
+.chk-day{font-size:9px;letter-spacing:1.5px;font-weight:700}
+.chk-sess{font-size:13px;color:var(--text);margin-top:1px}
+.check-item.done .chk-sess{color:#86EFAC}
+
+/* ── EMPTY PHASE ── */
+.empty{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:70px 40px;text-align:center}
+.empty-icon{font-size:44px;margin-bottom:18px}
+.empty-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+.empty-text{font-size:14px;color:var(--muted);line-height:1.7}
+
+/* ── MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;
+  align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:26px;
+  width:380px;box-shadow:0 24px 70px rgba(0,0,0,0.6)}
+.modal h3{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:14px}
+.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
+  padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);
+  resize:vertical;min-height:90px;outline:none}
+.modal textarea:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.btn{padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2)}
+.btn-g{background:var(--surface2);color:var(--sub);border:1px solid var(--border2)}.btn-g:hover{background:var(--border)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);
+  border:1px solid var(--border2);border-left:4px solid var(--accent);
+  color:var(--text);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;
+  transform:translateY(70px);opacity:0;transition:all 0.3s;z-index:600}
+.toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="logo">HYROX <span>Rotterdam</span></div>
+    <div style="width:1px;height:22px;background:var(--border)"></div>
+    <div class="date-chip" id="top-date">—</div>
+  </div>
+  <div style="text-align:right">
+    <div class="countdown-num" id="top-days">—</div>
+    <div class="countdown-sub">days to race · 17 Apr 2027</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-top">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--accent)">🏁 HYROX '27</div>
+  </div>
+
+  <div class="sb-section">Menu</div>
+  <div class="sb-item active" onclick="nav('overview')">
+    <div class="sb-dot" style="background:var(--accent)"></div>
+    <div class="sb-label">Overview</div>
+  </div>
+  <div class="sb-item" onclick="nav('planner')">
+    <div class="sb-dot" style="background:#60A5FA"></div>
+    <div class="sb-label">Weekly Planner</div>
+  </div>
+  <div class="sb-item" onclick="nav('fullplan')">
+    <div class="sb-dot" style="background:var(--muted)"></div>
+    <div class="sb-label">14-Week Schedule</div>
+  </div>
+  <div class="sb-item" onclick="nav('log')">
+    <div class="sb-dot" style="background:#A78BFA"></div>
+    <div class="sb-label">Training Log</div>
+  </div>
+  <div class="sb-item" onclick="nav('stations')">
+    <div class="sb-dot" style="background:#FACC15"></div>
+    <div class="sb-label">Stations</div>
+  </div>
+  <div class="sb-item" onclick="nav('benchmarks')">
+    <div class="sb-dot" style="background:#F43F5E"></div>
+    <div class="sb-label">Benchmarks</div>
+  </div>
+
+  <div class="sb-section" style="margin-top:8px">Training Phases</div>
+
+  <div class="sb-item" onclick="nav('phase1')">
+    <div class="sb-dot" style="background:var(--p1)"></div>
+    <div class="sb-label">
+      Phase 1 · Base Fitness
+      <div><span class="sb-badge" style="background:var(--p1);color:#000">Mar – Jul 2026</span></div>
+    </div>
+  </div>
+  <div class="sb-sub" onclick="nav('p1found')">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--found)"></div> Foundation · Wk 1–5
+  </div>
+  <div class="sb-sub" onclick="nav('p1build')">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--build)"></div> Build · Wk 6–10
+  </div>
+  <div class="sb-sub" onclick="nav('p1peak')">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--peak)"></div> Peak · Wk 11–14
+  </div>
+
+  <div class="sb-item" onclick="nav('phase2')" style="opacity:0.5">
+    <div class="sb-dot" style="background:var(--p2)"></div>
+    <div class="sb-label">
+      Phase 2 · Gym Strength
+      <div><span class="sb-badge" style="background:var(--p2);color:#000">Jul – Oct 2026</span></div>
+    </div>
+  </div>
+  <div class="sb-item" onclick="nav('phase3')" style="opacity:0.5">
+    <div class="sb-dot" style="background:var(--p3)"></div>
+    <div class="sb-label">
+      Phase 3 · Race Specific
+      <div><span class="sb-badge" style="background:var(--p3);color:#fff">Oct 26 – Feb 27</span></div>
+    </div>
+  </div>
+  <div class="sb-item" onclick="nav('phase4')" style="opacity:0.5">
+    <div class="sb-dot" style="background:var(--p4)"></div>
+    <div class="sb-label">
+      Phase 4 · Taper
+      <div><span class="sb-badge" style="background:var(--p4);color:#fff">Mar – Apr 2027</span></div>
+    </div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="sb-stat-lbl">Total sessions done</div>
+    <div class="sb-stat" id="sb-total">0</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px">This week: <span id="sb-wk" style="color:var(--sub)">—</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="sb-prog" style="width:0%"></div></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px" id="sb-pct">0% to Rotterdam</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- OVERVIEW -->
+<div class="view active" id="view-overview">
+  <div class="page-title">HYROX Rotterdam 2027</div>
+  <div class="page-sub">Full Preparation Dashboard · Individual Competitor · For the kids 🧡</div>
+
+  <div class="ov-grid">
+    <div class="ov-card">
+      <div class="ov-lbl">DAYS TO RACE</div>
+      <div class="ov-val" style="color:#F43F5E" id="ov-days">—</div>
+      <div class="ov-sub">17 April 2027 · Rotterdam</div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-lbl">CURRENT PHASE</div>
+      <div class="ov-val" style="color:var(--p1);font-size:22px;line-height:1.2" id="ov-phase">—</div>
+      <div class="ov-sub" id="ov-phase-sub">—</div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-lbl">SESSIONS DONE</div>
+      <div class="ov-val" style="color:var(--accent)" id="ov-done">0</div>
+      <div class="ov-sub">total logged</div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-lbl">STATIONS TO MASTER</div>
+      <div class="ov-val" style="color:#FACC15">8</div>
+      <div class="ov-sub">HYROX workout zones</div>
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:22px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">JOURNEY TO ROTTERDAM</div>
+    <div class="tl-bar" id="tl-bar"></div>
+    <div class="tl-marker" id="tl-marker"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:22px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:11px;color:var(--muted)">Start: 31 Mar 2026</div>
+      <div style="font-size:11px;color:var(--muted)">Race: 17 Apr 2027</div>
+    </div>
+  </div>
+
+  <div class="why-card">
+    <div class="why-lbl">YOUR WHY ❤️</div>
+    <div class="why-text">
+      This race is dedicated to a <strong style="color:#fff">children's charity</strong> — every training session is a step toward something bigger than a finish time.
+      Each phase unlocks a <strong style="color:#A78BFA">fundraising milestone</strong>. Complete the phase, hit the target, celebrate the kids you're running for.
+      On race day in Rotterdam, the pain is borrowed. The purpose is permanent.
+    </div>
+    <div class="milestones">
+      <div class="ms"><div class="ms-ph">Phase 1 Complete</div><div class="ms-goal">Open fundraiser</div></div>
+      <div class="ms"><div class="ms-ph">Phase 2 Complete</div><div class="ms-goal">25% of target</div></div>
+      <div class="ms"><div class="ms-ph">Phase 3 Complete</div><div class="ms-goal">75% of target</div></div>
+      <div class="ms"><div class="ms-ph">Race Day</div><div class="ms-goal">100% + bonus push</div></div>
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">THIS WEEK'S SESSIONS</div>
+    <div class="checklist-grid" id="ov-check"></div>
+  </div>
+</div>
+
+<!-- WEEKLY PLANNER -->
+<div class="view" id="view-planner">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+    <div class="page-title">Weekly Planner</div>
+    <button class="btn btn-g" onclick="goToday()" style="font-size:12px">Today</button>
+  </div>
+  <div class="page-sub">Drag sessions between days to reschedule · tick to mark done · add notes</div>
+
+  <div class="week-nav">
+    <button class="wk-btn" onclick="chgWk(-1)">‹</button>
+    <div class="wk-center">
+      <div class="wk-num" id="wk-num">WEEK 1</div>
+      <div class="wk-dates" id="wk-dates">31 Mar – 6 Apr 2026</div>
+      <span class="wk-pill" id="wk-pill" style="background:var(--found)">FOUNDATION</span>
+    </div>
+    <button class="wk-btn" onclick="chgWk(1)">›</button>
+  </div>
+
+  <div class="planner-stats">
+    <div class="ps-box"><div class="ps-n accent" id="ps-done">0</div><div class="ps-l">Done this week</div></div>
+    <div class="ps-box"><div class="ps-n" id="ps-total">0</div><div class="ps-l">Planned</div></div>
+    <div class="ps-box"><div class="ps-n" id="ps-all">0</div><div class="ps-l">All-time done</div></div>
+    <div class="ps-box"><div class="ps-n" id="ps-streak">0</div><div class="ps-l">Day streak</div></div>
+    <div class="ps-box"><div class="ps-n accent" id="ps-wk">W1</div><div class="ps-l">Plan week</div></div>
+  </div>
+
+  <div class="cal-grid" id="cal"></div>
+</div>
+
+<!-- 14-WEEK SCHEDULE -->
+<div class="view" id="view-fullplan">
+  <div class="page-title">14-Week Schedule</div>
+  <div class="page-sub">Phase 1 · Foundation → Build → Peak · Starting 31 March 2026</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <table class="plan-tbl" id="plan-tbl"></table>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="view" id="view-log">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+    <div class="page-title">Training Log</div>
+    <button class="btn btn-g" onclick="exportCSV()" style="font-size:12px">Export CSV</button>
+  </div>
+  <div class="page-sub">All sessions auto-logged when ticked complete</div>
+  <div id="log-list"></div>
+</div>
+
+<!-- STATIONS -->
+<div class="view" id="view-stations">
+  <div class="page-title">HYROX Stations</div>
+  <div class="page-sub">8 workout stations + 8 × 1 km runs = full race</div>
+  <div class="station-grid" id="station-grid"></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-top:16px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#60A5FA;margin-bottom:14px">THE RUNNING COMPONENT — 8 × 1 KM BETWEEN EVERY STATION</div>
+    <div class="runs-grid" id="runs-grid"></div>
+    <div style="margin-top:14px;font-size:13px;color:var(--sub);line-height:1.7">
+      Total: <strong style="color:var(--text)">8 km running</strong> + <strong style="color:var(--text)">8 stations</strong> = full HYROX race.
+      Target pace: <strong style="color:var(--accent)">&lt; 5:30 / km</strong> across all running segments.
+      Competitive first-timer finish: <strong style="color:var(--accent)">&lt; 85 min total</strong>.
+    </div>
+  </div>
+</div>
+
+<!-- BENCHMARKS -->
+<div class="view" id="view-benchmarks">
+  <div class="page-title">Benchmarks</div>
+  <div class="page-sub">Test at end of each phase · click MY RESULT and type your time/result · auto-saved</div>
+  <div id="bench-list"></div>
+  <div style="background:linear-gradient(135deg,rgba(26,10,26,0.8),var(--surface));
+    border:1px solid rgba(107,33,168,0.5);border-radius:var(--radius);padding:22px;margin-top:8px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#A78BFA;margin-bottom:16px">🏁 RACE DAY TARGETS</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px" id="race-targets"></div>
+  </div>
+</div>
+
+<!-- PHASE 1 -->
+<div class="view" id="view-phase1">
+  <div class="page-title" style="color:var(--p1)">Phase 1 · Base Fitness</div>
+  <div class="page-sub">31 Mar – 11 Jul 2026 · Weeks 1–14 · Legs + Zone 2 engine + full weekly sport schedule</div>
+  <div id="p1-all"></div>
+</div>
+<div class="view" id="view-p1found">
+  <div class="page-title" style="color:var(--found)">Foundation · Weeks 1–5</div>
+  <div class="page-sub">Build bulletproof movement base · 5–9 min Hyrox sessions</div>
+  <div id="p1-found-c"></div>
+</div>
+<div class="view" id="view-p1build">
+  <div class="page-title" style="color:var(--build)">Build · Weeks 6–10</div>
+  <div class="page-sub">Volume and density · 10–12 min Hyrox sessions</div>
+  <div id="p1-build-c"></div>
+</div>
+<div class="view" id="view-p1peak">
+  <div class="page-title" style="color:var(--peak)">Peak · Weeks 11–14</div>
+  <div class="page-sub">Maximum intensity · 12–15 min Hyrox sessions</div>
+  <div id="p1-peak-c"></div>
+</div>
+
+<!-- PHASES 2/3/4 -->
+<div class="view" id="view-phase2">
+  <div class="page-title" style="color:var(--p2)">Phase 2 · Gym Strength</div>
+  <div class="page-sub">Jul – Oct 2026 · Weeks 15–27</div>
+  <div class="empty"><div class="empty-icon">🏋️</div><div class="empty-title">Not Planned Yet</div>
+  <div class="empty-text">Phase 2 introduces compound lifting and HYROX station-specific training.<br>Plan will be added when Phase 1 is complete.</div></div>
+</div>
+<div class="view" id="view-phase3">
+  <div class="page-title" style="color:var(--p3)">Phase 3 · Race Specific</div>
+  <div class="page-sub">Oct 2026 – Feb 2027 · Weeks 28–48</div>
+  <div class="empty"><div class="empty-icon">⏱️</div><div class="empty-title">Not Planned Yet</div>
+  <div class="empty-text">Full race simulations, station power work, race-pace intervals.<br>Plan will be built after Phase 2 complete.</div></div>
+</div>
+<div class="view" id="view-phase4">
+  <div class="page-title" style="color:var(--p4)">Phase 4 · Taper</div>
+  <div class="page-sub">Mar – Apr 2027 · Weeks 49–54</div>
+  <div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Not Planned Yet</div>
+  <div class="empty-text">Sharpen, rest and race-day preparation.<br>40% volume reduction, maintaining intensity.</div></div>
+</div>
+
+</div><!-- /main -->
+
+<!-- NOTE MODAL -->
+<div class="modal-ov" id="note-modal">
+  <div class="modal">
+    <h3>Session Note</h3>
+    <textarea id="note-ta" placeholder="How did it go? PBs, feelings, issues, reps hit..."></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-p" onclick="saveNote()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS — all dates UTC-safe (no timezone drift)
+// ═══════════════════════════════════════════════════════════════
+// We use a pure day-count system to avoid any timezone issues.
+// Day 0 = 2026-03-30 (Monday, Week 1 start)
+const EPOCH = new Date('2026-03-30T00:00:00Z'); // Monday Week 1
+const RACE  = new Date('2027-04-17T08:00:00Z');
+
+function daysSinceEpoch(d) {
+  return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()) - EPOCH.getTime()) / 86400000);
+}
+function dateFromDayOffset(n) {
+  return new Date(EPOCH.getTime() + n * 86400000);
+}
+function isoFromOffset(n) {
+  const d = dateFromDayOffset(n);
+  return d.toISOString().slice(0,10);
+}
+// Get the Monday day-offset for a given date
+function mondayOffset(d) {
+  const ds = daysSinceEpoch(d);
+  const wd = ((ds % 7) + 7) % 7; // 0=Mon,1=Tue,...6=Sun
+  return ds - wd;
+}
+function wkIdxFromMondayOffset(mo) { return Math.floor(mo / 7); }
+function fmtDate(n) {
+  const d = dateFromDayOffset(n);
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+}
+function fmtFull(n) {
+  const d = dateFromDayOffset(n);
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+}
+
+// Today in local time, expressed as day-offset
+const TODAY_D = daysSinceEpoch(new Date());
+const TODAY_ISO = isoFromOffset(TODAY_D);
+
+const WEEKS = [
+  {wk:1,  p:'FOUNDATION', t:'5 min',  sq:'2×10', lu:'2×8',   ca:'-',    cue:'Drive through your heels — feel the floor push back. Every rep is race-ready posture.'},
+  {wk:2,  p:'FOUNDATION', t:'6 min',  sq:'2×12', lu:'2×10',  ca:'-',    cue:'Chest tall, core braced. Pretend a rope is pulling the crown of your head to the ceiling.'},
+  {wk:3,  p:'FOUNDATION', t:'7 min',  sq:'3×10', lu:'2×10',  ca:'2×8',  cue:'SL calf raise: full range — heel below step if possible. Slow descent = strength.'},
+  {wk:4,  p:'FOUNDATION', t:'8 min',  sq:'3×12', lu:'3×10',  ca:'2×10', cue:'Find your rhythm. Consistent tempo beats speed every time in Hyrox.'},
+  {wk:5,  p:'FOUNDATION', t:'9 min',  sq:'3×14', lu:'3×12',  ca:'2×12', cue:'Notice fatigue — and keep form anyway. That mental override is your race weapon.'},
+  {wk:6,  p:'BUILD',      t:'10 min', sq:'3×15', lu:'3×12',  ca:'3×10', cue:'Shorten rest by 5 s this week. Hyrox never gives you a full break.'},
+  {wk:7,  p:'BUILD',      t:'10 min', sq:'4×12', lu:'3×12',  ca:'3×12', cue:'Bulgarian: rear foot elevated, torso upright. Own the bottom position before ascending.'},
+  {wk:8,  p:'BUILD',      t:'11 min', sq:'4×14', lu:'4×12',  ca:'3×12', cue:'Reverse lunge: step BACK, not forward. Keeps your knee safe over miles of running.'},
+  {wk:9,  p:'BUILD',      t:'11 min', sq:'4×15', lu:'4×14',  ca:'3×14', cue:'Calf raise — pause 2 s at the top. That loaded hold is where race endurance is built.'},
+  {wk:10, p:'BUILD',      t:'12 min', sq:'4×16', lu:'4×14',  ca:'3×15', cue:'Push intensity: move as if the clock is running. Race pace lives in training.'},
+  {wk:11, p:'PEAK',       t:'12 min', sq:'4×18', lu:'4×15',  ca:'4×15', cue:'Superset squats + calf raises with no rest between. Welcome to Hyrox oxygen debt.'},
+  {wk:12, p:'PEAK',       t:'13 min', sq:'5×15', lu:'4×16',  ca:'4×15', cue:'Visualise the finish line during the hardest set. Emotion drives output.'},
+  {wk:13, p:'PEAK',       t:'14 min', sq:'5×16', lu:'5×15',  ca:'4×18', cue:'Taper is coming — squeeze every rep. Leave nothing in the gym, save it for the arena.'},
+  {wk:14, p:'PEAK',       t:'15 min', sq:'5×18', lu:'5×16',  ca:'4×20', cue:'You are race-ready. This week is proof. Trust your legs — they know what to do.'},
+];
+
+const SPORT_META = {
+  LEGS_RL:   {label:'Hyrox Legs RL',    icon:'🦵'},
+  LEGS_BSS:  {label:'Hyrox Legs BSS',   icon:'🦵'},
+  STRENGTH:  {label:'Strength',         icon:'💪'},
+  ZONE2:     {label:'Zone 2',           icon:'❤️'},
+  ZONE2_RUN: {label:'Zone 2 Run',       icon:'🏃'},
+  YOGA:      {label:'Yoga',             icon:'🧘'},
+  BIKE:      {label:'Bike',             icon:'🚴'},
+  LONG_RUN:  {label:'Long Run',         icon:'🏅'},
+};
+
+const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
+const DAY_NAMES = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+const STATIONS = [
+  {name:'SkiErg',           emoji:'⛷️',  target:'1,000 m',            note:'Smooth pull cadence, breathe on extension'},
+  {name:'Sled Push',        emoji:'🔵',  target:'50 m @ 102 kg (M)',   note:'Low hips, drive through heels, eyes forward'},
+  {name:'Sled Pull',        emoji:'🟣',  target:'50 m @ 78 kg (M)',    note:'Lean back, pull with arms not just back'},
+  {name:'Burpee Broad Jump',emoji:'🟡',  target:'80 m',               note:'Steady pace, full hip extension on jump'},
+  {name:'Rowing',           emoji:'🚣',  target:'1,000 m',            note:'Target ~3:55/500 m split, legs-arms-arms-legs'},
+  {name:'Farmers Carry',    emoji:'💼',  target:'200 m @ 2×24 kg (M)',note:'Upright posture, tight core, small fast steps'},
+  {name:'Sandbag Lunges',   emoji:'🧱',  target:'100 m @ 20 kg (M)',  note:'Controlled descent, knee above ankle'},
+  {name:'Wall Balls',       emoji:'🟠',  target:'100 reps @ 6 kg (M)',note:'Breathe on catch, hip crease below parallel'},
+];
+
+// Benchmarks covering all 8 HYROX stations + key fitness tests
+const BENCHMARKS = [
+  // Running / Base fitness
+  {group:'BASE FITNESS', phase:'Phase 1', label:'5 km Run',              icon:'🏃', target:'< 28 min'},
+  {group:'BASE FITNESS', phase:'Phase 1', label:'Zone 2 HR stable 45 min',icon:'❤️', target:'120-140 bpm'},
+  // All 8 HYROX stations
+  {group:'HYROX STATIONS', phase:'Phase 1–2', label:'SkiErg — 1,000 m',         icon:'⛷️', target:'< 5:00'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Push — 50 m',          icon:'🔵', target:'< 45 s'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Pull — 50 m',          icon:'🟣', target:'< 40 s'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Burpee Broad Jump — 80 m',  icon:'🟡', target:'< 3:30'},
+  {group:'HYROX STATIONS', phase:'Phase 1–2', label:'Rowing — 1,000 m',          icon:'🚣', target:'< 4:10'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Farmers Carry — 200 m',     icon:'💼', target:'< 2:30'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sandbag Lunges — 100 m',    icon:'🧱', target:'< 5:00'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Wall Balls — 100 reps',      icon:'🟠', target:'< 6:00'},
+  // Strength
+  {group:'GYM STRENGTH', phase:'Phase 2', label:'Back Squat 5RM',    icon:'🏋️', target:'≥ BW × 1.5'},
+  {group:'GYM STRENGTH', phase:'Phase 2', label:'Deadlift 3RM',      icon:'🏋️', target:'≥ BW × 2.0'},
+  // Full race
+  {group:'RACE SIMULATION', phase:'Phase 3', label:'Full HYROX simulation', icon:'⏱️', target:'< 90 min'},
+  {group:'RACE SIMULATION', phase:'Phase 3', label:'Running pace (8×1 km)', icon:'📍', target:'< 5:30/km'},
+];
+
+const RACE_TARGETS = [
+  {label:'Total Time',    val:'< 85 min',      sub:'competitive first-timer'},
+  {label:'Running Pace',  val:'< 5:30/km',     sub:'across 8 km total'},
+  {label:'Transitions',   val:'< 30 sec',      sub:'per station change'},
+  {label:'Wall Balls',    val:'50+ unbroken',  sub:'then sets of 2'},
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let state       = {}; // { ISO: [{type,id,...}] }
+let completions = {}; // { cardId: {done,note,ts} }
+let benchInputs = {}; // { label: string }
+let weekOffset  = 0;  // in weeks from current week
+let activeNoteId = null;
+
+function saveAll() {
+  try {
+    localStorage.setItem('hyrox3_state',  JSON.stringify(state));
+    localStorage.setItem('hyrox3_comp',   JSON.stringify(completions));
+    localStorage.setItem('hyrox3_bench',  JSON.stringify(benchInputs));
+  } catch(e) { console.warn('Save error',e); }
+}
+function loadAll() {
+  try {
+    const s = localStorage.getItem('hyrox3_state');
+    const c = localStorage.getItem('hyrox3_comp');
+    const b = localStorage.getItem('hyrox3_bench');
+    if (s) state       = JSON.parse(s);
+    if (c) completions = JSON.parse(c);
+    if (b) benchInputs = JSON.parse(b);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD WEEK TEMPLATE (day offset 0=Mon … 6=Sun within that week)
+// ═══════════════════════════════════════════════════════════════
+function buildTemplate(wkData) {
+  const {wk, p, t, sq, lu, ca} = wkData;
+  const legs = {wk, phase:p, sq, lu, ca, time:t};
+  // FIXED schedule — matches the PDF exactly
+  return [
+    // 0 MON: Legs RL + Upper Body Strength + Zone 2
+    [
+      {type:'LEGS_RL',   ...legs},
+      {type:'STRENGTH',  detail:'Upper Body · Bench Press, Row, OHP, Pull-ups · 45–60 min'},
+      {type:'ZONE2',     detail:'30–45 min easy · HR 120–140 bpm · conversational pace'},
+    ],
+    // 1 TUE: Yoga + Bike
+    [
+      {type:'YOGA', detail:'45 min · Hips, Hamstrings, Thoracic mobility'},
+      {type:'BIKE', detail:'30–45 min · Active recovery ride · low effort'},
+    ],
+    // 2 WED: Legs BSS + Bike
+    [
+      {type:'LEGS_BSS', ...legs},
+      {type:'BIKE',     detail:'30 min · Cross-training · moderate effort'},
+    ],
+    // 3 THU: Arms Strength only
+    [
+      {type:'STRENGTH', detail:'Arms & Shoulders · Bicep curl, Tricep, Lateral raise · 45–60 min'},
+    ],
+    // 4 FRI: Legs RL + Zone 2 Run
+    [
+      {type:'LEGS_RL',   ...legs},
+      {type:'ZONE2_RUN', detail:'30–45 min Zone 2 run · conversational pace'},
+    ],
+    // 5 SAT: Long Run + Legs RL (weekend — tick which day you do it)
+    [
+      {type:'LONG_RUN', detail:'60–90 min · easy aerobic pace · weekend session'},
+      {type:'LEGS_RL',  ...legs, detail_override:'Weekend Legs RL session'},
+    ],
+    // 6 SUN: Rest (or swap with Saturday)
+    [],
+  ];
+}
+
+function ensureWeek(mondayOff) {
+  const idx = wkIdxFromMondayOffset(mondayOff);
+  if (idx < 0 || idx >= 14) return;
+  const tmpl = buildTemplate(WEEKS[idx]);
+  for (let d = 0; d < 7; d++) {
+    const iso = isoFromOffset(mondayOff + d);
+    if (!state[iso]) {
+      state[iso] = tmpl[d].map((s,i) => ({...s, id:`${iso}_${s.type}_${i}`}));
+    }
+  }
+}
+
+// Pre-load all 14 weeks
+function initState() {
+  for (let w = 0; w < 14; w++) ensureWeek(w * 7);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER CALENDAR
+// ═══════════════════════════════════════════════════════════════
+function curMondayOff() {
+  const todayMon = mondayOffset(new Date());
+  return todayMon + weekOffset * 7;
+}
+
+function renderWeek() {
+  const monOff = curMondayOff();
+  const idx    = wkIdxFromMondayOffset(monOff);
+  const wd     = idx >= 0 && idx < 14 ? WEEKS[idx] : null;
+  const phase  = wd ? wd.p : '—';
+
+  ensureWeek(monOff);
+
+  document.getElementById('wk-num').textContent   = wd ? `WEEK ${wd.wk}` : '—';
+  document.getElementById('wk-dates').textContent = `${fmtDate(monOff)} – ${fmtDate(monOff+6)}`;
+  document.getElementById('ps-wk').textContent    = wd ? `W${wd.wk}` : '—';
+  const pill = document.getElementById('wk-pill');
+  pill.textContent = phase;
+  pill.style.background = PHASE_COL[phase] || '#555';
+
+  const grid = document.getElementById('cal');
+  grid.innerHTML = '';
+  let wkDone = 0, wkTotal = 0;
+
+  for (let d = 0; d < 7; d++) {
+    const dayOff = monOff + d;
+    const iso    = isoFromOffset(dayOff);
+    const acts   = state[iso] || [];
+    const isToday  = dayOff === TODAY_D;
+    const isWknd   = d >= 5;
+
+    const col = document.createElement('div');
+    col.className = 'day-col';
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'day-hdr' + (isToday ? ' today' : '');
+    const dayDate = dateFromDayOffset(dayOff);
+    hdr.innerHTML = `
+      <div class="day-name">${DAY_NAMES[d]}</div>
+      <div class="day-date-n">${dayDate.getUTCDate()}</div>
+      <div class="day-mo">${dayDate.toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})}</div>
+    `;
+    col.appendChild(hdr);
+
+    // Weekend label
+    if (isWknd) {
+      const wl = document.createElement('div');
+      wl.className = 'wknd-lbl';
+      wl.textContent = d === 5 ? 'SAT · or swap to SUN' : 'SUN · rest or swap';
+      col.appendChild(wl);
+    }
+
+    // Drop zone
+    const zone = document.createElement('div');
+    zone.className = 'drop-zone';
+    zone.dataset.iso = iso;
+    zone.addEventListener('dragover',  onDragOver);
+    zone.addEventListener('dragleave', onDragLeave);
+    zone.addEventListener('drop',      onDrop);
+
+    acts.forEach((sess, i) => {
+      zone.appendChild(buildCard(sess, iso));
+      wkTotal++;
+      if (completions[sess.id]?.done) wkDone++;
+    });
+
+    col.appendChild(zone);
+    grid.appendChild(col);
+  }
+
+  document.getElementById('ps-done').textContent  = wkDone;
+  document.getElementById('ps-total').textContent = wkTotal;
+  updateGlobalStats();
+}
+
+function buildCard(sess, iso) {
+  const meta  = SPORT_META[sess.type] || {label: sess.type, icon:'📌'};
+  const cData = completions[sess.id] || {};
+  const done  = cData.done || false;
+  const note  = cData.note || '';
+
+  const isLegs = sess.type === 'LEGS_RL' || sess.type === 'LEGS_BSS';
+  const legsLine = isLegs && sess.sq
+    ? `Sq: ${sess.sq}  ·  ${sess.type==='LEGS_RL'?'Rev. Lunge':'Bulgarian'}: ${sess.lu}${sess.ca && sess.ca!=='-' ? '  ·  Calf: '+sess.ca : ''}  ·  ${sess.time}`
+    : '';
+
+  const detailText = sess.detail_override || (isLegs ? '' : (sess.detail || ''));
+
+  const card = document.createElement('div');
+  card.className   = 'sess' + (done ? ' done' : '');
+  card.dataset.t   = sess.type;
+  card.dataset.id  = sess.id;
+  card.dataset.iso = iso;
+  card.draggable   = true;
+
+  card.innerHTML = `
+    <div class="sess-top">
+      <span class="sess-icon">${meta.icon}</span>
+      <span class="sess-title">${meta.label}</span>
+      ${sess.time && !isLegs ? `<span class="sess-time">${sess.time}</span>` : ''}
+    </div>
+    ${legsLine ? `<div class="sess-reps">${legsLine}</div>` : ''}
+    ${detailText ? `<div class="sess-detail">${detailText}</div>` : ''}
+    ${note ? `<div class="sess-note">📝 ${note}</div>` : ''}
+    <div class="sess-actions">
+      <div class="chk ${done?'on':''}" onclick="toggleDone(event,'${sess.id}','${iso}')">${done?'✓':''}</div>
+      <button class="note-btn" onclick="openNote(event,'${sess.id}')">+ note</button>
+      ${done ? '<span style="font-size:10px;color:var(--found);margin-left:auto;font-weight:600">DONE ✓</span>' : ''}
+    </div>
+  `;
+
+  card.addEventListener('dragstart', onDragStart);
+  card.addEventListener('dragend',   onDragEnd);
+  return card;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════════════
+let dragId=null, dragFrom=null;
+
+function onDragStart(e) {
+  dragId   = e.currentTarget.dataset.id;
+  dragFrom = e.currentTarget.dataset.iso;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragEnd(e)   { e.currentTarget.classList.remove('dragging'); }
+function onDragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const toISO = e.currentTarget.dataset.iso;
+  if (!toISO || !dragFrom || toISO === dragFrom) return;
+
+  const fromArr = state[dragFrom] || [];
+  const idx = fromArr.findIndex(s => s.id === dragId);
+  if (idx === -1) return;
+  const [moved] = fromArr.splice(idx, 1);
+
+  const newId = `${toISO}_${moved.type}_${Date.now()}`;
+  if (completions[moved.id]) { completions[newId] = completions[moved.id]; delete completions[moved.id]; }
+  moved.id = newId;
+
+  if (!state[toISO]) state[toISO] = [];
+  state[toISO].push(moved);
+
+  saveAll(); renderWeek();
+  toast(`Moved ${SPORT_META[moved.type]?.label || moved.type} → ${fmtFull(daysSinceEpoch(new Date(toISO+'T00:00:00Z')))}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DONE / NOTES
+// ═══════════════════════════════════════════════════════════════
+function toggleDone(e, id, iso) {
+  e.stopPropagation();
+  const cur = completions[id] || {};
+  const nowOn = !cur.done;
+  completions[id] = {...cur, done:nowOn, ts:new Date().toISOString(), iso};
+  saveAll(); renderWeek(); updateLog();
+  if (nowOn) toast('Session complete ✓');
+}
+function openNote(e, id) {
+  e.stopPropagation();
+  activeNoteId = id;
+  document.getElementById('note-ta').value = completions[id]?.note || '';
+  document.getElementById('note-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('note-modal').classList.remove('open'); activeNoteId=null; }
+function saveNote() {
+  if (!activeNoteId) return;
+  completions[activeNoteId] = {...(completions[activeNoteId]||{}), note:document.getElementById('note-ta').value.trim()};
+  saveAll(); closeModal(); renderWeek(); updateLog(); toast('Note saved');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GLOBAL STATS
+// ═══════════════════════════════════════════════════════════════
+function updateGlobalStats() {
+  let total = 0;
+  Object.values(completions).forEach(c => { if (c.done) total++; });
+  document.getElementById('ps-all').textContent  = total;
+  document.getElementById('sb-total').textContent = total;
+  document.getElementById('ov-done').textContent  = total;
+
+  // Streak
+  let streak = 0;
+  for (let i = 0; i <= 365; i++) {
+    const iso = isoFromOffset(TODAY_D - i);
+    const any = (state[iso]||[]).some(s => completions[s.id]?.done);
+    if (!any) break;
+    streak++;
+  }
+  document.getElementById('ps-streak').textContent = streak;
+
+  // Progress bar
+  const totalMs = RACE.getTime() - EPOCH.getTime();
+  const elapsed = Date.now() - EPOCH.getTime();
+  const pct = Math.max(0, Math.min(100, (elapsed/totalMs)*100));
+  document.getElementById('sb-prog').style.width = pct.toFixed(1)+'%';
+  document.getElementById('sb-pct').textContent  = pct.toFixed(1)+'% to Rotterdam';
+
+  // Sidebar week
+  const monOff = curMondayOff();
+  let wd=0, wt=0;
+  for (let i=0;i<7;i++) { const iso=isoFromOffset(monOff+i); (state[iso]||[]).forEach(s=>{wt++;if(completions[s.id]?.done)wd++;}); }
+  document.getElementById('sb-wk').textContent = `${wd}/${wt}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAN TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderPlanTable() {
+  const curIdx = wkIdxFromMondayOffset(curMondayOff());
+  const pc = w => w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)';
+  document.getElementById('plan-tbl').innerHTML = `
+    <thead><tr>
+      <th>WK</th><th>PERIOD</th><th>DATES</th><th>TIME</th>
+      <th>SQUATS</th><th>LUNGE / BSS</th><th>CALF</th><th>COACHING CUE</th>
+    </tr></thead>
+    <tbody>${WEEKS.map((w,i)=>{
+      const mo = i*7;
+      return `<tr class="${i===curIdx?'cur-wk':''}">
+        <td><div class="wk-pill" style="background:${pc(w)}">${w.wk}</div></td>
+        <td><span style="font-size:9px;font-weight:700;padding:2px 9px;border-radius:10px;color:#fff;background:${pc(w)}">${w.p}</span></td>
+        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">${fmtDate(mo)} – ${fmtDate(mo+5)}</td>
+        <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--accent)">${w.t}</td>
+        <td><span class="ex-tag" style="background:var(--bg-legs-rl);color:var(--c-legs-rl)">${w.sq}</span></td>
+        <td><span class="ex-tag" style="background:var(--bg-legs-bss);color:var(--c-legs-bss)">${w.lu}</span></td>
+        <td>${w.ca!=='-'?`<span class="ex-tag" style="background:var(--bg-zone2);color:var(--c-zone2)">${w.ca}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td><div class="cue-txt">${w.cue}</div></td>
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PHASE DETAIL
+// ═══════════════════════════════════════════════════════════════
+function renderPhaseWeeks(elId, weeksArr) {
+  const el = document.getElementById(elId);
+  const pc = w => w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)';
+  el.innerHTML = weeksArr.map(w => {
+    const mo = (w.wk-1)*7;
+    const tmpl = buildTemplate(w);
+    return `<div class="phase-wk">
+      <div class="phase-wk-hdr" style="background:${pc(w)}18;border-bottom:1px solid ${pc(w)}30">
+        <div style="display:flex;align-items:baseline">
+          <span class="phase-wk-num" style="color:${pc(w)}">WEEK ${w.wk}</span>
+          <span class="phase-wk-dt">${fmtDate(mo)} – ${fmtDate(mo+4)}</span>
+        </div>
+        <span class="phase-wk-t">${w.t}</span>
+      </div>
+      <div class="phase-wk-body">
+        <div class="ex-box" style="background:var(--bg-legs-rl);border-left-color:var(--c-legs-rl)">
+          <div class="ex-lbl" style="color:var(--c-legs-rl)">SQUATS</div>
+          <div class="ex-val" style="color:var(--c-legs-rl)">${w.sq}</div>
+        </div>
+        <div class="ex-box" style="background:var(--bg-legs-bss);border-left-color:var(--c-legs-bss)">
+          <div class="ex-lbl" style="color:var(--c-legs-bss)">LUNGE / BSS</div>
+          <div class="ex-val" style="color:var(--c-legs-bss)">${w.lu}</div>
+        </div>
+        <div class="ex-box" style="background:var(--bg-zone2);border-left-color:var(--c-zone2)">
+          <div class="ex-lbl" style="color:var(--c-zone2)">CALF RAISE /leg</div>
+          <div class="ex-val" style="color:var(--c-zone2)">${w.ca!=='-'?w.ca:'—'}</div>
+        </div>
+      </div>
+      <div class="cue-block" style="border-left-color:${pc(w)}">
+        <div class="cue-pre">COACHING CUE</div>
+        <div class="cue-text">${w.cue}</div>
+      </div>
+      <div style="padding:0 20px 16px">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">WEEKLY STRUCTURE</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          ${['MON','TUE','WED','THU','FRI','SAT','SUN'].map((dn,d)=>{
+            const sessions = tmpl[d]||[];
+            const dcols=['var(--c-legs-rl)','var(--c-yoga)','var(--c-legs-bss)','var(--c-strength)','var(--c-zone2r)','var(--c-longrun)','var(--muted)'];
+            return `<div style="text-align:center">
+              <div style="font-size:8px;font-weight:700;color:${dcols[d]};margin-bottom:4px">${dn}</div>
+              ${sessions.length ? sessions.map(s=>`<div style="font-size:8px;background:var(--surface2);border-radius:3px;padding:3px;margin:2px 0;color:var(--sub)">${SPORT_META[s.type]?.icon||'·'} ${(SPORT_META[s.type]?.label||'').split(' ')[0]}</div>`).join('') : '<div style="font-size:8px;color:var(--muted);padding:3px">REST</div>'}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATIONS
+// ═══════════════════════════════════════════════════════════════
+function renderStations() {
+  document.getElementById('station-grid').innerHTML = STATIONS.map((s,i)=>`
+    <div class="station-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div><div class="st-num">STATION ${i+1}</div><div class="st-name">${s.name}</div></div>
+        <div style="font-size:32px">${s.emoji}</div>
+      </div>
+      <div class="st-target">
+        <div class="st-tl">RACE TARGET</div>
+        <div class="st-tv">${s.target}</div>
+      </div>
+      <div class="st-cue">💡 ${s.note}</div>
+    </div>`).join('');
+
+  const runsGrid = document.getElementById('runs-grid');
+  runsGrid.innerHTML = '';
+  for (let n = 1; n <= 8; n++) {
+    const box = document.createElement('div');
+    box.className = 'run-box';
+    box.innerHTML = `<div class="run-n">Run ${n}</div><div class="run-d">1 km</div><div class="run-t">&lt; 5:30/km</div>`;
+    runsGrid.appendChild(box);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BENCHMARKS
+// ═══════════════════════════════════════════════════════════════
+function renderBenchmarks() {
+  const list = document.getElementById('bench-list');
+  let html = '';
+  let lastGroup = '';
+  BENCHMARKS.forEach(b => {
+    if (b.group !== lastGroup) {
+      html += `<div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);
+        padding:${lastGroup?'18px':'0'} 0 8px;text-transform:uppercase">${b.group}</div>`;
+      lastGroup = b.group;
+    }
+    const val = benchInputs[b.label] || '';
+    html += `<div class="bench-row">
+      <div class="bench-icon">${b.icon}</div>
+      <div class="bench-info">
+        <div class="bench-phase">${b.phase.toUpperCase()} · ${b.group}</div>
+        <div class="bench-label">${b.label}</div>
+      </div>
+      <div class="bench-target">
+        <div class="bench-tl">TARGET</div>
+        <div class="bench-tv">${b.target}</div>
+      </div>
+      <div class="bench-result" onclick="this.querySelector('input').focus()">
+        <div class="bench-rl">MY RESULT — CLICK TO EDIT</div>
+        <input class="bench-input" value="${val}" placeholder="e.g. 4:45"
+          onchange="saveBench('${b.label.replace(/'/g,'\\')}',this.value)"
+          oninput="saveBench('${b.label.replace(/'/g,'\\')}',this.value)"
+          onclick="event.stopPropagation()">
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  const raceEl = document.getElementById('race-targets');
+  raceEl.innerHTML = '';
+  RACE_TARGETS.forEach(t => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--surface);border-radius:8px;padding:14px';
+    div.innerHTML = `
+      <div style="font-size:9px;color:#7C3AED;letter-spacing:1.5px;margin-bottom:4px">${t.label.toUpperCase()}</div>
+      <div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:500;color:#A78BFA">${t.val}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">${t.sub}</div>`;
+    raceEl.appendChild(div);
+  });
+}
+
+function saveBench(label, val) {
+  benchInputs[label] = val;
+  saveAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING LOG
+// ═══════════════════════════════════════════════════════════════
+function updateLog() {
+  const entries = [];
+  Object.entries(completions).forEach(([id, c]) => {
+    if (!c.done) return;
+    let found = null;
+    Object.entries(state).forEach(([iso, sessions]) => {
+      const s = sessions.find(x => x.id === id);
+      if (s) found = {...s, iso};
+    });
+    if (!found) return;
+    const meta = SPORT_META[found.type] || {label:found.type, icon:'📌'};
+    entries.push({iso:c.iso||found.iso, label:meta.label, icon:meta.icon, note:c.note, ts:c.ts});
+  });
+  entries.sort((a,b) => b.iso.localeCompare(a.iso));
+  const list = document.getElementById('log-list');
+  list.innerHTML = entries.length === 0
+    ? '<div style="text-align:center;padding:70px;color:var(--muted);font-size:15px">No sessions logged yet.<br><br>Tick sessions in the Weekly Planner to record them here.</div>'
+    : entries.map(e => `<div class="log-row">
+        <div class="log-date">${new Date(e.iso+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})}</div>
+        <div style="flex:1">
+          <div class="log-sport">${e.icon} ${e.label}</div>
+          ${e.note ? `<div class="log-note">📝 ${e.note}</div>` : ''}
+        </div>
+        <div class="log-ts">${e.ts ? new Date(e.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      </div>`).join('');
+}
+
+function exportCSV() {
+  let csv = 'Date,Day,Activity,Note,Completed At\n';
+  Object.entries(completions).forEach(([id,c]) => {
+    if (!c.done) return;
+    Object.entries(state).forEach(([iso,sessions]) => {
+      const s = sessions.find(x => x.id === id);
+      if (!s) return;
+      const d = new Date(iso+'T00:00:00Z');
+      const meta = SPORT_META[s.type] || {label:s.type};
+      csv += `${iso},${d.toLocaleDateString('en-GB',{weekday:'short',timeZone:'UTC'})},${meta.label},"${(c.note||'').replace(/"/g,'""')}",${c.ts||''}\n`;
+    });
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'hyrox_training_log.csv';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════════
+function updateOverview() {
+  const now = new Date();
+  const phases = [
+    {s:'2026-03-30',e:'2026-07-11',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
+    {s:'2026-07-14',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'Compound lifting + HYROX intro'},
+    {s:'2026-10-12',e:'2027-02-28',n:'Phase 3 · Race Specific',sub:'Full simulations'},
+    {s:'2027-03-01',e:'2027-04-16',n:'Phase 4 · Taper',        sub:'Sharpen & rest'},
+    {s:'2027-04-17',e:'2027-04-17',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
+  ];
+  let ph={n:'Pre-Season',sub:'Training starts 31 Mar 2026'};
+  for (const p of phases) {
+    if (now >= new Date(p.s) && now <= new Date(p.e)) { ph=p; break; }
+  }
+  document.getElementById('ov-phase').textContent     = ph.n;
+  document.getElementById('ov-phase-sub').textContent = ph.sub;
+
+  // Timeline
+  const pct = Math.max(0,Math.min(100,(Date.now()-EPOCH.getTime())/(RACE.getTime()-EPOCH.getTime())*100));
+  const segs = [{c:'#4ADE80',w:26.5},{c:'#FACC15',w:24.5},{c:'#FB923C',w:38.8},{c:'#A78BFA',w:10.2}];
+  document.getElementById('tl-bar').innerHTML = segs.map(s=>`<div class="tl-seg" style="width:${s.w}%;background:${s.c}"></div>`).join('');
+  document.getElementById('tl-marker').innerHTML = `<div class="tl-pin" style="left:${pct.toFixed(1)}%"><div class="tl-line"></div><div class="tl-lbl">YOU ARE HERE</div></div>`;
+
+  // Overview checklist
+  const monOff = curMondayOff();
+  ensureWeek(monOff);
+  const items = [];
+  for (let d=0;d<7;d++) {
+    const iso = isoFromOffset(monOff+d);
+    (state[iso]||[]).forEach(s => {
+      const meta = SPORT_META[s.type]||{label:s.type,icon:'📌'};
+      const done = completions[s.id]?.done||false;
+      const dc = ['var(--c-legs-rl)','var(--c-yoga)','var(--c-legs-bss)','var(--c-strength)','var(--c-zone2r)','var(--c-longrun)','var(--muted)'][d];
+      items.push({id:s.id,iso,day:DAY_NAMES[d],label:meta.label,icon:meta.icon,done,dc});
+    });
+  }
+  document.getElementById('ov-check').innerHTML = items.map(it=>`
+    <div class="check-item ${it.done?'done':''}" onclick="toggleDone(event,'${it.id}','${it.iso}');renderOvCheck()">
+      <div class="chk-box">${it.done?'✓':''}</div>
+      <div>
+        <div class="chk-day" style="color:${it.dc}">${it.day}</div>
+        <div class="chk-sess">${it.icon} ${it.label}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderOvCheck() { updateOverview(); }
+
+// ═══════════════════════════════════════════════════════════════
+// TOPBAR
+// ═══════════════════════════════════════════════════════════════
+function updateTopbar() {
+  const now = new Date();
+  const days = Math.ceil((RACE.getTime() - now.getTime()) / 86400000);
+  document.getElementById('top-days').textContent = days > 0 ? days : '🏁';
+  document.getElementById('ov-days').textContent  = days > 0 ? days : '🏁';
+
+  const wkIdx = wkIdxFromMondayOffset(mondayOffset(now));
+  const wkStr = wkIdx >= 0 && wkIdx < 14 ? ` &nbsp;·&nbsp; <strong>Week ${wkIdx+1}</strong> of 14` : '';
+  document.getElementById('top-date').innerHTML =
+    `<strong>${now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</strong>${wkStr}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+const NAV_MAP = {
+  overview:0, planner:1, fullplan:2, log:3, stations:4, benchmarks:5,
+  phase1:6, phase2:10, phase3:11, phase4:12
+};
+const SUB_MAP = { p1found:0, p1build:1, p1peak:2 };
+
+function nav(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.sb-item,.sb-sub').forEach(n => n.classList.remove('active'));
+
+  const view = document.getElementById('view-'+id);
+  if (view) view.classList.add('active');
+
+  const items = document.querySelectorAll('.sb-item');
+  const subs  = document.querySelectorAll('.sb-sub');
+  if (NAV_MAP[id] !== undefined && items[NAV_MAP[id]]) items[NAV_MAP[id]].classList.add('active');
+  if (SUB_MAP[id] !== undefined && subs[SUB_MAP[id]])  subs[SUB_MAP[id]].classList.add('active');
+
+  if (id==='planner')  renderWeek();
+  if (id==='fullplan') renderPlanTable();
+  if (id==='log')      updateLog();
+  if (id==='stations') renderStations();
+  if (id==='benchmarks') renderBenchmarks();
+  if (id==='phase1')   renderPhaseWeeks('p1-all',    WEEKS);
+  if (id==='p1found')  renderPhaseWeeks('p1-found-c',WEEKS.slice(0,5));
+  if (id==='p1build')  renderPhaseWeeks('p1-build-c',WEEKS.slice(5,10));
+  if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
+  if (id==='overview') updateOverview();
+}
+
+function chgWk(n) { weekOffset += n; renderWeek(); }
+function goToday() { weekOffset = 0; renderWeek(); }
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+loadAll();
+initState();
+saveAll();
+
+// Set weekOffset so we start on current week
+weekOffset = Math.round((mondayOffset(new Date()) - mondayOffset(new Date('2026-03-30T00:00:00Z'))) / 7);
+// clamp to 0 if before plan start
+weekOffset = Math.max(0, Math.min(13, weekOffset));
+
+updateTopbar();
+setInterval(updateTopbar, 60000);
+updateOverview();
+updateGlobalStats();
+
+document.getElementById('note-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>

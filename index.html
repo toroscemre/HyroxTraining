@@ -754,11 +754,8 @@ let activeNoteId = null;
 // ═══════════════════════════════════════════════════════════════
 const CF_ACCOUNT = '5823a3f9a0ffa81b5ce3bb4d6043da01';
 const CF_TOKEN   = 'cfut_9u9JuWoOyRdDUCUHQWGp2tuSrzUl6z7FdHOo6m7Yedb03751';
-const CF_NS_KEY  = '__HYROX_KV_NS__'; // filled in after you create namespace
-
-// KV namespace ID — paste yours here after creating it in Cloudflare
-// Instructions at bottom of this file
-let CF_NS_ID = localStorage.getItem('hyrox_kv_ns') || '';
+// KV namespace ID — hardcoded, no setup needed
+const CF_NS_ID = '7173b21051cf4c6babd2f336608c457f';
 
 const KV_URL = () =>
   `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NS_ID}/values/hyrox_data`;
@@ -796,7 +793,7 @@ function saveAll() {
 }
 
 async function saveToCloud() {
-  if (!CF_NS_ID) { setSyncUI('error', '⚠️ No KV namespace'); return; }
+  // CF_NS_ID is hardcoded — always available
   setSyncUI('saving', '⏳ Saving...');
   try {
     const payload = JSON.stringify({ state, completions, benchInputs, ts: Date.now() });
@@ -830,11 +827,6 @@ async function loadAll() {
     if (c) completions = JSON.parse(c);
     if (b) benchInputs = JSON.parse(b);
   } catch(e) {}
-
-  if (!CF_NS_ID) {
-    setSyncUI('error', '⚠️ Setup needed');
-    return;
-  }
 
   setSyncUI('loading', '🔄 Syncing...');
   try {
@@ -1487,32 +1479,6 @@ function toast(msg) {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
-  // Check if KV namespace ID is stored
-  CF_NS_ID = localStorage.getItem('hyrox_kv_ns') || '';
-
-  // If no namespace ID yet, show setup prompt after a short delay
-  if (!CF_NS_ID) {
-    setTimeout(() => {
-      const ns = prompt(
-        '🏁 HYROX SYNC SETUP\n\n' +
-        'One-time setup needed to enable cross-device sync.\n\n' +
-        'Steps:\n' +
-        '1. Go to dash.cloudflare.com\n' +
-        '2. Click Workers & Pages → KV\n' +
-        '3. Click "Create a namespace"\n' +
-        '4. Name it HYROX_DATA and click Add\n' +
-        '5. Copy the ID shown (long string of letters/numbers)\n' +
-        '6. Paste it here:\n'
-      );
-      if (ns && ns.trim().length > 10) {
-        CF_NS_ID = ns.trim();
-        localStorage.setItem('hyrox_kv_ns', CF_NS_ID);
-        toast('KV namespace saved — syncing now...');
-        saveToCloud();
-      }
-    }, 1500);
-  }
-
   await loadAll();
 
   initState();
@@ -1526,7 +1492,7 @@ async function init() {
 
   // Auto-sync every 60 seconds to pick up changes from other devices
   setInterval(() => {
-    if (CF_NS_ID) forceSync();
+    forceSync();
   }, 60000);
 
   updateOverview();

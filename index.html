@@ -342,9 +342,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div style="width:1px;height:22px;background:var(--border)"></div>
     <div class="date-chip" id="top-date">—</div>
   </div>
-  <div style="text-align:right">
-    <div class="countdown-num" id="top-days">—</div>
-    <div class="countdown-sub">days to race · 17 Apr 2027</div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span id="sync-status" style="font-size:11px;font-weight:600;transition:color 0.3s"></span>
+    <button onclick="forceSync()" title="Sync now" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--sub);font-size:11px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='var(--accent)';this.style.color='#fff'" onmouseout="this.style.background='var(--surface2)';this.style.color='var(--sub)'">↻ Sync</button>
+    <div style="text-align:right">
+      <div class="countdown-num" id="top-days">—</div>
+      <div class="countdown-sub">days to race · 17 Apr 2027</div>
+    </div>
   </div>
 </div>
 
@@ -744,14 +748,80 @@ let benchInputs = {}; // { label: string }
 let weekOffset  = 0;  // in weeks from current week
 let activeNoteId = null;
 
-function saveAll() {
-  try {
-    localStorage.setItem('hyrox3_state',  JSON.stringify(state));
-    localStorage.setItem('hyrox3_comp',   JSON.stringify(completions));
-    localStorage.setItem('hyrox3_bench',  JSON.stringify(benchInputs));
-  } catch(e) { console.warn('Save error',e); }
+// ═══════════════════════════════════════════════════════════════
+// CLOUDFLARE KV SYNC
+// Your data saves to the cloud — works on every device
+// ═══════════════════════════════════════════════════════════════
+const CF_ACCOUNT = '5823a3f9a0ffa81b5ce3bb4d6043da01';
+const CF_TOKEN   = 'cfut_9u9JuWoOyRdDUCUHQWGp2tuSrzUl6z7FdHOo6m7Yedb03751';
+const CF_NS_KEY  = '__HYROX_KV_NS__'; // filled in after you create namespace
+
+// KV namespace ID — paste yours here after creating it in Cloudflare
+// Instructions at bottom of this file
+let CF_NS_ID = localStorage.getItem('hyrox_kv_ns') || '';
+
+const KV_URL = () =>
+  `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces/${CF_NS_ID}/values/hyrox_data`;
+
+const CF_HEADERS = {
+  'Authorization': `Bearer ${CF_TOKEN}`,
+  'Content-Type': 'application/json',
+};
+
+let saveTimer = null;
+let syncStatus = 'idle'; // idle | saving | loading | error | ok
+
+function setSyncUI(status, msg) {
+  syncStatus = status;
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const icons = { saving:'⏳', loading:'🔄', ok:'☁️ Synced', error:'⚠️ Offline', idle:'' };
+  const cols  = { saving:'#FACC15', loading:'#60A5FA', ok:'#4ADE80', error:'#F87171', idle:'#6B7490' };
+  el.textContent = msg || icons[status] || '';
+  el.style.color = cols[status] || '#6B7490';
 }
-function loadAll() {
+
+// Save to Cloudflare KV (debounced 800ms so rapid ticks don't flood)
+function saveAll() {
+  // Always save locally first as fallback
+  try {
+    localStorage.setItem('hyrox3_state', JSON.stringify(state));
+    localStorage.setItem('hyrox3_comp',  JSON.stringify(completions));
+    localStorage.setItem('hyrox3_bench', JSON.stringify(benchInputs));
+  } catch(e) {}
+
+  // Debounce cloud save
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToCloud, 800);
+}
+
+async function saveToCloud() {
+  if (!CF_NS_ID) { setSyncUI('error', '⚠️ No KV namespace'); return; }
+  setSyncUI('saving', '⏳ Saving...');
+  try {
+    const payload = JSON.stringify({ state, completions, benchInputs, ts: Date.now() });
+    const res = await fetch(KV_URL(), {
+      method: 'PUT',
+      headers: CF_HEADERS,
+      body: payload,
+    });
+    if (res.ok) {
+      setSyncUI('ok', '☁️ Synced');
+      setTimeout(() => setSyncUI('idle', ''), 3000);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.warn('KV save error', err);
+      setSyncUI('error', '⚠️ Save failed');
+    }
+  } catch(e) {
+    console.warn('KV network error', e);
+    setSyncUI('error', '⚠️ Offline — saved locally');
+  }
+}
+
+// Load from Cloudflare KV on startup
+async function loadAll() {
+  // Load local first so UI shows immediately
   try {
     const s = localStorage.getItem('hyrox3_state');
     const c = localStorage.getItem('hyrox3_comp');
@@ -760,6 +830,67 @@ function loadAll() {
     if (c) completions = JSON.parse(c);
     if (b) benchInputs = JSON.parse(b);
   } catch(e) {}
+
+  if (!CF_NS_ID) {
+    setSyncUI('error', '⚠️ Setup needed');
+    return;
+  }
+
+  setSyncUI('loading', '🔄 Syncing...');
+  try {
+    const res = await fetch(KV_URL(), { headers: CF_HEADERS });
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text !== 'null') {
+        const data = JSON.parse(text);
+        // Only update if cloud data is newer than local
+        const localTs  = parseInt(localStorage.getItem('hyrox_ts') || '0');
+        const cloudTs  = data.ts || 0;
+        if (cloudTs >= localTs) {
+          if (data.state)       state       = data.state;
+          if (data.completions) completions = data.completions;
+          if (data.benchInputs) benchInputs = data.benchInputs;
+          localStorage.setItem('hyrox_ts', cloudTs.toString());
+        }
+      }
+      setSyncUI('ok', '☁️ Synced');
+      setTimeout(() => setSyncUI('idle', ''), 2000);
+    } else if (res.status === 404) {
+      // First time — no data yet, that's fine
+      setSyncUI('ok', '☁️ Ready');
+      setTimeout(() => setSyncUI('idle', ''), 2000);
+    } else {
+      setSyncUI('error', '⚠️ Load failed — using local');
+    }
+  } catch(e) {
+    setSyncUI('error', '⚠️ Offline — using local data');
+  }
+}
+
+// Manual sync button — force pull latest from cloud
+async function forceSync() {
+  setSyncUI('loading', '🔄 Pulling latest...');
+  try {
+    const res = await fetch(KV_URL(), { headers: CF_HEADERS });
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text !== 'null') {
+        const data = JSON.parse(text);
+        if (data.state)       state       = data.state;
+        if (data.completions) completions = data.completions;
+        if (data.benchInputs) benchInputs = data.benchInputs;
+      }
+      setSyncUI('ok', '☁️ Up to date');
+      toast('Synced from cloud ✓');
+      renderWeek();
+      updateGlobalStats();
+      updateOverview();
+      setTimeout(() => setSyncUI('idle',''), 3000);
+    }
+  } catch(e) {
+    setSyncUI('error', '⚠️ Could not reach cloud');
+    toast('Using local data — check connection');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1355,23 +1486,58 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-loadAll();
-initState();
-saveAll();
+async function init() {
+  // Check if KV namespace ID is stored
+  CF_NS_ID = localStorage.getItem('hyrox_kv_ns') || '';
 
-// Set weekOffset so we start on current week
-weekOffset = Math.round((mondayOffset(new Date()) - mondayOffset(new Date('2026-03-30T00:00:00Z'))) / 7);
-// clamp to 0 if before plan start
-weekOffset = Math.max(0, Math.min(13, weekOffset));
+  // If no namespace ID yet, show setup prompt after a short delay
+  if (!CF_NS_ID) {
+    setTimeout(() => {
+      const ns = prompt(
+        '🏁 HYROX SYNC SETUP\n\n' +
+        'One-time setup needed to enable cross-device sync.\n\n' +
+        'Steps:\n' +
+        '1. Go to dash.cloudflare.com\n' +
+        '2. Click Workers & Pages → KV\n' +
+        '3. Click "Create a namespace"\n' +
+        '4. Name it HYROX_DATA and click Add\n' +
+        '5. Copy the ID shown (long string of letters/numbers)\n' +
+        '6. Paste it here:\n'
+      );
+      if (ns && ns.trim().length > 10) {
+        CF_NS_ID = ns.trim();
+        localStorage.setItem('hyrox_kv_ns', CF_NS_ID);
+        toast('KV namespace saved — syncing now...');
+        saveToCloud();
+      }
+    }, 1500);
+  }
 
-updateTopbar();
-setInterval(updateTopbar, 60000);
-updateOverview();
-updateGlobalStats();
+  await loadAll();
 
-document.getElementById('note-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
+  initState();
+  saveAll();
+
+  weekOffset = Math.round((mondayOffset(new Date()) - mondayOffset(new Date('2026-03-30T00:00:00Z'))) / 7);
+  weekOffset = Math.max(0, Math.min(13, weekOffset));
+
+  updateTopbar();
+  setInterval(updateTopbar, 60000);
+
+  // Auto-sync every 60 seconds to pick up changes from other devices
+  setInterval(() => {
+    if (CF_NS_ID) forceSync();
+  }, 60000);
+
+  updateOverview();
+  updateGlobalStats();
+
+  document.getElementById('note-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+}
+
+init();
 </script>
 </body>
 </html>

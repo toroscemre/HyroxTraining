@@ -46,7 +46,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   background:rgba(13,15,20,0.95);backdrop-filter:blur(16px);
   border-bottom:2px solid var(--accent);
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px 0 calc(var(--sidebar)+24px);
+  padding:0 24px 0 calc(var(--sidebar)+56px);
 }
 .logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--accent)}
 .logo span{color:var(--text)}
@@ -325,6 +325,72 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2)}
 .btn-g{background:var(--surface2);color:var(--sub);border:1px solid var(--border2)}.btn-g:hover{background:var(--border)}
 
+/* ── SIDEBAR COLLAPSE ── */
+#sidebar{transition:width 0.25s,transform 0.25s}
+#sidebar.collapsed{width:52px;overflow:hidden}
+#sidebar.collapsed .sb-label,
+#sidebar.collapsed .sb-section,
+#sidebar.collapsed .sb-badge,
+#sidebar.collapsed .sb-sub,
+#sidebar.collapsed .sb-footer,
+#sidebar.collapsed .sb-top div{display:none}
+#sidebar.collapsed .sb-item{padding:12px;justify-content:center}
+#sidebar.collapsed .sb-dot{width:10px;height:10px;margin:0}
+#sidebar.collapsed + #main,
+body.sb-collapsed #main{margin-left:52px}
+#sidebar.collapsed ~ #topbar,
+body.sb-collapsed #topbar{padding-left:76px}
+#sb-toggle{
+  position:fixed;top:14px;left:14px;z-index:300;
+  width:32px;height:32px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--sub);transition:all 0.15s;
+}
+#sb-toggle:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media(max-width:700px){
+  :root{--sidebar:0px}
+  #sidebar{transform:translateX(-100%);width:260px !important;z-index:250}
+  #sidebar.mobile-open{transform:translateX(0)}
+  #main{margin-left:0 !important}
+  #topbar{padding-left:56px !important}
+  #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:240}
+  #sb-overlay.show{display:block}
+  .cal-grid{grid-template-columns:repeat(2,1fr) !important}
+  .planner-stats{grid-template-columns:repeat(3,1fr) !important}
+  .ov-grid{grid-template-columns:repeat(2,1fr) !important}
+  .milestones{grid-template-columns:repeat(2,1fr) !important}
+  .modal{width:95vw !important}
+}
+
+/* ── ADD SESSION MODAL ── */
+#add-modal .modal{width:420px;max-width:95vw}
+.add-sess-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
+.add-sess-btn{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;
+  cursor:pointer;border:1.5px solid var(--border2);background:var(--surface2);
+  transition:all 0.15s;text-align:left;
+}
+.add-sess-btn:hover{border-color:var(--accent);background:rgba(249,115,22,0.08)}
+.add-sess-btn.selected{border-color:var(--accent);background:rgba(249,115,22,0.15)}
+.add-sess-icon{font-size:16px}
+.add-sess-label{font-size:12px;font-weight:600;color:var(--text)}
+.add-sess-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.add-day-select{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;
+  font-family:"DM Sans",sans-serif;outline:none;margin-top:12px;
+}
+.add-day-select:focus{border-color:var(--accent)}
+
+/* ── RUN GUIDANCE TOOLTIP ── */
+.run-guide{
+  font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px;
+  padding:6px 8px;border-radius:5px;background:rgba(134,239,172,0.06);
+  border-left:2px solid var(--c-zone2r);display:none;
+}
+.sess:hover .run-guide,.run-guide.always{display:block}
+
 /* ── TOAST ── */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);
   border:1px solid var(--border2);border-left:4px solid var(--accent);
@@ -352,6 +418,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- SIDEBAR TOGGLE -->
+<button id="sb-toggle" onclick="toggleSidebar()" title="Toggle menu">☰</button>
+<div id="sb-overlay" onclick="closeSidebarMobile()"></div>
+
 <!-- SIDEBAR -->
 <nav id="sidebar">
   <div class="sb-top">
@@ -369,7 +439,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
   <div class="sb-item" onclick="nav('fullplan')">
     <div class="sb-dot" style="background:var(--muted)"></div>
-    <div class="sb-label">14-Week Schedule</div>
+    <div class="sb-label">100 Days Plan</div>
   </div>
   <div class="sb-item" onclick="nav('log')">
     <div class="sb-dot" style="background:#A78BFA"></div>
@@ -426,11 +496,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 
   <div class="sb-footer">
-    <div class="sb-stat-lbl">Total sessions done</div>
+    <div class="sb-stat-lbl">Sessions done</div>
     <div class="sb-stat" id="sb-total">0</div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px">This week: <span id="sb-wk" style="color:var(--sub)">—</span></div>
-    <div class="prog-bar"><div class="prog-fill" id="sb-prog" style="width:0%"></div></div>
-    <div style="font-size:10px;color:var(--muted);margin-top:5px" id="sb-pct">0% to Rotterdam</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">This week: <span id="sb-wk" style="color:var(--text);font-weight:600">—</span></div>
+    <div style="height:3px;background:var(--border2);border-radius:2px;margin-top:10px;overflow:hidden">
+      <div style="height:100%;background:linear-gradient(90deg,var(--p1),var(--accent));border-radius:2px;transition:width 0.5s" id="sb-prog"></div>
+    </div>
+    <div style="font-size:9px;color:var(--muted);margin-top:4px" id="sb-pct">0% to Rotterdam</div>
   </div>
 </nav>
 
@@ -440,58 +512,55 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- OVERVIEW -->
 <div class="view active" id="view-overview">
   <div class="page-title">HYROX Rotterdam 2027</div>
-  <div class="page-sub">Full Preparation Dashboard · Individual Competitor · For the kids 🧡</div>
+  <div class="page-sub">For the kids 🧡 · Individual Competitor</div>
 
-  <div class="ov-grid">
-    <div class="ov-card">
+  <!-- Top row: countdown + phase + sessions -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+    <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">DAYS TO RACE</div>
-      <div class="ov-val" style="color:#F43F5E" id="ov-days">—</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:#F43F5E;line-height:1" id="ov-days">—</div>
       <div class="ov-sub">17 April 2027 · Rotterdam</div>
     </div>
-    <div class="ov-card">
+    <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">CURRENT PHASE</div>
-      <div class="ov-val" style="color:var(--p1);font-size:22px;line-height:1.2" id="ov-phase">—</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--p1);line-height:1.2;margin:8px 0" id="ov-phase">—</div>
       <div class="ov-sub" id="ov-phase-sub">—</div>
     </div>
-    <div class="ov-card">
+    <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">SESSIONS DONE</div>
-      <div class="ov-val" style="color:var(--accent)" id="ov-done">0</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--accent);line-height:1" id="ov-done">0</div>
       <div class="ov-sub">total logged</div>
-    </div>
-    <div class="ov-card">
-      <div class="ov-lbl">STATIONS TO MASTER</div>
-      <div class="ov-val" style="color:#FACC15">8</div>
-      <div class="ov-sub">HYROX workout zones</div>
     </div>
   </div>
 
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:22px">
+  <!-- Journey bar -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
     <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">JOURNEY TO ROTTERDAM</div>
     <div class="tl-bar" id="tl-bar"></div>
     <div class="tl-marker" id="tl-marker"></div>
-    <div style="display:flex;justify-content:space-between;margin-top:22px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:11px;color:var(--muted)">Start: 31 Mar 2026</div>
-      <div style="font-size:11px;color:var(--muted)">Race: 17 Apr 2027</div>
-    </div>
   </div>
 
-  <div class="why-card">
+  <!-- Why card -->
+  <div class="why-card" style="margin-bottom:18px">
     <div class="why-lbl">YOUR WHY ❤️</div>
     <div class="why-text">
-      This race is dedicated to a <strong style="color:#fff">children's charity</strong> — every training session is a step toward something bigger than a finish time.
-      Each phase unlocks a <strong style="color:#A78BFA">fundraising milestone</strong>. Complete the phase, hit the target, celebrate the kids you're running for.
-      On race day in Rotterdam, the pain is borrowed. The purpose is permanent.
+      Dedicated to a <strong style="color:#fff">children's charity</strong> — every session is a step toward something bigger than a finish time.
+      Each phase unlocks a <strong style="color:#A78BFA">fundraising milestone</strong>. On race day in Rotterdam, the pain is borrowed. The purpose is permanent.
     </div>
     <div class="milestones">
-      <div class="ms"><div class="ms-ph">Phase 1 Complete</div><div class="ms-goal">Open fundraiser</div></div>
-      <div class="ms"><div class="ms-ph">Phase 2 Complete</div><div class="ms-goal">25% of target</div></div>
-      <div class="ms"><div class="ms-ph">Phase 3 Complete</div><div class="ms-goal">75% of target</div></div>
-      <div class="ms"><div class="ms-ph">Race Day</div><div class="ms-goal">100% + bonus push</div></div>
+      <div class="ms"><div class="ms-ph">Phase 1 Done</div><div class="ms-goal">Open fundraiser</div></div>
+      <div class="ms"><div class="ms-ph">Phase 2 Done</div><div class="ms-goal">25% of target</div></div>
+      <div class="ms"><div class="ms-ph">Phase 3 Done</div><div class="ms-goal">75% of target</div></div>
+      <div class="ms"><div class="ms-ph">Race Day</div><div class="ms-goal">100% &#127881;</div></div>
     </div>
   </div>
 
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px">
-    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">THIS WEEK'S SESSIONS</div>
+  <!-- This week quick view -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">THIS WEEK</div>
+      <button class="btn btn-g" onclick="nav('planner')" style="font-size:11px;padding:5px 12px">Open Planner →</button>
+    </div>
     <div class="checklist-grid" id="ov-check"></div>
   </div>
 </div>
@@ -514,10 +583,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <button class="wk-btn" onclick="chgWk(1)">›</button>
   </div>
 
-  <div class="planner-stats">
+  <div class="planner-stats" style="grid-template-columns:repeat(4,1fr)">
     <div class="ps-box"><div class="ps-n accent" id="ps-done">0</div><div class="ps-l">Done this week</div></div>
     <div class="ps-box"><div class="ps-n" id="ps-total">0</div><div class="ps-l">Planned</div></div>
-    <div class="ps-box"><div class="ps-n" id="ps-all">0</div><div class="ps-l">All-time done</div></div>
     <div class="ps-box"><div class="ps-n" id="ps-streak">0</div><div class="ps-l">Day streak</div></div>
     <div class="ps-box"><div class="ps-n accent" id="ps-wk">W1</div><div class="ps-l">Plan week</div></div>
   </div>
@@ -527,8 +595,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- 14-WEEK SCHEDULE -->
 <div class="view" id="view-fullplan">
-  <div class="page-title">14-Week Schedule</div>
-  <div class="page-sub">Phase 1 · Foundation → Build → Peak · Starting 31 March 2026</div>
+  <div class="page-title">100 Days Plan</div>
+  <div class="page-sub">Phase 1 · Foundation → Build → Peak · 31 Mar – 11 Jul 2026 · Legs + Running + Strength plan</div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
     <table class="plan-tbl" id="plan-tbl"></table>
   </div>
@@ -615,6 +683,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 </div><!-- /main -->
+
+<!-- ADD SESSION MODAL -->
+<div class="modal-ov" id="add-modal">
+  <div class="modal" style="width:440px;max-width:95vw">
+    <h3>Add Extra Session</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Choose a session to add to your selected day</div>
+    <div class="add-sess-grid" id="add-sess-grid"></div>
+    <select class="add-day-select" id="add-day-select"></select>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-p" onclick="confirmAddSession()">Add Session</button>
+    </div>
+  </div>
+</div>
 
 <!-- NOTE MODAL -->
 <div class="modal-ov" id="note-modal">
@@ -1000,7 +1082,14 @@ function renderWeek() {
       if (completions[sess.id]?.done) wkDone++;
     });
 
+    // + Add session button
+    const addBtn = document.createElement('button');
+    addBtn.style.cssText = 'width:100%;margin-top:6px;padding:9px 4px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;border:1.5px dashed rgba(249,115,22,0.4);background:rgba(249,115,22,0.05);color:var(--accent);letter-spacing:0.5px;-webkit-tap-highlight-color:transparent;';
+    addBtn.textContent = '+ Add session';
+    const capturedISO = iso;
+    addBtn.addEventListener('click', function(e){ e.stopPropagation(); openAddModal(capturedISO); });
     col.appendChild(zone);
+    col.appendChild(addBtn);
     grid.appendChild(col);
   }
 
@@ -1022,6 +1111,26 @@ function buildCard(sess, iso) {
 
   const detailText = sess.detail_override || (isLegs ? '' : (sess.detail || ''));
 
+  // Run guidance by phase — detailed
+  const RUN_GUIDE = {
+    ZONE2: {
+      FOUNDATION: 'Easy 30–40 min · HR 120–140 · fully conversational pace · bike, cross-trainer or easy jog · builds your aerobic engine for race day',
+      BUILD:      'Easy 40–50 min · HR 130–145 · add 4×20 sec strides at the very end (fast but not sprint, full walk recovery between) · introduces speed gently',
+      PEAK:       'Easy 45–55 min · HR 120–140 · this is recovery running, not fitness building · legs are under max load — resist going faster',
+    },
+    ZONE2_RUN: {
+      FOUNDATION: 'Easy 30–40 min run · HR 120–140 · conversational pace only · do not look at your pace, run by feel and breath · builds mileage habit',
+      BUILD:      'Tempo run: 3 km easy warm-up → 3 km tempo (uncomfortable but controlled, 3 words not a sentence) → 2 km easy cool-down · raises lactate threshold so race pace feels easier',
+      PEAK:       'RUN BRICK · 4× (1 km at 5:00–5:30/km → immediately 15 burpees → next 1 km, no rest) · by brick 3 legs feel heavy — hold pace anyway · that fight wins you Rotterdam',
+    },
+    LONG_RUN: {
+      FOUNDATION: 'Week 1: 5 km · add ~1 km/week · reach 8 km by Wk 5 · HR 120–135 throughout · eat carbs 90 min before · do not check pace — talk-test only',
+      BUILD:      '8–12 km · first portion easy (HR 130–140) · last 2 km at race pace 5:30/km · finish strong · teaches legs to run fast when already tired',
+      PEAK:       '10–14 km · 4 km easy → 4 km at race pace 5:00–5:30/km → remaining easy cool-down · race simulation · eat carbs 2 hrs before · bring water',
+    },
+  };
+  const runGuide = RUN_GUIDE[sess.type] && sess.phase ? (RUN_GUIDE[sess.type][sess.phase] || '') : '';
+
   const card = document.createElement('div');
   card.className   = 'sess' + (done ? ' done' : '');
   card.dataset.t   = sess.type;
@@ -1029,21 +1138,18 @@ function buildCard(sess, iso) {
   card.dataset.iso = iso;
   card.draggable   = true;
 
-  card.innerHTML = `
-    <div class="sess-top">
-      <span class="sess-icon">${meta.icon}</span>
-      <span class="sess-title">${meta.label}</span>
-      ${sess.time && !isLegs ? `<span class="sess-time">${sess.time}</span>` : ''}
-    </div>
-    ${legsLine ? `<div class="sess-reps">${legsLine}</div>` : ''}
-    ${detailText ? `<div class="sess-detail">${detailText}</div>` : ''}
-    ${note ? `<div class="sess-note">📝 ${note}</div>` : ''}
-    <div class="sess-actions">
-      <div class="chk ${done?'on':''}" onclick="toggleDone(event,'${sess.id}','${iso}')">${done?'✓':''}</div>
-      <button class="note-btn" onclick="openNote(event,'${sess.id}')">+ note</button>
-      ${done ? '<span style="font-size:10px;color:var(--found);margin-left:auto;font-weight:600">DONE ✓</span>' : ''}
-    </div>
-  `;
+  var _t = (sess.time && !isLegs) ? '<span class="sess-time">'+sess.time+'</span>' : '';
+  var _l = legsLine   ? '<div class="sess-reps">'+legsLine+'</div>' : '';
+  var _d = detailText ? '<div class="sess-detail">'+detailText+'</div>' : '';
+  var _g = runGuide   ? '<div class="run-guide always">&#127939; '+runGuide+'</div>' : '';
+  var _n = note       ? '<div class="sess-note">&#128221; '+note+'</div>' : '';
+  var _ok = done      ? '<span style="font-size:10px;color:var(--found);margin-left:auto;font-weight:600">DONE &#10003;</span>' : '';
+  var _chk = '<div class="chk '+(done?'on':'')+'" data-sid="'+sess.id+'" data-iso="'+iso+'" onclick="handleChk(this)">'+(done?'&#10003;':'')+'</div>';
+  var _nb = '<button class="note-btn" data-sid="'+sess.id+'" onclick="handleNote(this)">+ note</button>';
+  card.innerHTML =
+    '<div class="sess-top"><span class="sess-icon">'+meta.icon+'</span><span class="sess-title">'+meta.label+'</span>'+_t+'</div>'+
+    _l+_d+_g+_n+
+    '<div class="sess-actions">'+_chk+_nb+_ok+'</div>';
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
@@ -1089,6 +1195,14 @@ function onDrop(e) {
 // ═══════════════════════════════════════════════════════════════
 // DONE / NOTES
 // ═══════════════════════════════════════════════════════════════
+function handleChk(el) {
+  var id = el.dataset.sid, iso = el.dataset.iso;
+  toggleDone({stopPropagation:function(){}}, id, iso);
+}
+function handleNote(el) {
+  var id = el.dataset.sid;
+  openNote({stopPropagation:function(){}}, id);
+}
 function toggleDone(e, id, iso) {
   e.stopPropagation();
   const cur = completions[id] || {};
@@ -1116,7 +1230,6 @@ function saveNote() {
 function updateGlobalStats() {
   let total = 0;
   Object.values(completions).forEach(c => { if (c.done) total++; });
-  document.getElementById('ps-all').textContent  = total;
   document.getElementById('sb-total').textContent = total;
   document.getElementById('ov-done').textContent  = total;
 
@@ -1150,76 +1263,235 @@ function updateGlobalStats() {
 function renderPlanTable() {
   const curIdx = wkIdxFromMondayOffset(curMondayOff());
   const pc = w => w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)';
+
+  const RUN_PLAN = {
+    FOUNDATION: {
+      zone2:    'Mon: 30–40 min easy · HR 120–140 · fully conversational · no watch needed',
+      zone2run: 'Fri: 30–40 min easy run · same HR 120–140 · build mileage habit · no tempo yet',
+      longrun:  'Weekend: 5–8 km easy · HR 120–135 · talk-test pace · add 1 km/week',
+    },
+    BUILD: {
+      zone2:    'Mon: 40–50 min easy + 4×20 sec strides at end · HR 130–145',
+      zone2run: 'Fri: 3 km warm-up → 3 km tempo (uncomfortable, controlled) → 2 km cool-down',
+      longrun:  'Weekend: 8–12 km · last 2 km at race pace 5:30/km · finish strong',
+    },
+    PEAK: {
+      zone2:    'Mon: 45–55 min easy · HR controlled · legs under max load this week',
+      zone2run: 'Fri: Run Brick · 4× (1 km at 5:00–5:30/km → 15 burpees immediately) · no rest between',
+      longrun:  'Weekend: 10–14 km · 4 km easy → 4 km at race pace → finish easy · simulate race fatigue',
+    },
+  };
+
   document.getElementById('plan-tbl').innerHTML = `
-    <thead><tr>
-      <th>WK</th><th>PERIOD</th><th>DATES</th><th>TIME</th>
-      <th>SQUATS</th><th>LUNGE / BSS</th><th>CALF</th><th>COACHING CUE</th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th>WK</th><th>PERIOD</th><th>DATES</th><th>LEGS TIME</th>
+        <th>SQUATS</th><th>LUNGE/BSS</th><th>CALF</th>
+        <th style="color:#86EFAC">RUNNING THIS WEEK</th>
+        <th>LEGS CUE</th>
+      </tr>
+    </thead>
     <tbody>${WEEKS.map((w,i)=>{
       const mo = i*7;
-      return `<tr class="${i===curIdx?'cur-wk':''}">
+      const run = RUN_PLAN[w.p] || RUN_PLAN.FOUNDATION;
+      const isCur = i===curIdx;
+      return `<tr class="${isCur?'cur-wk':''}">
         <td><div class="wk-pill" style="background:${pc(w)}">${w.wk}</div></td>
         <td><span style="font-size:9px;font-weight:700;padding:2px 9px;border-radius:10px;color:#fff;background:${pc(w)}">${w.p}</span></td>
         <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">${fmtDate(mo)} – ${fmtDate(mo+5)}</td>
         <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--accent)">${w.t}</td>
         <td><span class="ex-tag" style="background:var(--bg-legs-rl);color:var(--c-legs-rl)">${w.sq}</span></td>
         <td><span class="ex-tag" style="background:var(--bg-legs-bss);color:var(--c-legs-bss)">${w.lu}</span></td>
-        <td>${w.ca!=='-'?`<span class="ex-tag" style="background:var(--bg-zone2);color:var(--c-zone2)">${w.ca}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td>' + (w.ca!=='-'?'<span class="ex-tag" style="background:var(--bg-zone2);color:var(--c-zone2)">'+w.ca+'</span>':'<span style="color:var(--muted)">—</span>') + '</td>
+        <td style="min-width:220px">
+          <div style="font-size:10px;color:#6EE7B7;margin-bottom:3px">❤️ ${run.zone2}</div>
+          <div style="font-size:10px;color:#86EFAC;margin-bottom:3px">🏃 ${run.zone2run}</div>
+          <div style="font-size:10px;color:#FCA5A5">🏅 ${run.longrun}</div>
+        </td>
         <td><div class="cue-txt">${w.cue}</div></td>
       </tr>`;
     }).join('')}</tbody>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PHASE DETAIL
+// PHASE DETAIL — clean render, no nested IIFEs
 // ═══════════════════════════════════════════════════════════════
+
+// All static data defined once, outside the render function
+const RUN_DETAILS = {
+  FOUNDATION: [
+    {day:'MON', icon:'❤️', col:'#6EE7B7', type:'Zone 2 Cardio',
+     detail:'30–40 min easy. HR 120–140 bpm. Fully conversational — if you cannot speak in full sentences you are going too fast. Use a bike, cross-trainer or easy jog. No pressure. Builds the aerobic base that carries you through 8 km on race day.'},
+    {day:'FRI', icon:'🏃', col:'#86EFAC', type:'Zone 2 Run',
+     detail:'30–40 min easy run. Same HR 120–140. Conversational pace only. No intervals, no tempo. Just building the habit and mileage. Do not look at your pace — run by feel and breath.'},
+    {day:'SAT/SUN', icon:'🏅', col:'#FCA5A5', type:'Long Run',
+     detail:'Start at 5 km in Week 1, add ~1 km per week, reach 8 km by Week 5. Easy pace throughout — HR 120–135. Most important aerobic session of the week. Eat something 90 min before. Hydrate well.'},
+  ],
+  BUILD: [
+    {day:'MON', icon:'❤️', col:'#6EE7B7', type:'Zone 2 + Strides',
+     detail:'40–50 min easy (HR 130–145) then 4×20 sec accelerations at the end — not sprints, just fast strides — with full recovery walk between. Introduces speed without stressing the body.'},
+    {day:'FRI', icon:'🏃', col:'#86EFAC', type:'Tempo Run',
+     detail:'3 km warm-up easy → 3 km tempo (uncomfortable but controlled — you can say 3 words not a sentence) → 2 km cool-down easy. Total ~8 km. Raises your lactate threshold so race pace feels easier.'},
+    {day:'SAT/SUN', icon:'🏅', col:'#FCA5A5', type:'Progressive Long Run',
+     detail:'8–12 km. First 6–9 km easy (HR 130–140). Last 2 km pick up to race pace (5:30/km). Finish strong. Teaches legs to run fast when already tired — exactly what Hyrox demands after stations.'},
+  ],
+  PEAK: [
+    {day:'MON', icon:'❤️', col:'#6EE7B7', type:'Zone 2 Recovery',
+     detail:'45–55 min easy. Legs are under maximum load this week. Keep HR controlled 120–140. This is recovery running — not fitness building. Resist the urge to go faster.'},
+    {day:'FRI', icon:'🏃', col:'#86EFAC', type:'Run Brick — Race Simulation',
+     detail:'4 rounds: Run 1 km at race pace 5:00–5:30/km → immediately 15 burpees → immediately next 1 km run. No rest between. Total ~5 km running + 60 burpees. By brick 3 your legs will feel heavy — hold the pace anyway. That fight wins Rotterdam.'},
+    {day:'SAT/SUN', icon:'🏅', col:'#FCA5A5', type:'Race-Pace Long Run',
+     detail:'10–14 km. Structure: 4 km easy → 4 km at race pace 5:00–5:30/km → remaining km easy cool-down. Simulates race fatigue. Eat carb-based meal 2 hrs before. Bring water.'},
+  ],
+};
+
+const NUT_DATA = {
+  FOUNDATION: {
+    legs:     {before:'30–60 min before: small carb snack — banana, slice of toast or handful of oats. Avoid heavy meals. Hydrate 400 ml water.',
+               after: 'Within 30 min: protein + carbs — Greek yoghurt + fruit, or protein shake + banana. Rebuilds muscle for next session.'},
+    run_easy: {before:'Easy runs under 45 min: just water is fine. If over 45 min, have a light snack 30 min before — banana, rice cake.',
+               after: 'Light recovery: fruit + water. If combined with legs on the same day, add a proper protein meal within 1 hour.'},
+    long_run: {before:'90–120 min before: carb-based meal — oats, toast + eggs, rice. Avoid fat and fibre close to run. Drink 500 ml water.',
+               after: 'Golden 30 min window: 20–30 g protein + carbs immediately. Full meal within 2 hours. Rehydrate well.'},
+    strength: {before:'60–90 min before: balanced meal with carbs + protein — rice + chicken, or eggs + toast. Not too heavy.',
+               after: 'Within 45 min: 25–30 g protein — shake, eggs, Greek yoghurt. This is when muscle is built. Do not skip.'},
+  },
+  BUILD: {
+    legs:     {before:'45–60 min before: carbs + small protein — rice cakes + peanut butter, banana + protein shake, or oats. Volume increases this phase — fuel properly.',
+               after: 'Prioritise protein: 30 g within 30 min. Add complex carbs to replenish glycogen for next session. Sleep well — recovery is training.'},
+    run_easy: {before:'Zone 2: just water if under 45 min. Strides added — have a banana 30 min before if training fasted.',
+               after: 'Electrolyte drink + light protein snack. If tempo run: full protein + carb meal within 45 min.'},
+    long_run: {before:'2 hrs before: full carb-focused meal. During run over 60 min: take a gel or dates at 45 min mark. Drink every 20 min.',
+               after: 'Immediate: recovery drink or banana + protein. Full meal within 1 hr. This long run is the hardest of the week — recover seriously.'},
+    strength: {before:'Pre-workout meal 60–90 min prior. Loads increase this phase — do not train fasted. Creatine (3–5 g) with water if you use it.',
+               after: '30 g protein immediately. Carbs to refuel. Sleep 7–9 hrs — growth hormone peaks during deep sleep.'},
+  },
+  PEAK: {
+    legs:     {before:'Legs at max volume. 60 min before: fast-digesting carbs + small protein. Avoid anything new. Hydrate from the day before.',
+               after: 'Protein within 20 min of finishing. You are in a recovery race between sessions. Add anti-inflammatory foods: berries, ginger, turmeric.'},
+    run_easy: {before:'Recovery run — do not overtrain it. Light snack or nothing if well-fed. Focus on hydration the day before.',
+               after: 'Light meal. Prioritise sleep and rest over eating. Legs need to be fresh for bricks and race simulation.'},
+    long_run: {before:'Race simulation nutrition: eat exactly what you plan on race day. Oats + banana + coffee 90 min before. Practice your routine.',
+               after: 'Race-day recovery protocol: 20 g fast protein + carbs immediately, full meal within 1 hr, foam roll, elevate legs 10 min.'},
+    strength: {before:'Same pre-workout routine as race week. Lock in your nutrition habits. Nothing new in peak phase.',
+               after: 'Maximum recovery focus. Protein + carbs + sleep. Reduce alcohol to zero — it blocks muscle protein synthesis.'},
+  },
+};
+
+const NUT_ROWS = [
+  {icon:'🦵', label:'Legs Sessions',     k:'legs'},
+  {icon:'❤️', label:'Easy Run / Zone 2', k:'run_easy'},
+  {icon:'🏅', label:'Long Run',          k:'long_run'},
+  {icon:'💪', label:'Strength',          k:'strength'},
+];
+
+function buildRunHTML(phase) {
+  const runs = RUN_DETAILS[phase] || RUN_DETAILS.FOUNDATION;
+  let html = '<div style="border-top:1px solid var(--border);padding-top:12px">';
+  html += '<div style="font-size:9px;letter-spacing:1.5px;color:#86EFAC;margin-bottom:10px">🏃 RUNNING PLAN THIS PHASE</div>';
+  runs.forEach(function(r) {
+    html += '<div style="display:flex;gap:10px;margin-bottom:10px;background:rgba(134,239,172,0.04);border-radius:8px;padding:10px;border-left:3px solid ' + r.col + '">';
+    html += '<div style="font-size:18px;flex-shrink:0">' + r.icon + '</div>';
+    html += '<div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">';
+    html += '<span style="font-size:9px;font-weight:700;color:' + r.col + ';letter-spacing:1px">' + r.day + '</span>';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--text)">' + r.type + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--sub);line-height:1.6">' + r.detail + '</div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function buildNutHTML(phase) {
+  const n = NUT_DATA[phase] || NUT_DATA.FOUNDATION;
+  let html = '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">';
+  html += '<div style="font-size:9px;letter-spacing:1.5px;color:#FCD34D;margin-bottom:12px">🍽️ NUTRITION — BEFORE &amp; AFTER TRAINING</div>';
+  NUT_ROWS.forEach(function(r) {
+    const tips = n[r.k];
+    html += '<div style="margin-bottom:10px;background:rgba(250,204,21,0.04);border-radius:8px;padding:10px 12px;border-left:3px solid rgba(250,204,21,0.3)">';
+    html += '<div style="font-size:11px;font-weight:700;color:#FCD34D;margin-bottom:6px">' + r.icon + ' ' + r.label + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    html += '<div><div style="font-size:9px;font-weight:700;color:#4ADE80;letter-spacing:1px;margin-bottom:3px">BEFORE</div>';
+    html += '<div style="font-size:11px;color:var(--sub);line-height:1.6">' + tips.before + '</div></div>';
+    html += '<div><div style="font-size:9px;font-weight:700;color:#F87171;letter-spacing:1px;margin-bottom:3px">AFTER</div>';
+    html += '<div style="font-size:11px;color:var(--sub);line-height:1.6">' + tips.after + '</div></div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function renderPhaseWeeks(elId, weeksArr) {
-  const el = document.getElementById(elId);
-  const pc = w => w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)';
-  el.innerHTML = weeksArr.map(w => {
-    const mo = (w.wk-1)*7;
-    const tmpl = buildTemplate(w);
-    return `<div class="phase-wk">
-      <div class="phase-wk-hdr" style="background:${pc(w)}18;border-bottom:1px solid ${pc(w)}30">
-        <div style="display:flex;align-items:baseline">
-          <span class="phase-wk-num" style="color:${pc(w)}">WEEK ${w.wk}</span>
-          <span class="phase-wk-dt">${fmtDate(mo)} – ${fmtDate(mo+4)}</span>
-        </div>
-        <span class="phase-wk-t">${w.t}</span>
-      </div>
-      <div class="phase-wk-body">
-        <div class="ex-box" style="background:var(--bg-legs-rl);border-left-color:var(--c-legs-rl)">
-          <div class="ex-lbl" style="color:var(--c-legs-rl)">SQUATS</div>
-          <div class="ex-val" style="color:var(--c-legs-rl)">${w.sq}</div>
-        </div>
-        <div class="ex-box" style="background:var(--bg-legs-bss);border-left-color:var(--c-legs-bss)">
-          <div class="ex-lbl" style="color:var(--c-legs-bss)">LUNGE / BSS</div>
-          <div class="ex-val" style="color:var(--c-legs-bss)">${w.lu}</div>
-        </div>
-        <div class="ex-box" style="background:var(--bg-zone2);border-left-color:var(--c-zone2)">
-          <div class="ex-lbl" style="color:var(--c-zone2)">CALF RAISE /leg</div>
-          <div class="ex-val" style="color:var(--c-zone2)">${w.ca!=='-'?w.ca:'—'}</div>
-        </div>
-      </div>
-      <div class="cue-block" style="border-left-color:${pc(w)}">
-        <div class="cue-pre">COACHING CUE</div>
-        <div class="cue-text">${w.cue}</div>
-      </div>
-      <div style="padding:0 20px 16px">
-        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">WEEKLY STRUCTURE</div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
-          ${['MON','TUE','WED','THU','FRI','SAT','SUN'].map((dn,d)=>{
-            const sessions = tmpl[d]||[];
-            const dcols=['var(--c-legs-rl)','var(--c-yoga)','var(--c-legs-bss)','var(--c-strength)','var(--c-zone2r)','var(--c-longrun)','var(--muted)'];
-            return `<div style="text-align:center">
-              <div style="font-size:8px;font-weight:700;color:${dcols[d]};margin-bottom:4px">${dn}</div>
-              ${sessions.length ? sessions.map(s=>`<div style="font-size:8px;background:var(--surface2);border-radius:3px;padding:3px;margin:2px 0;color:var(--sub)">${SPORT_META[s.type]?.icon||'·'} ${(SPORT_META[s.type]?.label||'').split(' ')[0]}</div>`).join('') : '<div style="font-size:8px;color:var(--muted);padding:3px">REST</div>'}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  var el = document.getElementById(elId);
+  var pc = function(w) {
+    return w.p === 'FOUNDATION' ? 'var(--found)' : w.p === 'BUILD' ? 'var(--build)' : 'var(--peak)';
+  };
+  var DAY_COLS = ['var(--c-legs-rl)','var(--c-yoga)','var(--c-legs-bss)','var(--c-strength)','var(--c-zone2r)','var(--c-longrun)','var(--muted)'];
+  var DAY_NS   = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+  var html = '';
+  weeksArr.forEach(function(w) {
+    var mo   = (w.wk - 1) * 7;
+    var tmpl = buildTemplate(w);
+    var phColor = pc(w);
+
+    // Week header
+    html += '<div class="phase-wk">';
+    html += '<div class="phase-wk-hdr" style="background:' + phColor + '18;border-bottom:1px solid ' + phColor + '30">';
+    html += '<div style="display:flex;align-items:baseline">';
+    html += '<span class="phase-wk-num" style="color:' + phColor + '">WEEK ' + w.wk + '</span>';
+    html += '<span class="phase-wk-dt">' + fmtDate(mo) + ' – ' + fmtDate(mo + 4) + '</span>';
+    html += '</div><span class="phase-wk-t">' + w.t + '</span></div>';
+
+    // Exercise boxes
+    html += '<div class="phase-wk-body">';
+    html += '<div class="ex-box" style="background:var(--bg-legs-rl);border-left-color:var(--c-legs-rl)">';
+    html += '<div class="ex-lbl" style="color:var(--c-legs-rl)">SQUATS</div>';
+    html += '<div class="ex-val" style="color:var(--c-legs-rl)">' + w.sq + '</div></div>';
+    html += '<div class="ex-box" style="background:var(--bg-legs-bss);border-left-color:var(--c-legs-bss)">';
+    html += '<div class="ex-lbl" style="color:var(--c-legs-bss)">LUNGE / BSS</div>';
+    html += '<div class="ex-val" style="color:var(--c-legs-bss)">' + w.lu + '</div></div>';
+    html += '<div class="ex-box" style="background:var(--bg-zone2);border-left-color:var(--c-zone2)">';
+    html += '<div class="ex-lbl" style="color:var(--c-zone2)">CALF RAISE /leg</div>';
+    html += '<div class="ex-val" style="color:var(--c-zone2)">' + (w.ca !== '-' ? w.ca : '—') + '</div></div>';
+    html += '</div>';
+
+    // Coaching cue
+    html += '<div class="cue-block" style="border-left-color:' + phColor + '">';
+    html += '<div class="cue-pre">COACHING CUE</div>';
+    html += '<div class="cue-text">' + w.cue + '</div></div>';
+
+    // Weekly structure grid
+    html += '<div style="padding:0 20px 16px">';
+    html += '<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">WEEKLY STRUCTURE</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';
+    DAY_NS.forEach(function(dn, d) {
+      var sessions = tmpl[d] || [];
+      html += '<div style="text-align:center">';
+      html += '<div style="font-size:8px;font-weight:700;color:' + DAY_COLS[d] + ';margin-bottom:4px">' + dn + '</div>';
+      if (sessions.length) {
+        sessions.forEach(function(s) {
+          var meta = SPORT_META[s.type] || {};
+          html += '<div style="font-size:8px;background:var(--surface2);border-radius:3px;padding:3px;margin:2px 0;color:var(--sub)">';
+          html += (meta.icon || '·') + ' ' + ((meta.label || '').split(' ')[0]);
+          html += '</div>';
+        });
+      } else {
+        html += '<div style="font-size:8px;color:var(--muted);padding:3px">REST</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Running plan + Nutrition (now just function calls, no nested IIFEs)
+    html += buildRunHTML(w.p);
+    html += buildNutHTML(w.p);
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1322,14 +1594,12 @@ function updateLog() {
   const list = document.getElementById('log-list');
   list.innerHTML = entries.length === 0
     ? '<div style="text-align:center;padding:70px;color:var(--muted);font-size:15px">No sessions logged yet.<br><br>Tick sessions in the Weekly Planner to record them here.</div>'
-    : entries.map(e => `<div class="log-row">
-        <div class="log-date">${new Date(e.iso+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})}</div>
-        <div style="flex:1">
-          <div class="log-sport">${e.icon} ${e.label}</div>
-          ${e.note ? `<div class="log-note">📝 ${e.note}</div>` : ''}
-        </div>
-        <div class="log-ts">${e.ts ? new Date(e.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
-      </div>`).join('');
+    : entries.map(function(e){
+      var _n2=e.note?'<div class="log-note">📝 '+e.note+'</div>':'';
+      var _ts=e.ts?new Date(e.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
+      var _d2=new Date(e.iso+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+      return '<div class="log-row"><div class="log-date">'+_d2+'</div><div style="flex:1"><div class="log-sport">'+e.icon+' '+e.label+'</div>'+_n2+'</div><div class="log-ts">'+_ts+'</div></div>';
+    }).join('');
 }
 
 function exportCSV() {
@@ -1369,11 +1639,80 @@ function updateOverview() {
   document.getElementById('ov-phase').textContent     = ph.n;
   document.getElementById('ov-phase-sub').textContent = ph.sub;
 
-  // Timeline
-  const pct = Math.max(0,Math.min(100,(Date.now()-EPOCH.getTime())/(RACE.getTime()-EPOCH.getTime())*100));
-  const segs = [{c:'#4ADE80',w:26.5},{c:'#FACC15',w:24.5},{c:'#FB923C',w:38.8},{c:'#A78BFA',w:10.2}];
-  document.getElementById('tl-bar').innerHTML = segs.map(s=>`<div class="tl-seg" style="width:${s.w}%;background:${s.c}"></div>`).join('');
-  document.getElementById('tl-marker').innerHTML = `<div class="tl-pin" style="left:${pct.toFixed(1)}%"><div class="tl-line"></div><div class="tl-lbl">YOU ARE HERE</div></div>`;
+  // Detailed timeline
+  const now2 = new Date();
+  const totalMs = RACE.getTime() - EPOCH.getTime();
+  const elapsedMs = now2.getTime() - EPOCH.getTime();
+  const pct = Math.max(0, Math.min(100, (elapsedMs/totalMs)*100));
+
+  const PHASE_DEFS = [
+    {label:'Phase 1\nBase',     short:'P1 BASE',  start:'2026-03-30', end:'2026-07-11', c:'#4ADE80'},
+    {label:'Phase 2\nStrength', short:'P2 STR',   start:'2026-07-14', end:'2026-10-11', c:'#FACC15'},
+    {label:'Phase 3\nRace',     short:'P3 RACE',  start:'2026-10-12', end:'2027-02-28', c:'#FB923C'},
+    {label:'Phase 4\nTaper',    short:'P4 TAPER', start:'2027-03-01', end:'2027-04-16', c:'#A78BFA'},
+    {label:'RACE DAY',           short:'RACE🏁',   start:'2027-04-17', end:'2027-04-17', c:'#F43F5E'},
+  ];
+
+  // Calculate each phase width as % of total journey
+  const totalDuration = RACE.getTime() - EPOCH.getTime();
+  var barHtml='';
+  PHASE_DEFS.forEach(function(ph){
+    var _ps=new Date(ph.start).getTime(),_pe=new Date(ph.end).getTime();
+    var _w=((_pe-_ps)/totalDuration*100).toFixed(1);
+    var _past=now2>new Date(ph.end),_act=now2>=new Date(ph.start)&&now2<=new Date(ph.end);
+    var _op=_past?'0.35':_act?'1':'0.55';
+    var _sz=_past?'8px':_act?'8px':'7px';
+    var _clr=_past?'rgba(0,0,0,0.7)':_act?'#000':'rgba(255,255,255,0.7)';
+    var _fw=_act?'900':'700';
+    var _txt=ph.short+(_past?' ✓':'');
+    barHtml+='<div class="tl-seg" title="'+ph.label+'" style="width:'+_w+'%;background:'+ph.c+';opacity:'+_op+';position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden"><span style="font-size:'+_sz+';color:'+_clr+';font-weight:'+_fw+';white-space:nowrap;padding:0 2px">'+_txt+'</span></div>';
+  });
+
+  document.getElementById('tl-bar').innerHTML = barHtml;
+
+  // Days done vs remaining
+  const daysDone = Math.max(0, Math.floor(elapsedMs / 86400000));
+  const daysLeft = Math.ceil((RACE.getTime() - now2.getTime()) / 86400000);
+
+  document.getElementById('tl-marker').innerHTML = `
+    <div class="tl-pin" style="left:${Math.min(pct,97).toFixed(1)}%">
+      <div class="tl-line"></div>
+      <div class="tl-lbl">TODAY · ${now2.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:18px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;color:#4ADE80;line-height:1">${daysDone}</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">DAYS IN</div>
+        </div>
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;color:var(--accent);line-height:1">${daysLeft}</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">DAYS LEFT</div>
+        </div>
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;color:#A78BFA;line-height:1">${pct.toFixed(0)}%</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">COMPLETE</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div id="tl-leg-inner"></div>
+      </div>
+    </div>`;
+
+  // Build timeline legend separately (no nested template literals)
+  var _legEl = document.getElementById('tl-leg-inner');
+  if(_legEl){
+    var _legH='';
+    PHASE_DEFS.forEach(function(ph){
+      var _past=now2>new Date(ph.end),_act=now2>=new Date(ph.start)&&now2<=new Date(ph.end);
+      var _op=_past?0.4:_act?1:0.55;
+      var _col=_act?'var(--text)':'var(--muted)';
+      var _fw=_act?'700':'400';
+      var _sfx=_past?' ✓':_act?' ◀':'';
+      _legH+='<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:'+ph.c+';opacity:'+_op+'"></div><span style="font-size:9px;color:'+_col+';font-weight:'+_fw+'">'+ph.short+_sfx+'</span></div>';
+    });
+    _legEl.innerHTML=_legH;
+  }
 
   // Overview checklist
   const monOff = curMondayOff();
@@ -1454,6 +1793,113 @@ function goToday() { weekOffset = 0; renderWeek(); }
 // ═══════════════════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════════════════
+// ── SIDEBAR TOGGLE ────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const isMobile = window.innerWidth <= 700;
+  if (isMobile) {
+    sb.classList.toggle('mobile-open');
+    document.getElementById('sb-overlay').classList.toggle('show');
+  } else {
+    sb.classList.toggle('collapsed');
+    document.getElementById('main').style.marginLeft =
+      sb.classList.contains('collapsed') ? '52px' : '';
+    document.getElementById('topbar').style.paddingLeft =
+      sb.classList.contains('collapsed') ? '76px' : '';
+  }
+}
+function closeSidebarMobile() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sb-overlay').classList.remove('show');
+}
+
+// ── ADD EXTRA SESSION ──────────────────────────────────────────
+const EXTRA_SESSIONS = [
+  {type:'ZONE2_RUN', icon:'🏃', label:'Zone 2 Run',       sub:'Easy run · HR 120–140 bpm'},
+  {type:'LONG_RUN',  icon:'🏅', label:'Long Run',          sub:'60–90 min easy aerobic'},
+  {type:'ZONE2',     icon:'❤️', label:'Zone 2 Cardio',     sub:'30–45 min easy cardio'},
+  {type:'LEGS_RL',   icon:'🦵', label:'Hyrox Legs RL',     sub:'Reverse lunge session'},
+  {type:'LEGS_BSS',  icon:'🦵', label:'Hyrox Legs BSS',    sub:'Bulgarian split squat'},
+  {type:'STRENGTH',  icon:'💪', label:'Strength',           sub:'Upper body or arms'},
+  {type:'YOGA',      icon:'🧘', label:'Yoga',               sub:'Mobility & recovery'},
+  {type:'BIKE',      icon:'🚴', label:'Bike',               sub:'Cross-training ride'},
+];
+
+let addModalTargetISO = null;
+let addModalSelectedType = null;
+
+function openAddModal(iso) {
+  addModalTargetISO = iso;
+  addModalSelectedType = null;
+
+  // Build session buttons
+  const grid = document.getElementById('add-sess-grid');
+  grid.innerHTML = EXTRA_SESSIONS.map(s => `
+    <div class="add-sess-btn" data-type="${s.type}" onclick="selectAddSess(this,'${s.type}')">
+      <span class="add-sess-icon">${s.icon}</span>
+      <div>
+        <div class="add-sess-label">${s.label}</div>
+        <div class="add-sess-sub">${s.sub}</div>
+      </div>
+    </div>`).join('');
+
+  // Build day selector — show current week days
+  const monOff = curMondayOff();
+  const sel = document.getElementById('add-day-select');
+  sel.innerHTML = '';
+  for (let d = 0; d < 7; d++) {
+    const dayOff = monOff + d;
+    const dayISO = isoFromOffset(dayOff);
+    const dayDate = dateFromDayOffset(dayOff);
+    const label = DAY_NAMES[d] + ' ' + dayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+    const opt = document.createElement('option');
+    opt.value = dayISO;
+    opt.textContent = label;
+    if (dayISO === iso) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function selectAddSess(el, type) {
+  document.querySelectorAll('.add-sess-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  addModalSelectedType = type;
+}
+
+function confirmAddSession() {
+  if (!addModalSelectedType) { toast('Please select a session type'); return; }
+  const targetISO = document.getElementById('add-day-select').value;
+  const monOff = curMondayOff();
+  const idx = wkIdxFromMondayOffset(mondayOffset(new Date(targetISO + 'T00:00:00Z')));
+  const wd  = idx >= 0 && idx < 14 ? WEEKS[idx] : WEEKS[0];
+  const legs = {wk:wd.wk, phase:wd.p, sq:wd.sq, lu:wd.lu, ca:wd.ca, time:wd.t};
+  const isLegs = addModalSelectedType === 'LEGS_RL' || addModalSelectedType === 'LEGS_BSS';
+  const meta = SPORT_META[addModalSelectedType] || {};
+
+  const newSess = {
+    type: addModalSelectedType,
+    id: `${targetISO}_${addModalSelectedType}_extra_${Date.now()}`,
+    detail: meta.label + ' — extra session',
+    extra: true,
+    ...(isLegs ? legs : {}),
+  };
+
+  if (!state[targetISO]) state[targetISO] = [];
+  state[targetISO].push(newSess);
+  saveAll();
+  closeAddModal();
+  renderWeek();
+  toast(`${meta.label} added to ${new Date(targetISO+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})} ✓`);
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  addModalTargetISO = null;
+  addModalSelectedType = null;
+}
+
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');

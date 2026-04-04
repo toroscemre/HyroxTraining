@@ -83,7 +83,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sb-sub:hover{color:var(--sub)}
 .sb-sub.active{color:var(--text);border-left-color:var(--border2)}
 .sb-footer{margin:auto 0 0;padding:16px 20px;border-top:1px solid var(--border)}
-.sb-stat{font-family:'DM Mono',monospace;font-size:28px;color:var(--accent);line-height:1}
+.sb-stat{font-family:monospace;font-size:28px;color:var(--accent);line-height:1}
 .sb-stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
 .prog-bar{height:4px;background:var(--border2);border-radius:2px;margin-top:10px;overflow:hidden}
 .prog-fill{height:100%;background:linear-gradient(90deg,var(--p1),var(--accent));border-radius:2px;transition:width 0.5s}
@@ -119,7 +119,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 .planner-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
 .ps-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
-.ps-n{font-family:'DM Mono',monospace;font-size:26px;color:var(--text)}
+.ps-n{font-family:monospace;font-size:26px;color:var(--text)}
 .ps-n.accent{color:var(--accent)}
 .ps-l{font-size:10px;letter-spacing:1px;color:var(--muted);margin-top:3px}
 
@@ -132,7 +132,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 }
 .day-hdr.today{border-color:var(--accent);background:rgba(249,115,22,0.08)}
 .day-name{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted)}
-.day-date-n{font-family:'DM Mono',monospace;font-size:20px;color:var(--text);line-height:1.2}
+.day-date-n{font-family:monospace;font-size:20px;color:var(--text);line-height:1.2}
 .day-hdr.today .day-date-n{color:var(--accent)}
 .day-mo{font-size:9px;color:var(--muted);margin-top:1px}
 .wknd-lbl{
@@ -179,9 +179,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess[data-t="BIKE"]     .sess-title{color:var(--c-bike)}
 .sess[data-t="LONG_RUN"] .sess-title{color:var(--c-longrun)}
 
-.sess-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.sess-time{font-family:monospace;font-size:10px;color:var(--muted)}
 .sess-detail{font-size:11px;color:var(--sub);line-height:1.5;margin-top:3px}
-.sess-reps{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);line-height:1.6;margin-top:3px;
+.sess-reps{font-family:monospace;font-size:11px;color:var(--sub);line-height:1.6;margin-top:3px;
   background:rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px}
 .sess-note{font-size:10.5px;color:var(--sub);font-style:italic;margin-top:4px;
   border-top:1px solid rgba(255,255,255,0.07);padding-top:4px;line-height:1.4}
@@ -214,11 +214,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .phase-wk-hdr{padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
 .phase-wk-num{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
 .phase-wk-dt{font-size:11px;color:rgba(255,255,255,0.55);margin-left:12px}
-.phase-wk-t{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#fff}
+.phase-wk-t{font-family:monospace;font-size:14px;font-weight:500;color:#fff}
 .phase-wk-body{padding:14px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .ex-box{border-radius:8px;padding:12px;border-left:3px solid}
 .ex-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;margin-bottom:5px}
-.ex-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500}
+.ex-val{font-family:monospace;font-size:22px;font-weight:500}
 .cue-block{margin:0 20px 14px;padding:12px 16px;border-radius:8px;background:var(--surface2);border-left:3px solid}
 .cue-pre{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px}
 .cue-text{font-size:13px;font-style:italic;line-height:1.6;color:var(--text)}
@@ -257,7 +257,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .bench-rl{font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
 .bench-input{
   background:transparent;border:none;outline:none;
-  font-family:'DM Mono',monospace;font-size:16px;font-weight:500;
+  font-family:monospace;font-size:16px;font-weight:500;
   color:var(--accent);width:110px;text-align:center;
   cursor:text;caret-color:var(--accent);
 }
@@ -266,7 +266,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* ── LOG ── */
 .log-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;
   padding:13px 18px;display:flex;align-items:flex-start;gap:14px;margin-bottom:7px}
-.log-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);min-width:95px}
+.log-date{font-family:monospace;font-size:11px;color:var(--muted);min-width:95px}
 .log-sport{font-weight:600;font-size:13px}
 .log-note{font-size:11px;color:var(--sub);font-style:italic;margin-top:3px}
 .log-ts{font-size:10px;color:var(--muted)}
@@ -413,7 +413,7 @@ body.sb-collapsed #topbar{padding-left:76px}
     <button onclick="forceSync()" title="Sync now" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--sub);font-size:11px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='var(--accent)';this.style.color='#fff'" onmouseout="this.style.background='var(--surface2)';this.style.color='var(--sub)'">↻ Sync</button>
     <div style="text-align:right">
       <div class="countdown-num" id="top-days">—</div>
-      <div class="countdown-sub">days to race · 17 Apr 2027</div>
+      <div class="countdown-sub">days to race · 1 Apr 2027</div>
     </div>
   </div>
 </div>
@@ -519,7 +519,7 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">DAYS TO RACE</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:#F43F5E;line-height:1" id="ov-days">—</div>
-      <div class="ov-sub">17 April 2027 · Rotterdam</div>
+      <div class="ov-sub">1 April 2027 · Rotterdam</div>
     </div>
     <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">CURRENT PHASE</div>
@@ -540,29 +540,6 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="tl-marker" id="tl-marker"></div>
   </div>
 
-  <!-- Why card -->
-  <div class="why-card" style="margin-bottom:18px">
-    <div class="why-lbl">YOUR WHY ❤️</div>
-    <div class="why-text">
-      Dedicated to a <strong style="color:#fff">children's charity</strong> — every session is a step toward something bigger than a finish time.
-      Each phase unlocks a <strong style="color:#A78BFA">fundraising milestone</strong>. On race day in Rotterdam, the pain is borrowed. The purpose is permanent.
-    </div>
-    <div class="milestones">
-      <div class="ms"><div class="ms-ph">Phase 1 Done</div><div class="ms-goal">Open fundraiser</div></div>
-      <div class="ms"><div class="ms-ph">Phase 2 Done</div><div class="ms-goal">25% of target</div></div>
-      <div class="ms"><div class="ms-ph">Phase 3 Done</div><div class="ms-goal">75% of target</div></div>
-      <div class="ms"><div class="ms-ph">Race Day</div><div class="ms-goal">100% &#127881;</div></div>
-    </div>
-  </div>
-
-  <!-- This week quick view -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">THIS WEEK</div>
-      <button class="btn btn-g" onclick="nav('planner')" style="font-size:11px;padding:5px 12px">Open Planner →</button>
-    </div>
-    <div class="checklist-grid" id="ov-check"></div>
-  </div>
 </div>
 
 <!-- WEEKLY PLANNER -->
@@ -718,7 +695,7 @@ body.sb-collapsed #topbar{padding-left:76px}
 // We use a pure day-count system to avoid any timezone issues.
 // Day 0 = 2026-03-30 (Monday, Week 1 start)
 const EPOCH = new Date('2026-03-30T00:00:00Z'); // Monday Week 1
-const RACE  = new Date('2027-04-17T08:00:00Z');
+const RACE  = new Date('2027-04-01T08:00:00Z');
 
 function daysSinceEpoch(d) {
   return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()) - EPOCH.getTime()) / 86400000);
@@ -912,6 +889,10 @@ async function loadAll() {
           localStorage.setItem('hyrox_ts', cloudTs.toString());
         }
       }
+      // Re-render everything with cloud data
+      if (document.getElementById('cal')) renderWeek();
+      updateGlobalStats();
+      updateOverview();
       setSyncUI('ok');
       setTimeout(() => setSyncUI('idle'), 2000);
     } else {
@@ -1261,56 +1242,58 @@ function updateGlobalStats() {
 // PLAN TABLE
 // ═══════════════════════════════════════════════════════════════
 function renderPlanTable() {
-  const curIdx = wkIdxFromMondayOffset(curMondayOff());
-  const pc = w => w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)';
-
-  const RUN_PLAN = {
-    FOUNDATION: {
-      zone2:    'Mon: 30–40 min easy · HR 120–140 · fully conversational · no watch needed',
-      zone2run: 'Fri: 30–40 min easy run · same HR 120–140 · build mileage habit · no tempo yet',
-      longrun:  'Weekend: 5–8 km easy · HR 120–135 · talk-test pace · add 1 km/week',
+  var curIdx = wkIdxFromMondayOffset(curMondayOff());
+  var RUN_PLAN = {
+    FOUNDATION:{
+      zone2:   'Mon: 30–40 min easy · HR 120–140 · fully conversational · no watch needed',
+      zone2run:'Fri: 30–40 min easy run · HR 120–140 · build mileage habit · no tempo yet',
+      longrun: 'Weekend: 5–8 km easy · HR 120–135 · talk-test pace · add 1 km/week',
     },
-    BUILD: {
-      zone2:    'Mon: 40–50 min easy + 4×20 sec strides at end · HR 130–145',
-      zone2run: 'Fri: 3 km warm-up → 3 km tempo (uncomfortable, controlled) → 2 km cool-down',
-      longrun:  'Weekend: 8–12 km · last 2 km at race pace 5:30/km · finish strong',
+    BUILD:{
+      zone2:   'Mon: 40–50 min easy + 4×20 sec strides at end · HR 130–145',
+      zone2run:'Fri: 3 km warm-up → 3 km tempo (uncomfortable, controlled) → 2 km cool-down',
+      longrun: 'Weekend: 8–12 km · last 2 km at race pace 5:30/km · finish strong',
     },
-    PEAK: {
-      zone2:    'Mon: 45–55 min easy · HR controlled · legs under max load this week',
-      zone2run: 'Fri: Run Brick · 4× (1 km at 5:00–5:30/km → 15 burpees immediately) · no rest between',
-      longrun:  'Weekend: 10–14 km · 4 km easy → 4 km at race pace → finish easy · simulate race fatigue',
+    PEAK:{
+      zone2:   'Mon: 45–55 min easy · HR controlled · legs under max load this week',
+      zone2run:'Fri: Run Brick · 4× (1 km at 5:00–5:30/km → 15 burpees immediately) · no rest',
+      longrun: 'Weekend: 10–14 km · 4 km easy → 4 km race pace → finish easy',
     },
   };
+  function phCol(w){ return w.p==='FOUNDATION'?'var(--found)':w.p==='BUILD'?'var(--build)':'var(--peak)'; }
 
-  document.getElementById('plan-tbl').innerHTML = `
-    <thead>
-      <tr>
-        <th>WK</th><th>PERIOD</th><th>DATES</th><th>LEGS TIME</th>
-        <th>SQUATS</th><th>LUNGE/BSS</th><th>CALF</th>
-        <th style="color:#86EFAC">RUNNING THIS WEEK</th>
-        <th>LEGS CUE</th>
-      </tr>
-    </thead>
-    <tbody>${WEEKS.map((w,i)=>{
-      const mo = i*7;
-      const run = RUN_PLAN[w.p] || RUN_PLAN.FOUNDATION;
-      const isCur = i===curIdx;
-      return `<tr class="${isCur?'cur-wk':''}">
-        <td><div class="wk-pill" style="background:${pc(w)}">${w.wk}</div></td>
-        <td><span style="font-size:9px;font-weight:700;padding:2px 9px;border-radius:10px;color:#fff;background:${pc(w)}">${w.p}</span></td>
-        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">${fmtDate(mo)} – ${fmtDate(mo+5)}</td>
-        <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--accent)">${w.t}</td>
-        <td><span class="ex-tag" style="background:var(--bg-legs-rl);color:var(--c-legs-rl)">${w.sq}</span></td>
-        <td><span class="ex-tag" style="background:var(--bg-legs-bss);color:var(--c-legs-bss)">${w.lu}</span></td>
-        <td>' + (w.ca!=='-'?'<span class="ex-tag" style="background:var(--bg-zone2);color:var(--c-zone2)">'+w.ca+'</span>':'<span style="color:var(--muted)">—</span>') + '</td>
-        <td style="min-width:220px">
-          <div style="font-size:10px;color:#6EE7B7;margin-bottom:3px">❤️ ${run.zone2}</div>
-          <div style="font-size:10px;color:#86EFAC;margin-bottom:3px">🏃 ${run.zone2run}</div>
-          <div style="font-size:10px;color:#FCA5A5">🏅 ${run.longrun}</div>
-        </td>
-        <td><div class="cue-txt">${w.cue}</div></td>
-      </tr>`;
-    }).join('')}</tbody>`;
+  var h = '<thead><tr>';
+  h += '<th>WK</th><th>PERIOD</th><th>DATES</th><th>TIME</th>';
+  h += '<th>SQUATS</th><th>LUNGE/BSS</th><th>CALF</th>';
+  h += '<th style="color:#86EFAC">RUNNING THIS WEEK</th><th>LEGS CUE</th>';
+  h += '</tr></thead><tbody>';
+
+  WEEKS.forEach(function(w, i) {
+    var mo  = i * 7;
+    var run = RUN_PLAN[w.p] || RUN_PLAN.FOUNDATION;
+    var pc  = phCol(w);
+    var cur = (i === curIdx) ? ' class="cur-wk"' : '';
+    var caCell = w.ca !== '-'
+      ? '<span class="ex-tag" style="background:var(--bg-zone2);color:var(--c-zone2)">'+w.ca+'</span>'
+      : '<span style="color:var(--muted)">—</span>';
+    h += '<tr'+cur+'>';
+    h += '<td><div class="wk-pill" style="background:'+pc+'">'+w.wk+'</div></td>';
+    h += '<td><span style="font-size:9px;font-weight:700;padding:2px 9px;border-radius:10px;color:#fff;background:'+pc+'">'+w.p+'</span></td>';
+    h += '<td style="font-family:var(--font-mono,monospace);font-size:11px;color:var(--sub)">'+fmtDate(mo)+' – '+fmtDate(mo+5)+'</td>';
+    h += '<td style="font-family:var(--font-mono,monospace);font-weight:600;color:var(--accent)">'+w.t+'</td>';
+    h += '<td><span class="ex-tag" style="background:var(--bg-legs-rl);color:var(--c-legs-rl)">'+w.sq+'</span></td>';
+    h += '<td><span class="ex-tag" style="background:var(--bg-legs-bss);color:var(--c-legs-bss)">'+w.lu+'</span></td>';
+    h += '<td>'+caCell+'</td>';
+    h += '<td style="min-width:200px">';
+    h += '<div style="font-size:10px;color:#6EE7B7;margin-bottom:3px">&#x2764;&#xFE0F; '+run.zone2+'</div>';
+    h += '<div style="font-size:10px;color:#86EFAC;margin-bottom:3px">&#127939; '+run.zone2run+'</div>';
+    h += '<div style="font-size:10px;color:#FCA5A5">&#127941; '+run.longrun+'</div>';
+    h += '</td>';
+    h += '<td><div class="cue-txt">'+w.cue+'</div></td>';
+    h += '</tr>';
+  });
+  h += '</tbody>';
+  document.getElementById('plan-tbl').innerHTML = h;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1423,6 +1406,75 @@ function buildNutHTML(phase) {
   return html;
 }
 
+
+function buildStrengthHTML() {
+  // ARM DAY (Thursday)
+  var armRows = [
+    {n:'Hammer Curl',              sets:'3 x 12 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'SkiErg pull · Sled Pull',   note:'Neutral grip. Mimics SkiErg arm pull. Elbows pinned to sides.'},
+    {n:'Incline Dumbbell Curl',    sets:'3 x 10 @ 6 kg  →  3 x 8 @ 8 kg',  hyrox:'SkiErg endurance',          note:'Full stretch at bottom. Slow 3-sec lower. Builds bicep length for long SkiErg pulls.'},
+    {n:'Close-Grip DB Press',      sets:'3 x 12 @ 8 kg  →  3 x 10 @ 10 kg',hyrox:'Sled Push · Wall Balls',    note:'DBs touching. Targets triceps for lockout. Transfers to Sled Push arm drive.'},
+    {n:'Overhead DB Tricep Ext.',  sets:'3 x 12 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'Wall Balls · Sled Push',    note:'Full overhead ROM. Wall Balls need tricep lockout at peak.'},
+    {n:'Bench Dips (feet elevated)',sets:'3 x 20  →  3 x 30',               hyrox:'Sled Push · Burpee',        note:'Pause 1 sec at bottom. Tricep endurance for push patterns.'},
+    {n:'Zottman Curl',             sets:'3 x 10 @ 6 kg  →  3 x 8 @ 8 kg',  hyrox:'Farmers Carry · Sled Pull', note:'Curl up supinated, rotate pronated, lower slowly. Trains all forearm flexors.'},
+    {n:'Wrist Curl (both ways)',   sets:'2 x 20 each direction @ 4 kg',     hyrox:'Farmers Carry',             note:'Grip endurance for 200m Farmers Carry.'},
+    {n:'Dead Hang (pull-up bar)',  sets:'3 x 30 s  →  45 s  →  60 s',      hyrox:'Farmers Carry · Sled Pull', note:'Iron grip for Farmers Carry. Decompresses spine after leg days.'},
+    {n:'Gentle Dead Bug ⚠️ HERNIA SAFE', sets:'3 x 6 each side  →  8 reps',hyrox:'All stations',              note:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.'},
+  ];
+
+  // UPPER BODY DAY (Monday)
+  var upperRows = [
+    {n:'Pull-ups (band-assisted)',  sets:'3 x max  →  3 x 10 bodyweight', hyrox:'Sled Pull · SkiErg · Rowing', note:'Loop band on bar if needed. Best single exercise for SkiErg + Sled Pull prep.'},
+    {n:'Bent-Over DB Row (both arms)',sets:'4 x 10 @ 8 kg  →  4 x 8 @ 10 kg',hyrox:'SkiErg · Sled Pull · Rowing', note:'Hips hinged, chest parallel to floor. Both DBs simultaneously = bilateral SkiErg pull.'},
+    {n:'One-Arm DB Row',           sets:'3 x 10 @ 8 kg  →  3 x 10 @ 10 kg',hyrox:'Sled Pull · Rowing',         note:'Knee on bench. Drive elbow to ceiling. Full stretch at bottom.'},
+    {n:'Flat DB Press',            sets:'4 x 12 @ 8 kg  →  4 x 10 @ 10 kg',hyrox:'Sled Push · Burpee',         note:'Full ROM, touch chest. Progress when all 4 sets clean.'},
+    {n:'Incline DB Press',         sets:'3 x 10 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'Wall Balls · Sled Push',     note:'30-45 degree angle. Upper chest + anterior delt for Wall Ball power.'},
+    {n:'Seated DB Overhead Press', sets:'3 x 10 @ 8 kg  →  3 x 8 @ 10 kg', hyrox:'Wall Balls · SkiErg',        note:'Most important upper body move. 100 Wall Balls at 6 kg needs overhead endurance.'},
+    {n:'Lateral Raise',            sets:'3 x 15 @ 4 kg  →  3 x 15 @ 6 kg', hyrox:'Wall Balls',                 note:'3 sec up, 3 sec down. No swinging. Shoulder stability for Hyrox fatigue.'},
+    {n:'Reverse Fly',              sets:'3 x 15 @ 4 kg  →  3 x 15 @ 6 kg', hyrox:'SkiErg posture · Running',   note:'Pinch shoulder blades. Critical for posture under fatigue.'},
+    {n:'Farmers Walk',             sets:'3 x 30 m @ 2×8 kg  →  3 x 40 m @ 2×10 kg',hyrox:'Farmers Carry · Sandbag Lunges', note:'Upright posture, tight core. Progress to 40m by Wk 10.'},
+    {n:'Gentle Dead Bug ⚠️ HERNIA SAFE',sets:'3 x 6 each side  →  8 reps',  hyrox:'All stations',              note:'Same as Arm Day. Lie on back, exhale gently, one heel 10 cm only. STOP if any lower-ab pain.'},
+  ];
+
+  function buildTable(rows, dayLabel, dayColor) {
+    var h = '<div style="margin-bottom:16px">';
+    h += '<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:'+dayColor+';margin-bottom:8px">'+dayLabel+'</div>';
+    h += '<div style="overflow-x:auto">';
+    h += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    h += '<thead><tr style="background:var(--surface2)">';
+    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px;white-space:nowrap">#</th>';
+    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">EXERCISE</th>';
+    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px;white-space:nowrap">SETS × REPS × KG</th>';
+    h += '<th style="text-align:left;padding:6px 8px;color:'+dayColor+';font-size:9px;letter-spacing:1px">HYROX LINK</th>';
+    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">COACHING NOTE</th>';
+    h += '</tr></thead><tbody>';
+    rows.forEach(function(r, i) {
+      var bg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
+      var isHernia = r.n.indexOf('HERNIA') > -1;
+      if (isHernia) bg = 'rgba(34,197,94,0.06)';
+      h += '<tr style="background:'+bg+';border-bottom:1px solid var(--border)">';
+      h += '<td style="padding:7px 8px;color:var(--muted);font-size:10px">'+(i+1)+'</td>';
+      h += '<td style="padding:7px 8px;font-weight:600;color:'+(isHernia?'#4ADE80':'var(--text)')+'">'+r.n+'</td>';
+      h += '<td style="padding:7px 8px;font-family:monospace;color:var(--accent);white-space:nowrap">'+r.sets+'</td>';
+      h += '<td style="padding:7px 8px;color:#F97316;font-size:10px">'+r.hyrox+'</td>';
+      h += '<td style="padding:7px 8px;color:var(--sub);font-size:10px;line-height:1.5">'+r.note+'</td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table></div></div>';
+    return h;
+  }
+
+  var h = '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">';
+  h += '<div style="font-size:9px;letter-spacing:1.5px;color:#FCD34D;margin-bottom:12px">💪 STRENGTH PROGRAMME · PHASE 1 (Home · Dumbbells 1.5–10 kg · Bench · Pull-up bar)</div>';
+  h += '<div style="font-size:10px;color:var(--sub);background:rgba(34,197,94,0.06);border-left:3px solid #4ADE80;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:12px">';
+  h += '⚠️ <strong style="color:#4ADE80">Hernia note (umbilical + inguinal):</strong> Traditional planks and heavy core bracing are replaced with Gentle Dead Bug. ';
+  h += 'STOP immediately if any pulling, pressure or pain in the lower abdomen. Consult your GP before race day.';
+  h += '</div>';
+  h += buildTable(armRows,   'THURSDAY — ARM DAY (45–50 min · 3 sets per exercise)', '#C4B5FD');
+  h += buildTable(upperRows, 'MONDAY — UPPER BODY DAY (45–50 min · 3–4 sets per exercise)', '#93C5FD');
+  h += '</div>';
+  return h;
+}
+
 function renderPhaseWeeks(elId, weeksArr) {
   var el = document.getElementById(elId);
   var pc = function(w) {
@@ -1489,8 +1541,13 @@ function renderPhaseWeeks(elId, weeksArr) {
     html += buildRunHTML(w.p);
     html += buildNutHTML(w.p);
     html += '</div></div>';
+
   });
 
+  // Strength programme once at bottom of phase
+  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;padding:20px">';
+  html += buildStrengthHTML();
+  html += '</div>';
   el.innerHTML = html;
 }
 
@@ -1630,7 +1687,7 @@ function updateOverview() {
     {s:'2026-07-14',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'Compound lifting + HYROX intro'},
     {s:'2026-10-12',e:'2027-02-28',n:'Phase 3 · Race Specific',sub:'Full simulations'},
     {s:'2027-03-01',e:'2027-04-16',n:'Phase 4 · Taper',        sub:'Sharpen & rest'},
-    {s:'2027-04-17',e:'2027-04-17',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
+    {s:'2027-04-01',e:'2027-04-01',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
   ];
   let ph={n:'Pre-Season',sub:'Training starts 31 Mar 2026'};
   for (const p of phases) {
@@ -1639,105 +1696,90 @@ function updateOverview() {
   document.getElementById('ov-phase').textContent     = ph.n;
   document.getElementById('ov-phase-sub').textContent = ph.sub;
 
-  // Detailed timeline
-  const now2 = new Date();
-  const totalMs = RACE.getTime() - EPOCH.getTime();
-  const elapsedMs = now2.getTime() - EPOCH.getTime();
-  const pct = Math.max(0, Math.min(100, (elapsedMs/totalMs)*100));
+  // Journey timeline
+  var now2 = new Date();
+  var totalDuration = RACE.getTime() - EPOCH.getTime();
+  var elapsedMs = now2.getTime() - EPOCH.getTime();
+  var pct = Math.max(0, Math.min(100, (elapsedMs / totalDuration) * 100));
+  var daysDone = Math.max(0, Math.floor(elapsedMs / 86400000));
+  var daysLeft = Math.ceil((RACE.getTime() - now2.getTime()) / 86400000);
+  var todayStr = now2.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 
-  const PHASE_DEFS = [
-    {label:'Phase 1\nBase',     short:'P1 BASE',  start:'2026-03-30', end:'2026-07-11', c:'#4ADE80'},
-    {label:'Phase 2\nStrength', short:'P2 STR',   start:'2026-07-14', end:'2026-10-11', c:'#FACC15'},
-    {label:'Phase 3\nRace',     short:'P3 RACE',  start:'2026-10-12', end:'2027-02-28', c:'#FB923C'},
-    {label:'Phase 4\nTaper',    short:'P4 TAPER', start:'2027-03-01', end:'2027-04-16', c:'#A78BFA'},
-    {label:'RACE DAY',           short:'RACE🏁',   start:'2027-04-17', end:'2027-04-17', c:'#F43F5E'},
+  var PDEFS = [
+    {name:'Phase 1',  sub:'Base Fitness',  start:'2026-03-30', end:'2026-07-11', c:'#4ADE80'},
+    {name:'Phase 2',  sub:'Gym Strength',  start:'2026-07-14', end:'2026-10-11', c:'#FACC15'},
+    {name:'Phase 3',  sub:'Race Specific', start:'2026-10-12', end:'2027-02-28', c:'#FB923C'},
+    {name:'Phase 4',  sub:'Taper',         start:'2027-03-01', end:'2027-03-31', c:'#A78BFA'},
+    {name:'RACE',     sub:'Rotterdam',     start:'2027-04-01', end:'2027-04-01', c:'#F43F5E'},
   ];
 
-  // Calculate each phase width as % of total journey
-  const totalDuration = RACE.getTime() - EPOCH.getTime();
-  var barHtml='';
-  PHASE_DEFS.forEach(function(ph){
-    var _ps=new Date(ph.start).getTime(),_pe=new Date(ph.end).getTime();
-    var _w=((_pe-_ps)/totalDuration*100).toFixed(1);
-    var _past=now2>new Date(ph.end),_act=now2>=new Date(ph.start)&&now2<=new Date(ph.end);
-    var _op=_past?'0.35':_act?'1':'0.55';
-    var _sz=_past?'8px':_act?'8px':'7px';
-    var _clr=_past?'rgba(0,0,0,0.7)':_act?'#000':'rgba(255,255,255,0.7)';
-    var _fw=_act?'900':'700';
-    var _txt=ph.short+(_past?' ✓':'');
-    barHtml+='<div class="tl-seg" title="'+ph.label+'" style="width:'+_w+'%;background:'+ph.c+';opacity:'+_op+';position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden"><span style="font-size:'+_sz+';color:'+_clr+';font-weight:'+_fw+';white-space:nowrap;padding:0 2px">'+_txt+'</span></div>';
+  // Build bar
+  var barH = '';
+  PDEFS.forEach(function(ph) {
+    var ps = new Date(ph.start).getTime();
+    var pe = new Date(ph.end).getTime();
+    var w  = ((pe - ps) / totalDuration * 100).toFixed(2);
+    var past = now2 > new Date(ph.end);
+    var act  = now2 >= new Date(ph.start) && now2 <= new Date(ph.end);
+    var op   = past ? '0.4' : act ? '1' : '0.5';
+    var fw   = act ? '800' : '600';
+    var fc   = past ? 'rgba(0,0,0,0.6)' : act ? '#000' : 'rgba(255,255,255,0.75)';
+    var fs   = act ? '9px' : '8px';
+    var txt  = ph.name + (past ? ' ✓' : act ? ' ◀' : '');
+    barH += '<div style="width:'+w+'%;background:'+ph.c+';opacity:'+op
+          + ';display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:default" title="'+ph.name+' — '+ph.sub+'">'
+          + '<span style="font-size:'+fs+';font-weight:'+fw+';color:'+fc+';white-space:nowrap;padding:0 3px">'+txt+'</span>'
+          + '</div>';
   });
+  document.getElementById('tl-bar').innerHTML = barH;
 
-  document.getElementById('tl-bar').innerHTML = barHtml;
+  // Build marker + stats + legend
+  var pinLeft = Math.min(pct, 97).toFixed(1);
+  var mH = '';
 
-  // Days done vs remaining
-  const daysDone = Math.max(0, Math.floor(elapsedMs / 86400000));
-  const daysLeft = Math.ceil((RACE.getTime() - now2.getTime()) / 86400000);
+  // YOU ARE HERE pin
+  mH += '<div style="position:relative;height:28px;margin-bottom:14px">';
+  mH +=   '<div style="position:absolute;left:'+pinLeft+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center">';
+  mH +=     '<div style="width:2px;height:14px;background:var(--accent)"></div>';
+  mH +=     '<div style="font-size:9px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:0.5px;margin-top:2px">TODAY '+todayStr+'</div>';
+  mH +=   '</div>';
+  mH += '</div>';
 
-  document.getElementById('tl-marker').innerHTML = `
-    <div class="tl-pin" style="left:${Math.min(pct,97).toFixed(1)}%">
-      <div class="tl-line"></div>
-      <div class="tl-lbl">TODAY · ${now2.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:18px;flex-wrap:wrap;gap:6px">
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:22px;color:#4ADE80;line-height:1">${daysDone}</div>
-          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">DAYS IN</div>
-        </div>
-        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:22px;color:var(--accent);line-height:1">${daysLeft}</div>
-          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">DAYS LEFT</div>
-        </div>
-        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 14px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:22px;color:#A78BFA;line-height:1">${pct.toFixed(0)}%</div>
-          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px">COMPLETE</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <div id="tl-leg-inner"></div>
-      </div>
-    </div>`;
+  // Three stat boxes
+  mH += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
+  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
+  mH +=     '<div style="font-family:monospace;font-size:26px;color:#4ADE80;line-height:1">'+daysDone+'</div>';
+  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">DAYS IN</div>';
+  mH +=   '</div>';
+  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
+  mH +=     '<div style="font-family:monospace;font-size:26px;color:var(--accent);line-height:1">'+daysLeft+'</div>';
+  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">DAYS LEFT</div>';
+  mH +=   '</div>';
+  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
+  mH +=     '<div style="font-family:monospace;font-size:26px;color:#A78BFA;line-height:1">'+pct.toFixed(0)+'%</div>';
+  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">COMPLETE</div>';
+  mH +=   '</div>';
+  mH += '</div>';
 
-  // Build timeline legend separately (no nested template literals)
-  var _legEl = document.getElementById('tl-leg-inner');
-  if(_legEl){
-    var _legH='';
-    PHASE_DEFS.forEach(function(ph){
-      var _past=now2>new Date(ph.end),_act=now2>=new Date(ph.start)&&now2<=new Date(ph.end);
-      var _op=_past?0.4:_act?1:0.55;
-      var _col=_act?'var(--text)':'var(--muted)';
-      var _fw=_act?'700':'400';
-      var _sfx=_past?' ✓':_act?' ◀':'';
-      _legH+='<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:'+ph.c+';opacity:'+_op+'"></div><span style="font-size:9px;color:'+_col+';font-weight:'+_fw+'">'+ph.short+_sfx+'</span></div>';
-    });
-    _legEl.innerHTML=_legH;
-  }
+  // Phase legend row
+  mH += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  PDEFS.forEach(function(ph) {
+    var past = now2 > new Date(ph.end);
+    var act  = now2 >= new Date(ph.start) && now2 <= new Date(ph.end);
+    var op   = past ? '0.45' : act ? '1' : '0.6';
+    var fc   = act ? 'var(--text)' : 'var(--muted)';
+    var fw   = act ? '700' : '400';
+    mH += '<div style="display:flex;align-items:center;gap:4px">';
+    mH +=   '<div style="width:9px;height:9px;border-radius:2px;background:'+ph.c+';opacity:'+op+'"></div>';
+    mH +=   '<span style="font-size:10px;color:'+fc+';font-weight:'+fw+'">'+ph.name+'</span>';
+    mH +=   '<span style="font-size:9px;color:var(--muted)">'+ph.sub+(past?' ✓':act?' ←':'')+'</span>';
+    mH += '</div>';
+  });
+  mH += '</div>';
 
-  // Overview checklist
-  const monOff = curMondayOff();
-  ensureWeek(monOff);
-  const items = [];
-  for (let d=0;d<7;d++) {
-    const iso = isoFromOffset(monOff+d);
-    (state[iso]||[]).forEach(s => {
-      const meta = SPORT_META[s.type]||{label:s.type,icon:'📌'};
-      const done = completions[s.id]?.done||false;
-      const dc = ['var(--c-legs-rl)','var(--c-yoga)','var(--c-legs-bss)','var(--c-strength)','var(--c-zone2r)','var(--c-longrun)','var(--muted)'][d];
-      items.push({id:s.id,iso,day:DAY_NAMES[d],label:meta.label,icon:meta.icon,done,dc});
-    });
-  }
-  document.getElementById('ov-check').innerHTML = items.map(it=>`
-    <div class="check-item ${it.done?'done':''}" onclick="toggleDone(event,'${it.id}','${it.iso}');renderOvCheck()">
-      <div class="chk-box">${it.done?'✓':''}</div>
-      <div>
-        <div class="chk-day" style="color:${it.dc}">${it.day}</div>
-        <div class="chk-sess">${it.icon} ${it.label}</div>
-      </div>
-    </div>`).join('');
+  document.getElementById('tl-marker').innerHTML = mH;
+
 }
-
-function renderOvCheck() { updateOverview(); }
 
 // ═══════════════════════════════════════════════════════════════
 // TOPBAR

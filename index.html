@@ -1408,70 +1408,230 @@ function buildNutHTML(phase) {
 
 
 function buildStrengthHTML() {
-  // ARM DAY (Thursday)
-  var armRows = [
-    {n:'Hammer Curl',              sets:'3 x 12 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'SkiErg pull · Sled Pull',   note:'Neutral grip. Mimics SkiErg arm pull. Elbows pinned to sides.'},
-    {n:'Incline Dumbbell Curl',    sets:'3 x 10 @ 6 kg  →  3 x 8 @ 8 kg',  hyrox:'SkiErg endurance',          note:'Full stretch at bottom. Slow 3-sec lower. Builds bicep length for long SkiErg pulls.'},
-    {n:'Close-Grip DB Press',      sets:'3 x 12 @ 8 kg  →  3 x 10 @ 10 kg',hyrox:'Sled Push · Wall Balls',    note:'DBs touching. Targets triceps for lockout. Transfers to Sled Push arm drive.'},
-    {n:'Overhead DB Tricep Ext.',  sets:'3 x 12 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'Wall Balls · Sled Push',    note:'Full overhead ROM. Wall Balls need tricep lockout at peak.'},
-    {n:'Bench Dips (feet elevated)',sets:'3 x 20  →  3 x 30',               hyrox:'Sled Push · Burpee',        note:'Pause 1 sec at bottom. Tricep endurance for push patterns.'},
-    {n:'Zottman Curl',             sets:'3 x 10 @ 6 kg  →  3 x 8 @ 8 kg',  hyrox:'Farmers Carry · Sled Pull', note:'Curl up supinated, rotate pronated, lower slowly. Trains all forearm flexors.'},
-    {n:'Wrist Curl (both ways)',   sets:'2 x 20 each direction @ 4 kg',     hyrox:'Farmers Carry',             note:'Grip endurance for 200m Farmers Carry.'},
-    {n:'Dead Hang (pull-up bar)',  sets:'3 x 30 s  →  45 s  →  60 s',      hyrox:'Farmers Carry · Sled Pull', note:'Iron grip for Farmers Carry. Decompresses spine after leg days.'},
-    {n:'Gentle Dead Bug ⚠️ HERNIA SAFE', sets:'3 x 6 each side  →  8 reps',hyrox:'All stations',              note:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.'},
+  // ── DATA FROM PDF: hyrox_strength_plan_v2.pdf ──────────────
+  var ARM_EXERCISES = [
+    {n:'Hammer Curl',
+     s:'3 × 12 @ 6 kg  →  3 × 10 @ 8 kg',
+     h:['SkiErg pull','Sled Pull'],
+     c:'Neutral grip = brachialis + bicep. Mimics SkiErg arm pull. Keep elbows pinned to sides.'},
+    {n:'Incline Dumbbell Curl',
+     s:'3 × 10 @ 6 kg  →  3 × 8 @ 8 kg',
+     h:['SkiErg endurance'],
+     c:'Full stretch at bottom. Slow 3-sec lower. Builds bicep length for long SkiErg pulls.'},
+    {n:'Close-Grip DB Press (flat bench)',
+     s:'3 × 12 @ 8 kg  →  3 × 10 @ 10 kg',
+     h:['Sled Push','Wall Balls'],
+     c:'DBs touching at top. Targets triceps for lockout. Transfers to Sled Push arm drive.'},
+    {n:'Overhead DB Tricep Extension',
+     s:'3 × 12 @ 6 kg  →  3 × 10 @ 8 kg',
+     h:['Wall Balls','Sled Push'],
+     c:'One or two hands. Full overhead ROM. Wall Balls need tricep lockout at peak.'},
+    {n:'Bench Dips (feet elevated)',
+     s:'3 × 20  →  3 × 25  →  3 × 30',
+     h:['Sled Push','Burpee'],
+     c:'Feet on bench = harder. Pause 1 sec at bottom. Tricep endurance for push patterns.'},
+    {n:'Zottman Curl',
+     s:'3 × 10 @ 6 kg  →  3 × 8 @ 8 kg',
+     h:['Farmers Carry','Sled Pull'],
+     c:'Curl up supinated, rotate pronated, lower slowly. Trains ALL forearm flexors + extensors.'},
+    {n:'Wrist Curl + Reverse Wrist Curl',
+     s:'2 × 20 each direction @ 4 kg',
+     h:['Farmers Carry'],
+     c:'Both directions in same set. Grip endurance for 200m Farmers Carry at 2x24kg.'},
+    {n:'Dead Hang (pull-up bar)',
+     s:'3 × 30 s  →  45 s  →  60 s',
+     h:['Farmers Carry','Sled Pull'],
+     c:'Hang still. Iron grip for Farmers Carry. Decompresses spine after leg days. High return.'},
+    {n:'Gentle Dead Bug',
+     s:'3 × 6 reps each side  →  8 reps',
+     h:['All stations'],
+     c:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.',
+     hernia:true},
   ];
 
-  // UPPER BODY DAY (Monday)
-  var upperRows = [
-    {n:'Pull-ups (band-assisted)',  sets:'3 x max  →  3 x 10 bodyweight', hyrox:'Sled Pull · SkiErg · Rowing', note:'Loop band on bar if needed. Best single exercise for SkiErg + Sled Pull prep.'},
-    {n:'Bent-Over DB Row (both arms)',sets:'4 x 10 @ 8 kg  →  4 x 8 @ 10 kg',hyrox:'SkiErg · Sled Pull · Rowing', note:'Hips hinged, chest parallel to floor. Both DBs simultaneously = bilateral SkiErg pull.'},
-    {n:'One-Arm DB Row',           sets:'3 x 10 @ 8 kg  →  3 x 10 @ 10 kg',hyrox:'Sled Pull · Rowing',         note:'Knee on bench. Drive elbow to ceiling. Full stretch at bottom.'},
-    {n:'Flat DB Press',            sets:'4 x 12 @ 8 kg  →  4 x 10 @ 10 kg',hyrox:'Sled Push · Burpee',         note:'Full ROM, touch chest. Progress when all 4 sets clean.'},
-    {n:'Incline DB Press',         sets:'3 x 10 @ 6 kg  →  3 x 10 @ 8 kg', hyrox:'Wall Balls · Sled Push',     note:'30-45 degree angle. Upper chest + anterior delt for Wall Ball power.'},
-    {n:'Seated DB Overhead Press', sets:'3 x 10 @ 8 kg  →  3 x 8 @ 10 kg', hyrox:'Wall Balls · SkiErg',        note:'Most important upper body move. 100 Wall Balls at 6 kg needs overhead endurance.'},
-    {n:'Lateral Raise',            sets:'3 x 15 @ 4 kg  →  3 x 15 @ 6 kg', hyrox:'Wall Balls',                 note:'3 sec up, 3 sec down. No swinging. Shoulder stability for Hyrox fatigue.'},
-    {n:'Reverse Fly',              sets:'3 x 15 @ 4 kg  →  3 x 15 @ 6 kg', hyrox:'SkiErg posture · Running',   note:'Pinch shoulder blades. Critical for posture under fatigue.'},
-    {n:'Farmers Walk',             sets:'3 x 30 m @ 2×8 kg  →  3 x 40 m @ 2×10 kg',hyrox:'Farmers Carry · Sandbag Lunges', note:'Upright posture, tight core. Progress to 40m by Wk 10.'},
-    {n:'Gentle Dead Bug ⚠️ HERNIA SAFE',sets:'3 x 6 each side  →  8 reps',  hyrox:'All stations',              note:'Same as Arm Day. Lie on back, exhale gently, one heel 10 cm only. STOP if any lower-ab pain.'},
+  var UPPER_EXERCISES = [
+    {n:'Pull-ups (band-assisted if needed)',
+     s:'3 × max (target 5–8)  →  bodyweight 3 × 10',
+     h:['Sled Pull','SkiErg','Rowing'],
+     c:'Best exercise for SkiErg + Sled Pull. Loop band on bar if needed. Aim 3x10 by Wk 14.'},
+    {n:'Bent-Over DB Row (both arms)',
+     s:'4 × 10 @ 8 kg  →  4 × 8 @ 10 kg',
+     h:['SkiErg','Sled Pull','Rowing'],
+     c:'Hinge at hip, chest parallel to floor. BOTH DBs simultaneously = bilateral SkiErg pull. KEY exercise.'},
+    {n:'One-Arm DB Row',
+     s:'3 × 10 @ 8 kg  →  3 × 10 @ 10 kg',
+     h:['Sled Pull','Rowing'],
+     c:'Keep as accessory. Knee on bench. Drive elbow to ceiling. Full stretch at bottom.'},
+    {n:'Flat DB Press',
+     s:'4 × 12 @ 8 kg  →  4 × 10 @ 10 kg',
+     h:['Sled Push','Burpee'],
+     c:'Full ROM, touch chest. Sled Push needs powerful chest drive. Progress when all 4 sets clean.'},
+    {n:'Incline DB Press',
+     s:'3 × 10 @ 6 kg  →  3 × 10 @ 8 kg',
+     h:['Wall Balls','Sled Push'],
+     c:'30-45 degree angle. Upper chest + anterior delt. Combines with OHP for Wall Ball power.'},
+    {n:'Seated DB Overhead Press',
+     s:'3 × 10 @ 8 kg  →  3 × 8 @ 10 kg',
+     h:['Wall Balls','SkiErg'],
+     c:'Most important upper body exercise. 100 Wall Balls at 6kg needs overhead endurance. Push to 10kg Wk 10.'},
+    {n:'Lateral Raise',
+     s:'3 × 15 @ 4 kg  →  3 × 15 @ 6 kg',
+     h:['Wall Balls'],
+     c:'Increased from 3.5 kg. 3 sec up, 3 sec down. No swinging. Shoulder stability for Hyrox fatigue.'},
+    {n:'Reverse Fly (bent over)',
+     s:'3 × 15 @ 4 kg  →  3 × 15 @ 6 kg',
+     h:['SkiErg posture','Running'],
+     c:'Pinch shoulder blades. Critical for posture under fatigue. Slight elbow bend.'},
+    {n:'Farmers Walk',
+     s:'3 × 30 m @ 2×8 kg  →  3 × 40 m @ 2×10 kg',
+     h:['Farmers Carry','Sandbag Lunges'],
+     c:'Upright posture, tight core. Progress to 40m by Wk 10.'},
+    {n:'Gentle Dead Bug',
+     s:'3 × 6 reps each side  →  8 reps',
+     h:['All stations'],
+     c:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.',
+     hernia:true},
   ];
 
-  function buildTable(rows, dayLabel, dayColor) {
-    var h = '<div style="margin-bottom:16px">';
-    h += '<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:'+dayColor+';margin-bottom:8px">'+dayLabel+'</div>';
-    h += '<div style="overflow-x:auto">';
-    h += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
-    h += '<thead><tr style="background:var(--surface2)">';
-    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px;white-space:nowrap">#</th>';
-    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">EXERCISE</th>';
-    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px;white-space:nowrap">SETS × REPS × KG</th>';
-    h += '<th style="text-align:left;padding:6px 8px;color:'+dayColor+';font-size:9px;letter-spacing:1px">HYROX LINK</th>';
-    h += '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">COACHING NOTE</th>';
-    h += '</tr></thead><tbody>';
-    rows.forEach(function(r, i) {
-      var bg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
-      var isHernia = r.n.indexOf('HERNIA') > -1;
-      if (isHernia) bg = 'rgba(34,197,94,0.06)';
-      h += '<tr style="background:'+bg+';border-bottom:1px solid var(--border)">';
-      h += '<td style="padding:7px 8px;color:var(--muted);font-size:10px">'+(i+1)+'</td>';
-      h += '<td style="padding:7px 8px;font-weight:600;color:'+(isHernia?'#4ADE80':'var(--text)')+'">'+r.n+'</td>';
-      h += '<td style="padding:7px 8px;font-family:monospace;color:var(--accent);white-space:nowrap">'+r.sets+'</td>';
-      h += '<td style="padding:7px 8px;color:#F97316;font-size:10px">'+r.hyrox+'</td>';
-      h += '<td style="padding:7px 8px;color:var(--sub);font-size:10px;line-height:1.5">'+r.note+'</td>';
-      h += '</tr>';
-    });
-    h += '</tbody></table></div></div>';
+  function exRow(r, i) {
+    var isH = r.hernia === true;
+    var bg  = isH ? 'background:rgba(34,197,94,0.08);border-left:3px solid #4ADE80;'
+                  : (i%2===0 ? 'background:var(--surface);' : 'background:var(--surface2);');
+    var nc  = isH ? '#4ADE80' : 'var(--text)';
+    var tags = r.h.map(function(t){
+      return '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;'
+           + 'border-radius:8px;margin:1px;background:rgba(249,115,22,0.12);color:var(--accent);'
+           + 'border:1px solid rgba(249,115,22,0.3)">'+t+'</span>';
+    }).join('');
+    var badge = isH ? '<span style="font-size:8px;font-weight:700;padding:1px 7px;border-radius:8px;'
+                    + 'background:rgba(34,197,94,0.2);color:#4ADE80;border:1px solid #4ADE80;'
+                    + 'margin-left:6px">HERNIA SAFE</span>' : '';
+    var row = '<div style="'+bg+'padding:10px 12px;border-bottom:1px solid var(--border);display:grid;'
+            + 'grid-template-columns:24px 1fr;gap:10px;align-items:start">';
+    row += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding-top:2px">'+(i+1)+'</div>';
+    row += '<div>';
+    row += '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
+    row += '<span style="font-size:12px;font-weight:700;color:'+nc+'">'+r.n+'</span>'+badge;
+    row += '</div>';
+    row += '<div style="font-family:monospace;font-size:11px;color:var(--accent);margin-bottom:5px">'+r.s+'</div>';
+    row += '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:5px">'+tags+'</div>';
+    row += '<div style="font-size:11px;color:var(--sub);line-height:1.5">'+r.c+'</div>';
+    row += '</div></div>';
+    return row;
+  }
+
+  function buildDay(title, subtitle, col, exercises) {
+    var h = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;'
+          + 'overflow:hidden;margin-bottom:12px">';
+    // Header
+    h += '<div style="background:'+col+'18;border-bottom:1px solid '+col+'40;padding:14px 16px;'
+       + 'display:flex;justify-content:space-between;align-items:center">';
+    h += '<div>';
+    h += '<div style="font-size:14px;font-weight:700;color:'+col+'">'+title+'</div>';
+    h += '<div style="font-size:11px;color:var(--sub);margin-top:2px">'+subtitle+'</div>';
+    h += '</div>';
+    h += '<div style="font-size:10px;color:var(--muted)">'+exercises.length+' exercises</div>';
+    h += '</div>';
+    // Exercises
+    exercises.forEach(function(r, i) { h += exRow(r, i); });
+    h += '</div>';
     return h;
   }
 
-  var h = '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">';
-  h += '<div style="font-size:9px;letter-spacing:1.5px;color:#FCD34D;margin-bottom:12px">💪 STRENGTH PROGRAMME · PHASE 1 (Home · Dumbbells 1.5–10 kg · Bench · Pull-up bar)</div>';
-  h += '<div style="font-size:10px;color:var(--sub);background:rgba(34,197,94,0.06);border-left:3px solid #4ADE80;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:12px">';
-  h += '⚠️ <strong style="color:#4ADE80">Hernia note (umbilical + inguinal):</strong> Traditional planks and heavy core bracing are replaced with Gentle Dead Bug. ';
-  h += 'STOP immediately if any pulling, pressure or pain in the lower abdomen. Consult your GP before race day.';
+  var h = '<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">';
+
+  // Section title
+  h += '<div style="font-size:10px;letter-spacing:1.5px;font-weight:700;color:#FCD34D;margin-bottom:12px">';
+  h += '&#128170; STRENGTH PROGRAMME · PHASE 1</div>';
+
+  // Equipment note
+  h += '<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:12px;'
+     + 'display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
+  h += '<div style="font-size:10px;color:var(--sub)">&#128081; <strong style="color:var(--text)">Equipment:</strong> '
+     + 'Dumbbells 1.5–10 kg · Bench · Pull-up bar</div>';
+  h += '<div style="font-size:10px;color:#FACC15">&#128705; Buy next: Adjustable DBs to 20 kg · Kettlebell 16 kg · Resistance bands</div>';
   h += '</div>';
-  h += buildTable(armRows,   'THURSDAY — ARM DAY (45–50 min · 3 sets per exercise)', '#C4B5FD');
-  h += buildTable(upperRows, 'MONDAY — UPPER BODY DAY (45–50 min · 3–4 sets per exercise)', '#93C5FD');
+
+  // Hernia warning
+  h += '<div style="background:rgba(219,39,119,0.08);border:1px solid rgba(219,39,119,0.4);'
+     + 'border-radius:8px;padding:12px 14px;margin-bottom:16px">';
+  h += '<div style="font-size:10px;font-weight:700;color:#F472B6;letter-spacing:1px;margin-bottom:6px">';
+  h += '&#9888;&#65039; HERNIA NOTE — UMBILICAL + INGUINAL</div>';
+  h += '<div style="font-size:11px;color:var(--sub);line-height:1.7">';
+  h += 'Core exercises have been replaced with the hernia-safe <strong style="color:#4ADE80">Gentle Dead Bug</strong>. ';
+  h += 'STOP immediately if you feel any pulling, sharp pain or pressure in your lower abdomen. ';
+  h += 'Do not breath-hold or brace hard during any exercise. ';
+  h += '<strong style="color:#F472B6">Please mention this to your GP before race day</strong> — Farmers Carry and Sandbag Lunges create significant abdominal pressure under load.';
+  h += '</div></div>';
+
+  // Progress guide
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">';
+  var pg = [
+    {p:'FOUNDATION Wk 1–5', c:'var(--found)', d:'3 sets · 60 s rest · Focus on form. Use lower kg. Rep target = upper limit.'},
+    {p:'BUILD Wk 6–10',     c:'var(--build)', d:'3–4 sets · 45 s rest · Add 2 reps OR +1 kg every 2 weeks. Volume priority.'},
+    {p:'PEAK Wk 11–14',     c:'var(--peak)',  d:'4 sets · 30 s rest · Max reps at top weight. Superset where possible.'},
+  ];
+  pg.forEach(function(g) {
+    h += '<div style="background:'+g.c+'18;border:1px solid '+g.c+'40;border-radius:8px;padding:10px">';
+    h += '<div style="font-size:9px;font-weight:700;color:'+g.c+';letter-spacing:1px;margin-bottom:4px">'+g.p+'</div>';
+    h += '<div style="font-size:10px;color:var(--sub);line-height:1.5">'+g.d+'</div>';
+    h += '</div>';
+  });
   h += '</div>';
+
+  // ARM DAY
+  h += buildDay(
+    'ARM DAY  ·  THURSDAY',
+    'Thursday · 3 sets per exercise · 45–50 min · Rest 60 s (Foundation), 45 s (Build), 30 s (Peak)',
+    '#C4B5FD',
+    ARM_EXERCISES
+  );
+
+  // UPPER BODY DAY
+  h += buildDay(
+    'UPPER BODY DAY  ·  MONDAY',
+    'Monday · 3–4 sets per exercise · 45–50 min · Superset rows with presses to save time',
+    '#93C5FD',
+    UPPER_EXERCISES
+  );
+
+  // Gentle Dead Bug guide
+  h += '<div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);'
+     + 'border-radius:10px;overflow:hidden;margin-top:4px">';
+  h += '<div style="background:rgba(34,197,94,0.15);padding:12px 16px;border-bottom:1px solid rgba(34,197,94,0.3)">';
+  h += '<div style="font-size:12px;font-weight:700;color:#4ADE80">GENTLE DEAD BUG — TECHNIQUE GUIDE</div>';
+  h += '<div style="font-size:10px;color:var(--sub);margin-top:2px">Hernia-Safe Core · Start Here · Progress Slowly</div>';
+  h += '</div>';
+  var steps = [
+    {lbl:'START POSITION',
+     txt:'Lie flat on your back on the floor or mat. Bend both knees to 90°, feet flat. Raise both arms straight to the ceiling. Lower back in neutral — not pressed hard into the floor, not arched. Breathe normally.'},
+    {lbl:'THE BREATH',
+     txt:'Breathe OUT slowly and gently. As you exhale you will feel a very light, natural tension in your deep abs. Do NOT forcefully brace or press your back hard into the floor — this spikes pressure. The exhale is enough.'},
+    {lbl:'PHASE 1 MOVEMENT (Wk 1–5)',
+     txt:'While exhaling, slowly lower just ONE heel toward the floor, knee still bent at 90°. Lower 10 cm only — not all the way to the floor. Bring it back up. Alternate legs. 6 reps each side = one set. 3 sets total.'},
+    {lbl:'PHASE 2 PROGRESSION (Wk 6–10)',
+     txt:'If zero discomfort after 3 sessions: lower the heel further to 15–20 cm. Still knee bent. Still one limb at a time. Add the opposite arm moving backward simultaneously if comfortable.'},
+    {lbl:'PHASE 3 PROGRESSION (Wk 11–14)',
+     txt:'If still no discomfort: try straightening the lowering leg slightly as it descends. This increases lever length and challenge. Never force. 8 reps each side = one set.'},
+  ];
+  steps.forEach(function(s, i) {
+    var bg = i%2===0 ? 'var(--surface2)' : 'var(--surface)';
+    h += '<div style="background:'+bg+';padding:10px 16px;border-bottom:1px solid var(--border);'
+       + 'display:grid;grid-template-columns:140px 1fr;gap:12px">';
+    h += '<div style="font-size:9px;font-weight:700;color:#4ADE80;letter-spacing:1px;padding-top:2px">STEP '+(i+1)+' · '+s.lbl+'</div>';
+    h += '<div style="font-size:11px;color:var(--sub);line-height:1.6">'+s.txt+'</div>';
+    h += '</div>';
+  });
+  // STOP signals
+  h += '<div style="background:rgba(220,38,38,0.1);padding:12px 16px;border-top:1px solid rgba(220,38,38,0.3)">';
+  h += '<div style="font-size:9px;font-weight:700;color:#F87171;letter-spacing:1px;margin-bottom:4px">&#128721; STOP IMMEDIATELY IF:</div>';
+  h += '<div style="font-size:11px;color:var(--sub);line-height:1.7">';
+  h += 'Any sharp pain, pulling sensation or pressure in the lower abdomen or groin. ';
+  h += 'Any bulging or visible protrusion. Any discomfort that lingers after the session. ';
+  h += '<strong style="color:#F87171">If any of these happen — skip core entirely and see your GP before continuing.</strong>';
+  h += '</div></div></div>';
+
+  h += '</div>'; // end strength section
   return h;
 }
 

@@ -609,6 +609,20 @@ body.sb-collapsed #topbar{padding-left:76px}
 <div class="view" id="view-benchmarks">
   <div class="page-title">Benchmarks</div>
   <div class="page-sub">Test at end of each phase · click MY RESULT and type your time/result · auto-saved</div>
+
+  <!-- 8×1km Run Tracker -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:10px;letter-spacing:1.5px;color:#60A5FA;margin-bottom:4px">BASE FITNESS · PHASE 1</div>
+        <div style="font-size:16px;font-weight:700">🏃 8 × 1 km Run Paces</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Record your 1 km pace for each run segment after weekend sessions · target &lt; 5:30/km</div>
+      </div>
+      <button class="btn btn-g" onclick="addRunSession()" style="font-size:12px;white-space:nowrap">+ Add session</button>
+    </div>
+    <div id="run-sessions-list"></div>
+  </div>
+
   <div id="bench-list"></div>
   <div style="background:linear-gradient(135deg,rgba(26,10,26,0.8),var(--surface));
     border:1px solid rgba(107,33,168,0.5);border-radius:var(--radius);padding:22px;margin-top:8px">
@@ -772,7 +786,6 @@ const STATIONS = [
 // Benchmarks covering all 8 HYROX stations + key fitness tests
 const BENCHMARKS = [
   // Running / Base fitness
-  {group:'BASE FITNESS', phase:'Phase 1', label:'5 km Run',              icon:'🏃', target:'< 28 min'},
   {group:'BASE FITNESS', phase:'Phase 1', label:'Zone 2 HR stable 45 min',icon:'❤️', target:'120-140 bpm'},
   // All 8 HYROX stations
   {group:'HYROX STATIONS', phase:'Phase 1–2', label:'SkiErg — 1,000 m',         icon:'⛷️', target:'< 5:00'},
@@ -893,6 +906,8 @@ async function loadAll() {
       if (document.getElementById('cal')) renderWeek();
       updateGlobalStats();
       updateOverview();
+      updateLog();
+      renderRunSessions();
       setSyncUI('ok');
       setTimeout(() => setSyncUI('idle'), 2000);
     } else {
@@ -922,6 +937,7 @@ async function forceSync() {
       renderWeek();
       updateGlobalStats();
       updateOverview();
+      updateLog();
       setTimeout(() => setSyncUI('idle'), 3000);
     } else {
       setSyncUI('error', '⚠️ Could not reach cloud');
@@ -941,10 +957,10 @@ function buildTemplate(wkData) {
   const legs = {wk, phase:p, sq, lu, ca, time:t};
   // FIXED schedule — matches the PDF exactly
   return [
-    // 0 MON: Legs RL + Upper Body Strength + Zone 2
+    // 0 MON: Legs RL + UPPER BODY Strength + Zone 2
     [
       {type:'LEGS_RL',   ...legs},
-      {type:'STRENGTH',  detail:'Upper Body · Bench Press, Row, OHP, Pull-ups · 45–60 min'},
+      {type:'STRENGTH',  detail:'UPPER BODY · Pull-ups, Bent-Over Row, Flat Press, OHP, Farmers Walk · 45–50 min'},
       {type:'ZONE2',     detail:'30–45 min easy · HR 120–140 bpm · conversational pace'},
     ],
     // 1 TUE: Yoga + Bike
@@ -957,9 +973,9 @@ function buildTemplate(wkData) {
       {type:'LEGS_BSS', ...legs},
       {type:'BIKE',     detail:'30 min · Cross-training · moderate effort'},
     ],
-    // 3 THU: Arms Strength only
+    // 3 THU: ARM DAY only
     [
-      {type:'STRENGTH', detail:'Arms & Shoulders · Bicep curl, Tricep, Lateral raise · 45–60 min'},
+      {type:'STRENGTH', detail:'ARM DAY · Hammer Curl, Close-Grip Press, Zottman Curl, Dead Hang · 45–50 min'},
     ],
     // 4 FRI: Legs RL + Zone 2 Run
     [
@@ -1095,17 +1111,17 @@ function buildCard(sess, iso) {
   // Run guidance by phase — detailed
   const RUN_GUIDE = {
     ZONE2: {
-      FOUNDATION: 'Easy 30–40 min · HR 120–140 · fully conversational pace · bike, cross-trainer or easy jog · builds your aerobic engine for race day',
+      FOUNDATION: 'Easy 30–40 min · HR 120–140 · fully conversational pace · protected low-strain day · no hard effort alongside this session',
       BUILD:      'Easy 40–50 min · HR 130–145 · add 4×20 sec strides at the very end (fast but not sprint, full walk recovery between) · introduces speed gently',
       PEAK:       'Easy 45–55 min · HR 120–140 · this is recovery running, not fitness building · legs are under max load — resist going faster',
     },
     ZONE2_RUN: {
-      FOUNDATION: 'Easy 30–40 min run · HR 120–140 · conversational pace only · do not look at your pace, run by feel and breath · builds mileage habit',
+      FOUNDATION: 'Easy 30–40 min run · HR 120–140 · conversational pace only · no intervals yet · protected low-strain day alongside Monday',
       BUILD:      'Tempo run: 3 km easy warm-up → 3 km tempo (uncomfortable but controlled, 3 words not a sentence) → 2 km easy cool-down · raises lactate threshold so race pace feels easier',
       PEAK:       'RUN BRICK · 4× (1 km at 5:00–5:30/km → immediately 15 burpees → next 1 km, no rest) · by brick 3 legs feel heavy — hold pace anyway · that fight wins you Rotterdam',
     },
     LONG_RUN: {
-      FOUNDATION: 'Week 1: 5 km · add ~1 km/week · reach 8 km by Wk 5 · HR 120–135 throughout · eat carbs 90 min before · do not check pace — talk-test only',
+      FOUNDATION: 'Sat: 4×4 min @ 90% max HR (Zone 4–5) · 5 min warm-up · 3 min easy jog recovery between reps · cool-down · Whoop-validated VO₂ Max work | Sun: 5 km easy · add 1 km/week to 8 km · HR 120–135 · talk-test only',
       BUILD:      '8–12 km · first portion easy (HR 130–140) · last 2 km at race pace 5:30/km · finish strong · teaches legs to run fast when already tired',
       PEAK:       '10–14 km · 4 km easy → 4 km at race pace 5:00–5:30/km → remaining easy cool-down · race simulation · eat carbs 2 hrs before · bring water',
     },
@@ -1126,11 +1142,12 @@ function buildCard(sess, iso) {
   var _n = note       ? '<div class="sess-note">&#128221; '+note+'</div>' : '';
   var _ok = done      ? '<span style="font-size:10px;color:var(--found);margin-left:auto;font-weight:600">DONE &#10003;</span>' : '';
   var _chk = '<div class="chk '+(done?'on':'')+'" data-sid="'+sess.id+'" data-iso="'+iso+'" onclick="handleChk(this)">'+(done?'&#10003;':'')+'</div>';
-  var _nb = '<button class="note-btn" data-sid="'+sess.id+'" onclick="handleNote(this)">+ note</button>';
+  var _nb  = '<button class="note-btn" data-sid="'+sess.id+'" onclick="handleNote(this)">+ note</button>';
+  var _rm  = '<button class="note-btn" data-sid="'+sess.id+'" data-iso="'+iso+'" onclick="handleRemove(this)" style="margin-left:auto;color:#F87171;border-color:rgba(248,113,113,0.3)" title="Remove session">&#10005;</button>';
   card.innerHTML =
     '<div class="sess-top"><span class="sess-icon">'+meta.icon+'</span><span class="sess-title">'+meta.label+'</span>'+_t+'</div>'+
     _l+_d+_g+_n+
-    '<div class="sess-actions">'+_chk+_nb+_ok+'</div>';
+    '<div class="sess-actions">'+_chk+_nb+_ok+_rm+'</div>';
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
@@ -1183,6 +1200,15 @@ function handleChk(el) {
 function handleNote(el) {
   var id = el.dataset.sid;
   openNote({stopPropagation:function(){}}, id);
+}
+function handleRemove(el) {
+  var id = el.dataset.sid, iso = el.dataset.iso;
+  if (!iso || !state[iso]) return;
+  state[iso] = state[iso].filter(function(s){ return s.id !== id; });
+  if (completions[id]) delete completions[id];
+  saveAll();
+  renderWeek();
+  toast('Session removed');
 }
 function toggleDone(e, id, iso) {
   e.stopPropagation();
@@ -1245,9 +1271,9 @@ function renderPlanTable() {
   var curIdx = wkIdxFromMondayOffset(curMondayOff());
   var RUN_PLAN = {
     FOUNDATION:{
-      zone2:   'Mon: 30–40 min easy · HR 120–140 · fully conversational · no watch needed',
-      zone2run:'Fri: 30–40 min easy run · HR 120–140 · build mileage habit · no tempo yet',
-      longrun: 'Weekend: 5–8 km easy · HR 120–135 · talk-test pace · add 1 km/week',
+      zone2:   'Mon: 30–40 min easy · HR 120–140 · fully conversational · protected low-strain day',
+      zone2run:'Fri: 30–40 min easy run · HR 120–140 · no intervals yet · protected low-strain day',
+      longrun: 'Sat: 4×4 min @ 90% max HR · 3 min jog recovery · VO₂ Max (Whoop-validated) | Sun: 5–8 km easy long run · HR 120–135',
     },
     BUILD:{
       zone2:   'Mon: 40–50 min easy + 4×20 sec strides at end · HR 130–145',
@@ -1304,11 +1330,13 @@ function renderPlanTable() {
 const RUN_DETAILS = {
   FOUNDATION: [
     {day:'MON', icon:'❤️', col:'#6EE7B7', type:'Zone 2 Cardio',
-     detail:'30–40 min easy. HR 120–140 bpm. Fully conversational — if you cannot speak in full sentences you are going too fast. Use a bike, cross-trainer or easy jog. No pressure. Builds the aerobic base that carries you through 8 km on race day.'},
+     detail:'30–40 min easy. HR 120–140 bpm. Fully conversational — if you cannot speak in full sentences you are going too fast. Use a bike, cross-trainer or easy jog. No pressure. Builds the aerobic base that carries you through 8 km on race day. Protected low-strain day — no extra hard effort.'},
     {day:'FRI', icon:'🏃', col:'#86EFAC', type:'Zone 2 Run',
-     detail:'30–40 min easy run. Same HR 120–140. Conversational pace only. No intervals, no tempo. Just building the habit and mileage. Do not look at your pace — run by feel and breath.'},
-    {day:'SAT/SUN', icon:'🏅', col:'#FCA5A5', type:'Long Run',
-     detail:'Start at 5 km in Week 1, add ~1 km per week, reach 8 km by Week 5. Easy pace throughout — HR 120–135. Most important aerobic session of the week. Eat something 90 min before. Hydrate well.'},
+     detail:'30–40 min easy run. HR 120–140. Conversational pace only — no intervals, no tempo yet. Just building the mileage habit. Do not look at your pace, run by feel and breath. Also a protected low-strain day alongside Monday.'},
+    {day:'SAT', icon:'🔥', col:'#F87171', type:'VO₂ Max Intervals (Whoop-validated)',
+     detail:'Added from Week 1 — your Whoop data confirms you already handle this strain. Structure: 5–10 min easy warm-up → 4 × 4 min at 90% max HR (Zone 4–5, uncomfortable but sustainable) with 3 min easy jog recovery between each → easy cool-down. Total ~35–40 min. This is the session that directly raises your VO₂ Max and makes the 8 × 1 km race runs feel manageable. Do not skip the warm-up.'},
+    {day:'SUN', icon:'🏅', col:'#FCA5A5', type:'Long Run (easy)',
+     detail:'5 km in Week 1, add ~1 km per week, reach 8 km by Week 5. Easy pace throughout — HR 120–135. Do not combine with the VO₂ Max day. If Saturday was hard, Sunday is purely easy. Eat carbs 90 min before. Talk-test only — fully conversational.'},
   ],
   BUILD: [
     {day:'MON', icon:'❤️', col:'#6EE7B7', type:'Zone 2 + Strides',
@@ -1334,8 +1362,8 @@ const NUT_DATA = {
                after: 'Within 30 min: protein + carbs — Greek yoghurt + fruit, or protein shake + banana. Rebuilds muscle for next session.'},
     run_easy: {before:'Easy runs under 45 min: just water is fine. If over 45 min, have a light snack 30 min before — banana, rice cake.',
                after: 'Light recovery: fruit + water. If combined with legs on the same day, add a proper protein meal within 1 hour.'},
-    long_run: {before:'90–120 min before: carb-based meal — oats, toast + eggs, rice. Avoid fat and fibre close to run. Drink 500 ml water.',
-               after: 'Golden 30 min window: 20–30 g protein + carbs immediately. Full meal within 2 hours. Rehydrate well.'},
+    long_run: {before:'VO₂ Max day (Sat): light carb snack 60 min before — banana or rice cake. Do not run fasted for intervals. | Easy long run (Sun): oats or toast 90 min before. 500 ml water.',
+               after: 'VO₂ Max day: 20–30 g protein + carbs within 30 min — this session creates the most adaptation, fuel it well. | Long run: fruit + protein snack, full meal within 2 hours. Rehydrate.'},
     strength: {before:'60–90 min before: balanced meal with carbs + protein — rice + chicken, or eggs + toast. Not too heavy.',
                after: 'Within 45 min: 25–30 g protein — shake, eggs, Greek yoghurt. This is when muscle is built. Do not skip.'},
   },
@@ -1742,6 +1770,7 @@ function renderStations() {
 // BENCHMARKS
 // ═══════════════════════════════════════════════════════════════
 function renderBenchmarks() {
+  renderRunSessions();
   const list = document.getElementById('bench-list');
   let html = '';
   let lastGroup = '';
@@ -1789,6 +1818,95 @@ function renderBenchmarks() {
 function saveBench(label, val) {
   benchInputs[label] = val;
   saveAll();
+}
+
+// ─── 8×1km Run Session Tracker ───────────────────────────────
+function getRunSessions() {
+  try { return JSON.parse(benchInputs['run_sessions'] || '[]'); } catch(e) { return []; }
+}
+function saveRunSessions(sessions) {
+  benchInputs['run_sessions'] = JSON.stringify(sessions);
+  saveAll();
+}
+
+function addRunSession() {
+  var sessions = getRunSessions();
+  var today = new Date().toISOString().slice(0,10);
+  sessions.unshift({id: Date.now(), date: today, paces: ['','','','','','','',''], note:''});
+  saveRunSessions(sessions);
+  renderRunSessions();
+  toast('New 8×1km session added ✓');
+}
+
+function removeRunSession(id) {
+  var sessions = getRunSessions().filter(function(s){ return s.id !== id; });
+  saveRunSessions(sessions);
+  renderRunSessions();
+  toast('Session removed');
+}
+
+function updateRunPace(id, idx, val) {
+  var sessions = getRunSessions();
+  var s = sessions.find(function(x){ return x.id === id; });
+  if (s) { s.paces[idx] = val; saveRunSessions(sessions); }
+}
+
+function updateRunNote(id, val) {
+  var sessions = getRunSessions();
+  var s = sessions.find(function(x){ return x.id === id; });
+  if (s) { s.note = val; saveRunSessions(sessions); }
+}
+
+function updateRunDate(id, val) {
+  var sessions = getRunSessions();
+  var s = sessions.find(function(x){ return x.id === id; });
+  if (s) { s.date = val; saveRunSessions(sessions); }
+}
+
+function renderRunSessions() {
+  var el = document.getElementById('run-sessions-list');
+  if (!el) return;
+  var sessions = getRunSessions();
+  if (sessions.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No sessions yet — click <strong style="color:var(--text)">+ Add session</strong> after each weekend run to record your 8 × 1 km paces.</div>';
+    return;
+  }
+  var h = '';
+  sessions.forEach(function(s) {
+    var best = s.paces.filter(function(p){return p.trim();}).sort()[0] || '—';
+    var filled = s.paces.filter(function(p){return p.trim();}).length;
+    h += '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">';
+    // Header row
+    h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">';
+    h += '<input type="date" value="'+s.date+'" onchange="updateRunDate('+s.id+',this.value)" style="background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px">';
+    h += '<span style="font-size:10px;color:var(--muted)">'+filled+'/8 splits recorded</span>';
+    if (best !== '—') h += '<span style="font-size:10px;font-weight:700;color:#4ADE80">Best: '+best+' /km</span>';
+    h += '<button onclick="removeRunSession('+s.id+')" style="margin-left:auto;background:transparent;border:1px solid rgba(248,113,113,0.3);border-radius:5px;padding:3px 8px;color:#F87171;font-size:11px;cursor:pointer">Remove</button>';
+    h += '</div>';
+    // 8 pace inputs
+    h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">';
+    for (var i=0; i<8; i++) {
+      var pace = s.paces[i] || '';
+      var isFast = pace && pace < '5:30';
+      var col = isFast ? '#4ADE80' : pace ? 'var(--accent)' : 'var(--muted)';
+      h += '<div style="text-align:center">';
+      h += '<div style="font-size:8px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:3px">RUN '+(i+1)+'</div>';
+      h += '<input type="text" placeholder="5:20" value="'+pace+'"'
+        +  ' onchange="updateRunPace('+s.id+','+i+',this.value)"'
+        +  ' style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:6px;'
+        +  'padding:6px 4px;text-align:center;font-family:monospace;font-size:13px;font-weight:700;'
+        +  'color:'+col+';outline:none">';
+      h += '</div>';
+    }
+    h += '</div>';
+    // Note
+    h += '<input type="text" placeholder="Note — conditions, effort, how it felt..." value="'+s.note+'"'
+      +  ' onchange="updateRunNote('+s.id+',this.value)"'
+      +  ' style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:6px;'
+      +  'padding:6px 10px;color:var(--sub);font-size:11px;outline:none">';
+    h += '</div>';
+  });
+  el.innerHTML = h;
 }
 
 // ═══════════════════════════════════════════════════════════════

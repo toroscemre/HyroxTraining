@@ -55,7 +55,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   border-radius:20px;padding:5px 16px;font-size:13px;color:var(--sub);
 }
 .date-chip strong{color:var(--text);font-weight:700}
-.countdown-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);line-height:1;letter-spacing:2px}
+.countdown-num{font-family:var(--font-display,sans-serif);font-size:32px;color:var(--accent);line-height:1;letter-spacing:2px}
 .countdown-sub{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
 
 /* ── SIDEBAR ── */
@@ -445,6 +445,10 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="sb-dot" style="background:#A78BFA"></div>
     <div class="sb-label">Training Log</div>
   </div>
+  <div class="sb-item" onclick="nav('history')">
+    <div class="sb-dot" style="background:#22D3EE"></div>
+    <div class="sb-label">Training History</div>
+  </div>
   <div class="sb-item" onclick="nav('stations')">
     <div class="sb-dot" style="background:#FACC15"></div>
     <div class="sb-label">Stations</div>
@@ -560,6 +564,54 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div id="heatmap" style="overflow-x:auto;padding-bottom:4px"></div>
   </div>
 
+</div>
+
+<!-- TRAINING HISTORY -->
+<div class="view" id="view-history">
+  <div class="page-title">Training History</div>
+  <div class="page-sub">2024 · 2025 · 2026 · 237 sessions · Your full fitness journey into Rotterdam</div>
+  <div style="margin-bottom:14px">
+    <button class="btn btn-g" onclick="toggleImportPanel()" style="font-size:11px">+ Add / Import more sessions</button>
+  </div>
+
+  <!-- Import panel -->
+  <div id="hist-import-panel" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;display:none">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#22D3EE;margin-bottom:8px">IMPORT YOUR TRAINING DATA</div>
+    <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:14px">
+      Paste your training data as CSV below. One row per session.<br>
+      Format: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">date, category, activity, duration_min, notes</code><br>
+      Example: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">2024-03-15, Running, Easy run, 45, Morning run</code><br>
+      Categories: <strong style="color:#4ADE80">Running</strong> · <strong style="color:#60A5FA">Cycling</strong> · <strong style="color:#C4B5FD">Strength</strong> · <strong style="color:#F97316">Legs</strong> · <strong style="color:#F9A8D4">Mobility</strong> · <strong style="color:#FBBF24">Conditioning</strong> · <strong style="color:#2DD4BF">Swimming</strong> · <strong style="color:#94A3B8">Other</strong>
+    </div>
+    <textarea id="hist-csv-input" placeholder="Paste CSV here..." style="width:100%;height:120px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:monospace;font-size:11px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="importHistoryCSV()">Import Data</button>
+      <button class="btn btn-g" onclick="clearHistory()">Clear All History</button>
+      <button class="btn btn-g" onclick="toggleImportPanel()">Hide / Show Import</button>
+      <span id="hist-import-status" style="font-size:11px;color:#4ADE80;align-self:center"></span>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px" id="hist-stats"></div>
+
+  <!-- Monthly bar chart -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px">MONTHLY SESSIONS — ALL TIME</div>
+    <div id="hist-monthly-chart" style="overflow-x:auto"></div>
+  </div>
+
+  <!-- 3-year heatmap -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px">TRAINING HEATMAP — 2024 · 2025 · 2026</div>
+    <div id="hist-heatmap" style="overflow-x:auto"></div>
+  </div>
+
+  <!-- Category breakdown -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px">BREAKDOWN BY CATEGORY</div>
+    <div id="hist-breakdown" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+  </div>
 </div>
 
 <!-- WEEKLY PLANNER -->
@@ -2521,6 +2573,306 @@ function closeAddModal() {
   addModalTargetISO = null;
   addModalSelectedType = null;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING HISTORY
+// ═══════════════════════════════════════════════════════════════
+
+var HIST_CATS = {
+  'Running':     {col:'#4ADE80',  icon:'🏃'},
+  'Cycling':     {col:'#60A5FA',  icon:'🚴'},
+  'Strength':    {col:'#C4B5FD',  icon:'💪'},
+  'Legs':        {col:'#F97316',  icon:'🦵'},
+  'Mobility':    {col:'#F9A8D4',  icon:'🧘'},
+  'Conditioning':{col:'#FBBF24',  icon:'🥊'},
+  'Swimming':    {col:'#2DD4BF',  icon:'🏊'},
+  'Other':       {col:'#94A3B8',  icon:'📌'},
+};
+
+// Map free-text category to standard category
+function normCat(raw) {
+  if (!raw) return 'Other';
+  var r = raw.trim().toLowerCase();
+  if (r.includes('run') || r.includes('jog') || r.includes('zone') || r.includes('vo2') || r.includes('long')) return 'Running';
+  if (r.includes('cycl') || r.includes('bike') || r.includes('ride') || r.includes('commut')) return 'Cycling';
+  if (r.includes('swim') || r.includes('pool')) return 'Swimming';
+  if (r.includes('yoga') || r.includes('mobil') || r.includes('stretch') || r.includes('flex')) return 'Mobility';
+  if (r.includes('leg') || r.includes('squat') || r.includes('lunge') || r.includes('hyrox')) return 'Legs';
+  if (r.includes('box') || r.includes('hiit') || r.includes('circuit') || r.includes('burp') || r.includes('condition')) return 'Conditioning';
+  if (r.includes('strength') || r.includes('gym') || r.includes('weight') || r.includes('lift') || r.includes('arm') || r.includes('upper') || r.includes('press') || r.includes('pull')) return 'Strength';
+  return 'Other';
+}
+
+var HIST_BASELINE = [{"date": "2024-07-01", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-07-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-01", "category": "Strength", "activity": "Strength"}, {"date": "2024-07-03", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-05", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-07", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-08", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-07-09", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-13", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-15", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-07-15", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-16", "category": "Strength", "activity": "Strength"}, {"date": "2024-07-17", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-19", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-22", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-07-23", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-25", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-27", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-07-29", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-01", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-08-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-01", "category": "Strength", "activity": "Strength"}, {"date": "2024-08-03", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-05", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-07", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-09", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-11", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-08-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-13", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-15", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-16", "category": "Strength", "activity": "Strength"}, {"date": "2024-08-17", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-19", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-21", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-08-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-23", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-25", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-27", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-08-29", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-01", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-09-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-01", "category": "Strength", "activity": "Strength"}, {"date": "2024-09-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-01", "category": "Running", "activity": "Running"}, {"date": "2024-09-04", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-07", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-08", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-09-08", "category": "Strength", "activity": "Strength"}, {"date": "2024-09-10", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-13", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-15", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-09-15", "category": "Strength", "activity": "Strength"}, {"date": "2024-09-16", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-16", "category": "Running", "activity": "Running"}, {"date": "2024-09-19", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-22", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-09-22", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-09-22", "category": "Strength", "activity": "Strength"}, {"date": "2024-09-25", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-01", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-10-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-01", "category": "Strength", "activity": "Strength"}, {"date": "2024-10-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-01", "category": "Running", "activity": "Running"}, {"date": "2024-10-04", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-07", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-08", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-10-10", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-11", "category": "Strength", "activity": "Strength"}, {"date": "2024-10-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-13", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-15", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-10-16", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-16", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-19", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-21", "category": "Strength", "activity": "Strength"}, {"date": "2024-10-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-22", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-10-22", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-10-25", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-01", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-11-01", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-01", "category": "Strength", "activity": "Strength"}, {"date": "2024-11-01", "category": "Running", "activity": "Running"}, {"date": "2024-11-06", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-11", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-11", "category": "Strength", "activity": "Strength"}, {"date": "2024-11-16", "category": "Mobility", "activity": "Mobility"}, {"date": "2024-11-16", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-21", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-11-21", "category": "Strength", "activity": "Strength"}, {"date": "2024-11-26", "category": "Conditioning", "activity": "Conditioning"}, {"date": "2024-12-30", "category": "Mobility", "activity": "Yoga"}, {"date": "2024-12-31", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-01", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-02", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-03", "category": "Strength", "activity": "Old 5"}, {"date": "2025-01-06", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-07", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-08", "category": "Strength", "activity": "Old 5"}, {"date": "2025-01-10", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-12", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-13", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-01-15", "category": "Running", "activity": "RUN & Old 5"}, {"date": "2025-01-15", "category": "Strength", "activity": "RUN & Old 5"}, {"date": "2025-01-16", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-17", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-18", "category": "Running", "activity": "RUN"}, {"date": "2025-01-20", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-01-21", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-23", "category": "Strength", "activity": "Old 5"}, {"date": "2025-01-27", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-01-28", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-01-29", "category": "Running", "activity": "RUN"}, {"date": "2025-01-31", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-02-04", "category": "Strength", "activity": "Old 5"}, {"date": "2025-02-06", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-02-08", "category": "Running", "activity": "RUN"}, {"date": "2025-02-10", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-02-12", "category": "Running", "activity": "RUN & Old 5"}, {"date": "2025-02-12", "category": "Strength", "activity": "RUN & Old 5"}, {"date": "2025-02-14", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-02-15", "category": "Running", "activity": "RUN"}, {"date": "2025-02-20", "category": "Conditioning", "activity": "Challange V2"}, {"date": "2025-02-24", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-03-01", "category": "Running", "activity": "RUN & Challange V2"}, {"date": "2025-03-01", "category": "Conditioning", "activity": "RUN & Challange V2"}, {"date": "2025-03-03", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-03-04", "category": "Strength", "activity": "Old 5"}, {"date": "2025-03-05", "category": "Running", "activity": "RUN"}, {"date": "2025-03-08", "category": "Strength", "activity": "Old 5"}, {"date": "2025-03-10", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-03-12", "category": "Running", "activity": "RUN"}, {"date": "2025-04-05", "category": "Running", "activity": "RUN & Challange V2"}, {"date": "2025-04-05", "category": "Conditioning", "activity": "RUN & Challange V2"}, {"date": "2025-04-23", "category": "Running", "activity": "RUN"}, {"date": "2025-05-19", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-05-24", "category": "Running", "activity": "RUN"}, {"date": "2025-05-26", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-05-28", "category": "Running", "activity": "RUN"}, {"date": "2025-06-30", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-07", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-09", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-11", "category": "Strength", "activity": "home gym"}, {"date": "2025-07-14", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-17", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-21", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-24", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-27", "category": "Strength", "activity": "home gym"}, {"date": "2025-07-28", "category": "Strength", "activity": "Old 5"}, {"date": "2025-07-31", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-04", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-05", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-08-07", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-11", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-14", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-16", "category": "Running", "activity": "RUN"}, {"date": "2025-08-18", "category": "Strength", "activity": "Old 5"}, {"date": "2025-08-23", "category": "Running", "activity": "RUN"}, {"date": "2025-08-27", "category": "Swimming", "activity": "Swim"}, {"date": "2025-08-28", "category": "Swimming", "activity": "Swim"}, {"date": "2025-08-29", "category": "Swimming", "activity": "Swim"}, {"date": "2025-08-30", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-09-01", "category": "Swimming", "activity": "Swim"}, {"date": "2025-09-03", "category": "Swimming", "activity": "Swim"}, {"date": "2025-09-04", "category": "Swimming", "activity": "Swim"}, {"date": "2025-09-06", "category": "Running", "activity": "RUN"}, {"date": "2025-09-08", "category": "Strength", "activity": "Old 5"}, {"date": "2025-09-11", "category": "Strength", "activity": "Old 5"}, {"date": "2025-09-14", "category": "Running", "activity": "RUN"}, {"date": "2025-09-15", "category": "Strength", "activity": "ARM"}, {"date": "2025-09-17", "category": "Running", "activity": "RUN/ Upper"}, {"date": "2025-09-17", "category": "Strength", "activity": "RUN/ Upper"}, {"date": "2025-09-20", "category": "Running", "activity": "RUN"}, {"date": "2025-09-22", "category": "Strength", "activity": "ARM"}, {"date": "2025-09-23", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-09-25", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-09-27", "category": "Running", "activity": "RUN"}, {"date": "2025-09-29", "category": "Strength", "activity": "ARM"}, {"date": "2025-10-02", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-10-10", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-10-12", "category": "Running", "activity": "RUN"}, {"date": "2025-10-13", "category": "Strength", "activity": "ARM"}, {"date": "2025-10-16", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-10-18", "category": "Running", "activity": "RUN"}, {"date": "2025-10-20", "category": "Strength", "activity": "ARM"}, {"date": "2025-10-22", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-10-24", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-10-26", "category": "Running", "activity": "RUN"}, {"date": "2025-10-27", "category": "Strength", "activity": "ARM"}, {"date": "2025-11-01", "category": "Running", "activity": "RUN"}, {"date": "2025-11-03", "category": "Strength", "activity": "ARM"}, {"date": "2025-11-09", "category": "Running", "activity": "RUN"}, {"date": "2025-11-13", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-11-15", "category": "Running", "activity": "RUN"}, {"date": "2025-11-16", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-11-20", "category": "Strength", "activity": "ARM"}, {"date": "2025-11-22", "category": "Running", "activity": "RUN/UPPER"}, {"date": "2025-11-22", "category": "Strength", "activity": "RUN/UPPER"}, {"date": "2025-11-26", "category": "Strength", "activity": "ARM"}, {"date": "2025-11-29", "category": "Running", "activity": "RUN"}, {"date": "2025-12-01", "category": "Running", "activity": "RUN/UPPER"}, {"date": "2025-12-01", "category": "Strength", "activity": "RUN/UPPER"}, {"date": "2025-12-09", "category": "Mobility", "activity": "Yoga"}, {"date": "2025-12-13", "category": "Running", "activity": "RUN"}, {"date": "2025-12-15", "category": "Strength", "activity": "ARM"}, {"date": "2025-12-17", "category": "Strength", "activity": "UPPPER"}, {"date": "2025-12-20", "category": "Running", "activity": "RUN"}, {"date": "2025-12-29", "category": "Strength", "activity": "ARM"}, {"date": "2025-12-30", "category": "Mobility", "activity": "Yoga"}, {"date": "2026-01-01", "category": "Strength", "activity": "UPPPER"}, {"date": "2026-01-03", "category": "Running", "activity": "RUN"}, {"date": "2026-01-05", "category": "Strength", "activity": "ARM"}, {"date": "2026-01-08", "category": "Strength", "activity": "UPPPER"}, {"date": "2026-01-11", "category": "Running", "activity": "RUN"}, {"date": "2026-01-12", "category": "Strength", "activity": "ARM"}, {"date": "2026-01-13", "category": "Running", "activity": "RUN"}, {"date": "2026-01-27", "category": "Mobility", "activity": "Yoga"}, {"date": "2026-01-29", "category": "Strength", "activity": "ARM"}, {"date": "2026-01-31", "category": "Running", "activity": "RUN"}, {"date": "2026-02-02", "category": "Strength", "activity": "UPPPER"}, {"date": "2026-02-09", "category": "Strength", "activity": "ARM"}, {"date": "2026-02-10", "category": "Mobility", "activity": "Yoga"}, {"date": "2026-02-13", "category": "Strength", "activity": "UPPPER"}, {"date": "2026-02-15", "category": "Running", "activity": "RUN"}, {"date": "2026-02-17", "category": "Mobility", "activity": "Yoga"}, {"date": "2026-02-19", "category": "Strength", "activity": "ARM"}, {"date": "2026-03-02", "category": "Strength", "activity": "UPPPER"}, {"date": "2026-03-05", "category": "Strength", "activity": "ARM"}];
+
+function getHistory() {
+  try {
+    var extra = JSON.parse(benchInputs['training_history'] || '[]');
+    return HIST_BASELINE.concat(extra);
+  } catch(e) { return HIST_BASELINE.slice(); }
+}
+function saveHistory(data) {
+  // Only save user-added sessions (not baseline)
+  var baseDates = new Set(HIST_BASELINE.map(function(s){return s.date+'_'+s.category;}));
+  var extra = data.filter(function(s){return !baseDates.has(s.date+'_'+s.category);});
+  benchInputs['training_history'] = JSON.stringify(extra);
+  saveAll();
+}
+
+// Also merge Hyrox dashboard completions into history view
+function getMergedHistory() {
+  var hist = getHistory();
+  // Build from completions
+  var hyroxSessions = [];
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    var iso = id.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    var rest = id.slice(11);
+    var lastUs = rest.lastIndexOf('_');
+    var type = lastUs >= 0 ? rest.slice(0, lastUs) : rest;
+    var cat = normCat(type);
+    hyroxSessions.push({date:iso, category:cat, activity:(SPORT_META[type]||{label:type}).label, source:'hyrox'});
+  });
+  return hist.concat(hyroxSessions);
+}
+
+function importHistoryCSV() {
+  var raw = document.getElementById('hist-csv-input').value.trim();
+  if (!raw) { toast('Nothing to import'); return; }
+  var lines = raw.split(String.fromCharCode(10));
+  var imported = 0, skipped = 0;
+  var existing = getHistory();
+  var existingKeys = {};
+  existing.forEach(function(e){ existingKeys[e.date+'_'+e.activity] = true; });
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (!line || line.startsWith('#') || line.toLowerCase().startsWith('date')) return;
+    var parts = line.split(',');
+    if (parts.length < 2) { skipped++; return; }
+    var date = parts[0].trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { skipped++; return; }
+    var catRaw  = (parts[1] || '').trim();
+    var actRaw  = (parts[2] || catRaw).trim();
+    var dur     = parseInt(parts[3]) || 0;
+    var note    = (parts[4] || '').trim();
+    var cat     = normCat(catRaw);
+    var key     = date + '_' + actRaw;
+    if (existingKeys[key]) { skipped++; return; }
+    existing.push({date:date, category:cat, activity:actRaw, duration:dur, note:note, source:'import'});
+    existingKeys[key] = true;
+    imported++;
+  });
+
+  saveHistory(existing);
+  document.getElementById('hist-import-status').textContent = imported + ' sessions imported, ' + skipped + ' skipped';
+  document.getElementById('hist-csv-input').value = '';
+  renderHistory();
+  toast(imported + ' sessions imported ✓');
+}
+
+function clearHistory() {
+  if (!confirm('Clear all imported history? (Hyrox dashboard data is kept)')) return;
+  saveHistory([]);
+  renderHistory();
+  toast('History cleared');
+}
+
+function toggleImportPanel() {
+  var p = document.getElementById('hist-import-panel');
+  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+function renderHistory() {
+  var all = getMergedHistory();
+  if (!all.length) {
+    var el = document.getElementById('hist-heatmap');
+    if (el) el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted)">No history yet — import your data above or start ticking sessions in the planner.</div>';
+    return;
+  }
+
+  // Sort by date
+  all.sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  // ── Stats ─────────────────────────────────────────────────
+  var total = all.length;
+  var catCounts = {};
+  var monthSet  = {};
+  all.forEach(function(s) {
+    catCounts[s.category] = (catCounts[s.category] || 0) + 1;
+    monthSet[s.date.slice(0,7)] = true;
+  });
+  var activeMonths = Object.keys(monthSet).length;
+  var topCat = Object.keys(catCounts).sort(function(a,b){return catCounts[b]-catCounts[a];})[0] || '—';
+  var avgPerMonth = activeMonths > 0 ? Math.round(total / activeMonths) : 0;
+
+  var statsEl = document.getElementById('hist-stats');
+  if (statsEl) {
+    var sd = [
+      {v:total,          l:'Total Sessions', c:'#22D3EE'},
+      {v:activeMonths,   l:'Active Months',  c:'#4ADE80'},
+      {v:avgPerMonth,    l:'Avg / Month',    c:var_accent()},
+      {v:(HIST_CATS[topCat]||{icon:'📌'}).icon+' '+topCat, l:'Top Category', c:'#C4B5FD'},
+    ];
+    statsEl.innerHTML = sd.map(function(s){
+      return '<div class="ov-card" style="text-align:center">'
+        + '<div class="ov-lbl">'+s.l+'</div>'
+        + '<div style="font-family:var(--font-display,sans-serif);font-size:32px;color:'+s.c+';line-height:1.2;margin:6px 0">'+s.v+'</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // ── Monthly bar chart ──────────────────────────────────────
+  var monthData = {};
+  all.forEach(function(s) {
+    var mo = s.date.slice(0,7);
+    if (!monthData[mo]) monthData[mo] = {};
+    monthData[mo][s.category] = (monthData[mo][s.category] || 0) + 1;
+  });
+  var months = Object.keys(monthData).sort();
+  var maxMo  = 0;
+  months.forEach(function(m){ var t=Object.keys(monthData[m]).reduce(function(s,k){return s+monthData[m][k];},0); if(t>maxMo)maxMo=t; });
+  if (maxMo === 0) maxMo = 1;
+
+  var CHART_H = 120;
+  var chartH = '<div style="display:flex;align-items:flex-end;gap:3px;height:'+CHART_H+'px;margin-bottom:4px">';
+  months.forEach(function(mo) {
+    var cats = monthData[mo];
+    var total = Object.keys(cats).reduce(function(s,k){return s+cats[k];},0);
+    var barH  = Math.max(4, Math.round((total/maxMo)*CHART_H));
+    var tip   = mo + ': ' + total + ' sessions';
+    chartH += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:18px" title="'+tip+'">';
+    chartH += '<div style="font-size:8px;color:var(--muted);margin-bottom:2px">'+total+'</div>';
+    chartH += '<div style="width:100%;display:flex;flex-direction:column-reverse;border-radius:2px 2px 0 0;overflow:hidden;height:'+barH+'px">';
+    Object.keys(cats).forEach(function(cat){
+      var segH = Math.max(2, Math.round((cats[cat]/total)*barH));
+      var col  = (HIST_CATS[cat]||{col:'#6B7280'}).col;
+      chartH += '<div style="width:100%;height:'+segH+'px;background:'+col+'"></div>';
+    });
+    chartH += '</div></div>';
+  });
+  chartH += '</div>';
+  // Month labels
+  chartH += '<div style="display:flex;gap:3px;margin-bottom:12px">';
+  months.forEach(function(mo){
+    var parts = mo.split('-');
+    var lbl   = parts[1] === '01' ? parts[0].slice(2)+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1])-1]
+              : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1])-1];
+    chartH += '<div style="flex:1;font-size:7px;color:var(--muted);text-align:center;min-width:18px;overflow:hidden">'+lbl+'</div>';
+  });
+  chartH += '</div>';
+  // Legend
+  chartH += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  Object.keys(HIST_CATS).forEach(function(cat){
+    var count = catCounts[cat] || 0;
+    if (!count) return;
+    chartH += '<div style="display:flex;align-items:center;gap:4px">'
+            + '<div style="width:10px;height:10px;border-radius:2px;background:'+HIST_CATS[cat].col+'"></div>'
+            + '<span style="font-size:10px;color:var(--sub)">'+HIST_CATS[cat].icon+' '+cat+' ('+count+')</span>'
+            + '</div>';
+  });
+  chartH += '</div>';
+  var chartEl = document.getElementById('hist-monthly-chart');
+  if (chartEl) chartEl.innerHTML = chartH;
+
+  // ── 3-year heatmap ────────────────────────────────────────
+  var byISO = {};
+  all.forEach(function(s){ byISO[s.date] = (byISO[s.date]||[]); byISO[s.date].push(s.category); });
+
+  function hmDayCol(iso) {
+    var cats = byISO[iso];
+    if (!cats || !cats.length) return null;
+    // Use most frequent category colour
+    var freq = {};
+    cats.forEach(function(c){ freq[c]=(freq[c]||0)+1; });
+    var best = Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];})[0];
+    return (HIST_CATS[best]||{col:'#4ADE80'}).col;
+  }
+
+  var CELL = 13, GAP = 2;
+  var hmStart = new Date('2024-01-01T00:00:00Z');
+  var hmEnd   = new Date();
+  var hmMonths = [];
+  var c2 = new Date(Date.UTC(hmStart.getUTCFullYear(), hmStart.getUTCMonth(), 1));
+  while (c2 <= hmEnd) { hmMonths.push(new Date(c2)); c2.setUTCMonth(c2.getUTCMonth()+1); }
+
+  var hmH = '<div style="display:flex;gap:8px;align-items:flex-start">';
+  // Day labels
+  hmH += '<div style="display:flex;flex-direction:column;gap:'+GAP+'px;flex-shrink:0;padding-top:20px">';
+  for (var d2=1;d2<=31;d2++){
+    var show2=(d2===1||d2%5===0);
+    hmH += '<div style="height:'+CELL+'px;font-size:8px;color:var(--muted);line-height:'+CELL+'px;text-align:right;width:16px">'+(show2?d2:'')+'</div>';
+  }
+  hmH += '</div>';
+
+  // Year separators and month columns
+  var lastYr = null;
+  hmMonths.forEach(function(m) {
+    var yr  = m.getUTCFullYear();
+    var mo  = m.getUTCMonth();
+    var dim = new Date(Date.UTC(yr,mo+1,0)).getUTCDate();
+    var mLbl= m.toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'});
+    var isJan = mo === 0;
+
+    hmH += '<div style="flex-shrink:0'+(isJan&&lastYr?';border-left:2px solid rgba(255,255,255,0.1);padding-left:6px':'')+'">';
+    // Label: show year in Jan, month otherwise
+    var topLbl = isJan ? yr+' '+mLbl : mLbl;
+    var topCol = isJan ? 'var(--text)' : 'var(--muted)';
+    var topFw  = isJan ? '700' : '400';
+    hmH += '<div style="font-size:8px;font-weight:'+topFw+';color:'+topCol+';text-align:center;margin-bottom:4px;white-space:nowrap">'+topLbl+'</div>';
+    hmH += '<div style="display:flex;flex-direction:column;gap:'+GAP+'px">';
+    for (var d3=1;d3<=31;d3++){
+      if (d3>dim) {
+        hmH += '<div style="width:'+CELL+'px;height:'+CELL+'px;border-radius:2px;background:transparent"></div>';
+      } else {
+        var iso2 = yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d3).padStart(2,'0');
+        var isFut = new Date(iso2+'T00:00:00Z') > hmEnd;
+        var isTod = iso2 === TODAY_ISO;
+        var col2  = hmDayCol(iso2);
+        var count2 = byISO[iso2] ? byISO[iso2].length : 0;
+        var bg2 = isFut ? 'transparent' : isTod ? 'var(--accent)' : col2 ? col2 : 'var(--surface2)';
+        var op2 = isFut ? '0' : (col2||isTod) ? '0.9' : '0.25';
+        var tipCats = byISO[iso2] ? [...new Set(byISO[iso2])].join(', ') : 'Rest';
+        var tip2 = iso2+': '+count2+' session'+(count2!==1?'s':'')+' ('+tipCats+')';
+        hmH += '<div title="'+tip2+'" style="width:'+CELL+'px;height:'+CELL+'px;border-radius:2px;background:'+bg2+';opacity:'+op2+';cursor:default'+(isTod?';outline:2px solid var(--accent);outline-offset:1px':'')+'" ></div>';
+      }
+    }
+    hmH += '</div></div>';
+    lastYr = yr;
+  });
+  hmH += '</div>';
+  // Legend
+  hmH += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">';
+  hmH += '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--surface2);opacity:0.25"></div><span style="font-size:9px;color:var(--muted)">Rest</span></div>';
+  Object.keys(HIST_CATS).forEach(function(cat){
+    hmH += '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:'+HIST_CATS[cat].col+'"></div><span style="font-size:9px;color:var(--sub)">'+HIST_CATS[cat].icon+' '+cat+'</span></div>';
+  });
+  hmH += '</div>';
+
+  var hmEl = document.getElementById('hist-heatmap');
+  if (hmEl) hmEl.innerHTML = hmH;
+
+  // ── Category breakdown cards ──────────────────────────────
+  var bdEl = document.getElementById('hist-breakdown');
+  if (bdEl) {
+    bdEl.innerHTML = Object.keys(HIST_CATS).map(function(cat){
+      var n = catCounts[cat] || 0;
+      var pct = total > 0 ? Math.round(n/total*100) : 0;
+      return '<div style="background:var(--surface2);border-radius:8px;padding:12px;border-top:3px solid '+HIST_CATS[cat].col+'">'
+           + '<div style="font-size:18px;margin-bottom:4px">'+HIST_CATS[cat].icon+'</div>'
+           + '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">'+cat+'</div>'
+           + '<div style="font-family:monospace;font-size:20px;color:'+HIST_CATS[cat].col+';line-height:1">'+n+'</div>'
+           + '<div style="font-size:10px;color:var(--muted);margin-top:2px">'+pct+'% of total</div>'
+           + '<div style="height:3px;background:var(--border2);border-radius:2px;margin-top:6px;overflow:hidden">'
+           + '<div style="height:100%;width:'+pct+'%;background:'+HIST_CATS[cat].col+';border-radius:2px"></div>'
+           + '</div></div>';
+    }).join('');
+  }
+}
+
+// helper to get accent colour as string
+function var_accent() { return '#F97316'; }
 
 function toast(msg) {
   const t = document.getElementById('toast');

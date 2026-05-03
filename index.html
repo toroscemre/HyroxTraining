@@ -2430,8 +2430,8 @@ function updateTopbar() {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 const NAV_MAP = {
-  overview:0, planner:1, fullplan:2, log:3, stations:4, benchmarks:5,
-  phase1:6, phase2:10, phase3:11, phase4:12
+  overview:0, planner:1, fullplan:2, log:3, history:4, stations:5, benchmarks:6,
+  phase1:7, phase2:11, phase3:12, phase4:13
 };
 const SUB_MAP = { p1found:0, p1build:1, p1peak:2 };
 
@@ -2457,6 +2457,7 @@ function nav(id) {
   if (id==='p1build')  renderPhaseWeeks('p1-build-c',WEEKS.slice(5,10));
   if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
   if (id==='overview') updateOverview();
+  if (id==='history')  renderHistory();
 }
 
 function chgWk(n) { weekOffset += n; renderWeek(); }

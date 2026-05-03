@@ -542,35 +542,20 @@ body.sb-collapsed #topbar{padding-left:76px}
 
   <!-- Activity bar chart — last 28 days -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div>
-        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">DAILY ACTIVITY — LAST 28 DAYS</div>
-        <div style="font-size:11px;color:var(--sub);margin-top:3px">Sessions completed per day</div>
-      </div>
-      <div id="chart-legend" style="display:flex;gap:12px;font-size:10px;color:var(--muted)"></div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">DAILY ACTIVITY — LAST 28 DAYS</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:3px">Sessions completed per day · colour = session type</div>
     </div>
-    <div id="activity-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;padding-bottom:20px;position:relative"></div>
-    <div id="chart-dates" style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:4px;padding:0 1px"></div>
+    <div id="activity-chart" style="display:flex;align-items:flex-end;gap:2px;height:100px;margin-bottom:8px"></div>
+    <div id="chart-dates" style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:12px;padding:0 1px"></div>
+    <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:8px"></div>
   </div>
 
-  <!-- Training heatmap — since plan start -->
+  <!-- Training heatmap — monthly -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div>
-        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">TRAINING HEATMAP</div>
-        <div style="font-size:11px;color:var(--sub);margin-top:3px">Every day since plan start · darker = more sessions</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted)">
-        <span>0</span>
-        <div style="display:flex;gap:2px">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--surface2)"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:#166534"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:#16A34A"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:#4ADE80"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:#86EFAC"></div>
-        </div>
-        <span>4+</span>
-      </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">TRAINING HEATMAP — MONTHLY</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:3px">Each column = one month · rows = days 1–31 · colour = session type trained</div>
     </div>
     <div id="heatmap" style="overflow-x:auto;padding-bottom:4px"></div>
   </div>
@@ -803,6 +788,7 @@ const SPORT_META = {
   BIKE:      {label:'Bike',             icon:'🚴'},
   LONG_RUN:  {label:'Long Run',         icon:'🏅'},
   BOXING:    {label:'Shadow Boxing',    icon:'🥊'},
+  VO2_MAX:   {label:'VO₂ Max Intervals',icon:'🔥'},
 };
 
 const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
@@ -1022,7 +1008,7 @@ function buildTemplate(wkData) {
     ],
     // 5 SAT: VO₂ Max intervals
     [
-      {type:'ZONE2_RUN', detail:'VO₂ MAX · 5–10 min warm-up → 4 × 4 min @ 90% max HR (Zone 4–5) · 3 min jog recovery between · cool-down · total ~35–40 min'},
+      {type:'VO2_MAX', detail:'5–10 min warm-up → 4 × 4 min @ 90% max HR (Zone 4–5) · 3 min jog recovery between · easy cool-down · total ~35–40 min · eat light carb snack 60 min before'},
     ],
     // 6 SUN: Full rest
     [],
@@ -2057,168 +2043,211 @@ function exportCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// OVERVIEW
+// OVERVIEW CHARTS
 // ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// ACTIVITY CHART — last 28 days bar chart
-// ═══════════════════════════════════════════════════════════════
-function renderActivityChart() {
-  var chartEl = document.getElementById('activity-chart');
-  var datesEl = document.getElementById('chart-dates');
-  if (!chartEl) return;
 
-  // Build count map from completions directly (works even if state not initialised)
-  var countByISO = {};
+// Colour per session type
+var TYPE_COLORS = {
+  STRENGTH:  '#C4B5FD',  // purple  — Arms
+  LEGS_RL:   '#F97316',  // orange  — Legs RL
+  LEGS_BSS:  '#FB923C',  // amber   — Legs BSS
+  ZONE2:     '#6EE7B7',  // teal    — Zone 2
+  ZONE2_RUN: '#86EFAC',  // green   — Zone 2 Run
+  YOGA:      '#F9A8D4',  // pink    — Yoga
+  BIKE:      '#60A5FA',  // blue    — Bike
+  LONG_RUN:  '#FCA5A5',  // red     — Long Run
+  BOXING:    '#FBBF24',  // yellow  — Boxing
+  VO2_MAX:   '#F43F5E',  // red     — VO2 Max
+};
+
+// Build sessions-by-type map from completions
+function buildTypeMap() {
+  var byISO = {}; // iso -> {type -> count}
   Object.keys(completions).forEach(function(id) {
     if (!completions[id].done) return;
-    // Session IDs start with ISO date: "2026-04-12_TYPE_N"
-    var iso = id.slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      countByISO[iso] = (countByISO[iso] || 0) + 1;
-    }
+    var iso  = id.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    // Extract type from ID format: "2026-04-12_ZONE2_RUN_0"
+    var rest = id.slice(11); // remove date + underscore
+    var lastUs = rest.lastIndexOf('_');
+    var type = lastUs >= 0 ? rest.slice(0, lastUs) : rest;
+    if (!byISO[iso]) byISO[iso] = {};
+    byISO[iso][type] = (byISO[iso][type] || 0) + 1;
   });
+  return byISO;
+}
 
-  // Build 28 days of data
+// ── BAR CHART — last 28 days, stacked by type ──────────────────
+function renderActivityChart() {
+  var chartEl  = document.getElementById('activity-chart');
+  var datesEl  = document.getElementById('chart-dates');
+  var legendEl = document.getElementById('chart-legend');
+  if (!chartEl) return;
+
+  var byISO = buildTypeMap();
+
+  // Build 28 days
   var days = [];
   var maxCount = 0;
   for (var i = 27; i >= 0; i--) {
-    var offset = TODAY_D - i;
-    var iso    = isoFromOffset(offset);
-    var date   = dateFromDayOffset(offset);
-    var count  = countByISO[iso] || 0;
-    if (count > maxCount) maxCount = count;
-    days.push({iso: iso, date: date, count: count, isToday: offset === TODAY_D});
+    var offset  = TODAY_D - i;
+    var iso     = isoFromOffset(offset);
+    var date    = dateFromDayOffset(offset);
+    var typeMap = byISO[iso] || {};
+    var total   = Object.keys(typeMap).reduce(function(s,k){ return s + typeMap[k]; }, 0);
+    if (total > maxCount) maxCount = total;
+    days.push({iso:iso, date:date, typeMap:typeMap, total:total, isToday:offset===TODAY_D});
   }
-  if (maxCount === 0) maxCount = 1; // avoid division by zero
+  if (maxCount === 0) maxCount = 1;
 
-  // Bar colours by session count
-  function barCol(n) {
-    if (n === 0) return 'var(--surface2)';
-    if (n === 1) return '#166534';
-    if (n === 2) return '#16A34A';
-    if (n === 3) return '#4ADE80';
-    return '#86EFAC';
-  }
-
-  // Draw bars
+  // Draw stacked bars
   var barHTML = '';
+  var usedTypes = {};
   days.forEach(function(d) {
-    var heightPct = d.count > 0 ? Math.max(12, Math.round((d.count / maxCount) * 100)) : 6;
-    var col = d.isToday ? 'var(--accent)' : barCol(d.count);
-    var border = d.isToday ? '2px solid var(--accent)' : 'none';
-    var title = d.date.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})
-              + ': ' + d.count + ' session' + (d.count !== 1 ? 's' : '');
-    barHTML += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default" title="'+title+'">';
-    barHTML += '<div style="width:100%;background:'+col+';border-radius:2px 2px 0 0;'
-             + 'height:'+heightPct+'%;min-height:'+(d.count>0?'8':'3')+'px;border:'+border+';box-sizing:border-box;transition:height 0.3s"></div>';
+    var heightPx = d.total > 0 ? Math.max(8, Math.round((d.total / maxCount) * 90)) : 3;
+    var dateStr  = d.date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+    var tipParts = [dateStr];
+    Object.keys(d.typeMap).forEach(function(t){ tipParts.push((SPORT_META[t]||{label:t}).label+': '+d.typeMap[t]); });
+    var tip = tipParts.join(' · ');
+    var isWeekend = [5,6].indexOf(d.date.getUTCDay()) >= 0;
+    var borderTop = d.isToday ? '2px solid var(--accent)' : '';
+
+    barHTML += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default;position:relative" title="'+tip+'">';
+    if (d.total === 0) {
+      barHTML += '<div style="width:100%;height:3px;background:'+(isWeekend?'rgba(255,255,255,0.05)':'var(--surface2)')+';border-radius:1px"></div>';
+    } else {
+      // Stack segments from bottom, each type gets proportional height
+      var types = Object.keys(d.typeMap);
+      var stackHTML = '';
+      types.forEach(function(t) {
+        usedTypes[t] = true;
+        var segH = Math.max(4, Math.round((d.typeMap[t] / d.total) * heightPx));
+        var col  = TYPE_COLORS[t] || '#6B7280';
+        stackHTML += '<div style="width:100%;height:'+segH+'px;background:'+col+'"></div>';
+      });
+      barHTML += '<div style="width:100%;display:flex;flex-direction:column-reverse;border-radius:2px 2px 0 0;overflow:hidden;'
+               + (borderTop ? 'outline:'+borderTop+';' : '') + '">' + stackHTML + '</div>';
+    }
     barHTML += '</div>';
   });
   chartEl.innerHTML = barHTML;
 
-  // Date labels — show every 7th day (Mondays)
-  var labelHTML = '';
-  var shown = 0;
-  // Show 4 labels: day 0, 7, 14, 21
-  [0, 7, 14, 21].forEach(function(idx) {
-    var d = days[idx];
-    if (d) {
-      labelHTML += '<span>'+d.date.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'})+'</span>';
-    }
-  });
-  labelHTML += '<span>Today</span>';
-  if (datesEl) datesEl.innerHTML = labelHTML;
+  // Date labels — Mon of each week
+  if (datesEl) {
+    var lblHTML = '';
+    [0, 7, 14, 21].forEach(function(idx) {
+      var d = days[idx];
+      if (d) lblHTML += '<span>'+d.date.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'})+'</span>';
+    });
+    lblHTML += '<span style="color:var(--accent);font-weight:700">Today</span>';
+    datesEl.innerHTML = lblHTML;
+  }
+
+  // Legend — only types actually used
+  if (legendEl) {
+    var legHTML = '';
+    Object.keys(usedTypes).forEach(function(t) {
+      var col   = TYPE_COLORS[t] || '#6B7280';
+      var label = (SPORT_META[t] || {label:t}).label;
+      legHTML += '<div style="display:flex;align-items:center;gap:5px">'
+               + '<div style="width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+               + '<span style="font-size:10px;color:var(--sub)">'+label+'</span>'
+               + '</div>';
+    });
+    legendEl.innerHTML = legHTML || '<span style="font-size:10px;color:var(--muted)">No sessions yet</span>';
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// HEATMAP — every day since plan start
-// ═══════════════════════════════════════════════════════════════
+// ── HEATMAP — monthly layout ────────────────────────────────────
 function renderHeatmap() {
   var el = document.getElementById('heatmap');
   if (!el) return;
 
-  var EPOCH_OFF = 0; // day 0 = plan start
-  var totalDays = TODAY_D + 1; // days from plan start up to today
+  var byISO = buildTypeMap();
 
-  // Build count map from completions (works even if state not loaded for that day)
-  var hmCountByISO = {};
-  Object.keys(completions).forEach(function(id) {
-    if (!completions[id].done) return;
-    var iso = id.slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      hmCountByISO[iso] = (hmCountByISO[iso] || 0) + 1;
-    }
-  });
-
-  // Build grid: group by week columns, 7 rows (Mon–Sun)
-  var weeks = [];
-  var week  = [];
-  for (var d = 0; d < totalDays; d++) {
-    var iso   = isoFromOffset(d);
-    var count = hmCountByISO[iso] || 0;
-    week.push({d: d, iso: iso, count: count});
-    if (week.length === 7) { weeks.push(week); week = []; }
-  }
-  if (week.length > 0) weeks.push(week); // last partial week
-
-  function cellCol(n) {
-    if (n === 0) return 'var(--surface2)';
-    if (n === 1) return '#166534';
-    if (n === 2) return '#16A34A';
-    if (n === 3) return '#4ADE80';
-    return '#86EFAC';
+  // Collect all months from plan start to today
+  var startDate = new Date('2026-03-30T00:00:00Z');
+  var today     = new Date();
+  var months    = [];
+  var cur       = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  while (cur <= today) {
+    months.push(new Date(cur));
+    cur.setUTCMonth(cur.getUTCMonth() + 1);
   }
 
-  // Render as flex row of week columns
-  var h = '<div style="display:flex;gap:3px">';
-  // Day labels column
-  h += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:4px">';
-  ['M','T','W','T','F','S','S'].forEach(function(lbl) {
-    h += '<div style="width:10px;height:10px;font-size:7px;color:var(--muted);display:flex;align-items:center;justify-content:center">'+lbl+'</div>';
-  });
+  // Dominant type colour for a day
+  function dayCol(iso) {
+    var tm = byISO[iso];
+    if (!tm) return null;
+    var best = null, bestN = 0;
+    Object.keys(tm).forEach(function(t){ if(tm[t]>bestN){bestN=tm[t];best=t;} });
+    return best ? (TYPE_COLORS[best] || '#4ADE80') : null;
+  }
+
+  var CELL = 13; // px per cell
+  var GAP  = 2;
+
+  var h = '<div style="display:flex;gap:10px;align-items:flex-start">';
+
+  // Day-of-month labels on left
+  h += '<div style="display:flex;flex-direction:column;gap:'+GAP+'px;flex-shrink:0;padding-top:20px">';
+  for (var day = 1; day <= 31; day++) {
+    var show = (day === 1 || day % 5 === 0);
+    h += '<div style="height:'+CELL+'px;font-size:8px;color:var(--muted);line-height:'+CELL+'px;text-align:right;width:16px">'
+       + (show ? day : '') + '</div>';
+  }
   h += '</div>';
 
-  // Week columns
-  weeks.forEach(function(wk, wi) {
-    h += '<div style="display:flex;flex-direction:column;gap:3px">';
-    for (var di = 0; di < 7; di++) {
-      var cell = wk[di];
-      if (!cell) {
-        // empty future cell
-        h += '<div style="width:10px;height:10px;border-radius:2px;background:transparent"></div>';
+  // Month columns
+  months.forEach(function(m) {
+    var yr  = m.getUTCFullYear();
+    var mo  = m.getUTCMonth();
+    var dim = new Date(Date.UTC(yr, mo+1, 0)).getUTCDate(); // days in month
+    var mLabel = m.toLocaleDateString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'});
+
+    h += '<div style="flex-shrink:0">';
+    // Month label
+    h += '<div style="font-size:8px;font-weight:700;color:var(--muted);text-align:center;margin-bottom:4px;white-space:nowrap">'+mLabel+'</div>';
+    // Day cells
+    h += '<div style="display:flex;flex-direction:column;gap:'+GAP+'px">';
+    for (var d = 1; d <= 31; d++) {
+      if (d > dim) {
+        // padding cell for months with fewer days
+        h += '<div style="width:'+CELL+'px;height:'+CELL+'px;border-radius:2px;background:transparent"></div>';
       } else {
-        var isToday = cell.d === TODAY_D;
-        var col  = isToday ? 'var(--accent)' : cellCol(cell.count);
-        var date = dateFromDayOffset(cell.d);
-        var tip  = date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})
-                 + ': ' + cell.count + ' session' + (cell.count!==1?'s':'');
-        h += '<div title="'+tip+'" style="width:10px;height:10px;border-radius:2px;background:'+col
-           + (isToday?';outline:1px solid var(--accent)':'')
-           + ';cursor:default"></div>';
+        var iso     = yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        var isFuture = new Date(iso+'T00:00:00Z') > today;
+        var isToday  = iso === TODAY_ISO;
+        var col      = dayCol(iso);
+        var bg = isFuture ? 'transparent'
+               : isToday  ? 'var(--accent)'
+               : col      ? col
+               :             'var(--surface2)';
+        var opacity = isFuture ? '0' : col || isToday ? '1' : '0.35';
+        var tipTypes = byISO[iso] ? Object.keys(byISO[iso]).map(function(t){
+          return (SPORT_META[t]||{label:t}).label;
+        }).join(', ') : 'Rest';
+        var tip = iso + ': ' + tipTypes;
+        h += '<div title="'+tip+'" style="width:'+CELL+'px;height:'+CELL+'px;border-radius:2px;'
+           + 'background:'+bg+';opacity:'+opacity+';cursor:default'
+           + (isToday?';outline:2px solid var(--accent);outline-offset:1px':'')
+           + '"></div>';
       }
     }
-    h += '</div>';
-
-    // Month label every 4 weeks approx
-    if (wi > 0 && wk[0] && wk[0].d % 28 < 7) {
-      // skip — we'll use a simpler approach
-    }
+    h += '</div></div>';
   });
+
   h += '</div>';
 
-  // Month labels below
-  h += '<div style="display:flex;gap:3px;margin-top:4px;margin-left:14px">';
-  weeks.forEach(function(wk, wi) {
-    if (wk[0]) {
-      var d0 = dateFromDayOffset(wk[0].d);
-      // Show month label at start of each month
-      var day = d0.getUTCDate();
-      if (day <= 7 || wi === 0) {
-        h += '<div style="width:10px;font-size:7px;color:var(--muted);white-space:nowrap;overflow:visible">'
-           + d0.toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})+'</div>';
-      } else {
-        h += '<div style="width:10px"></div>';
-      }
-    }
+  // Legend — same colours as bar chart
+  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">';
+  h += '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--surface2);opacity:0.35"></div><span style="font-size:9px;color:var(--muted)">Rest / No session</span></div>';
+  Object.keys(TYPE_COLORS).forEach(function(t) {
+    if (!SPORT_META[t]) return;
+    h += '<div style="display:flex;align-items:center;gap:4px">'
+       + '<div style="width:10px;height:10px;border-radius:2px;background:'+TYPE_COLORS[t]+'"></div>'
+       + '<span style="font-size:9px;color:var(--sub)">'+(SPORT_META[t].icon||'')+'&nbsp;'+SPORT_META[t].label+'</span>'
+       + '</div>';
   });
   h += '</div>';
 
@@ -2415,6 +2444,7 @@ const EXTRA_SESSIONS = [
   {type:'YOGA',      icon:'🧘', label:'Yoga',               sub:'Mobility & recovery'},
   {type:'BIKE',      icon:'🚴', label:'Bike',               sub:'Cross-training ride'},
   {type:'BOXING',    icon:'🥊', label:'Shadow Boxing',      sub:'3–5 rounds · 3 min each'},
+  {type:'VO2_MAX',   icon:'🔥', label:'VO₂ Max Intervals',   sub:'4×4 min @ 90% HR · Whoop-validated'},
 ];
 
 let addModalTargetISO = null;

@@ -540,6 +540,41 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="tl-marker" id="tl-marker"></div>
   </div>
 
+  <!-- Activity bar chart — last 28 days -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">DAILY ACTIVITY — LAST 28 DAYS</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:3px">Sessions completed per day</div>
+      </div>
+      <div id="chart-legend" style="display:flex;gap:12px;font-size:10px;color:var(--muted)"></div>
+    </div>
+    <div id="activity-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;padding-bottom:20px;position:relative"></div>
+    <div id="chart-dates" style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:4px;padding:0 1px"></div>
+  </div>
+
+  <!-- Training heatmap — since plan start -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">TRAINING HEATMAP</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:3px">Every day since plan start · darker = more sessions</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted)">
+        <span>0</span>
+        <div style="display:flex;gap:2px">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--surface2)"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:#166534"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:#16A34A"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:#4ADE80"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:#86EFAC"></div>
+        </div>
+        <span>4+</span>
+      </div>
+    </div>
+    <div id="heatmap" style="overflow-x:auto;padding-bottom:4px"></div>
+  </div>
+
 </div>
 
 <!-- WEEKLY PLANNER -->
@@ -767,6 +802,7 @@ const SPORT_META = {
   YOGA:      {label:'Yoga',             icon:'🧘'},
   BIKE:      {label:'Bike',             icon:'🚴'},
   LONG_RUN:  {label:'Long Run',         icon:'🏅'},
+  BOXING:    {label:'Shadow Boxing',    icon:'🥊'},
 };
 
 const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
@@ -908,6 +944,7 @@ async function loadAll() {
       updateOverview();
       updateLog();
       renderRunSessions();
+      renderRunSessions();
       setSyncUI('ok');
       setTimeout(() => setSyncUI('idle'), 2000);
     } else {
@@ -955,39 +992,39 @@ async function forceSync() {
 function buildTemplate(wkData) {
   const {wk, p, t, sq, lu, ca} = wkData;
   const legs = {wk, phase:p, sq, lu, ca, time:t};
-  // FIXED schedule — matches the PDF exactly
+  // Weekly structure — updated May 2026
   return [
-    // 0 MON: Legs RL + UPPER BODY Strength + Zone 2
-    [
-      {type:'LEGS_RL',   ...legs},
-      {type:'STRENGTH',  detail:'UPPER BODY · Pull-ups, Bent-Over Row, Flat Press, OHP, Farmers Walk · 45–50 min'},
-      {type:'ZONE2',     detail:'30–45 min easy · HR 120–140 bpm · conversational pace'},
-    ],
-    // 1 TUE: Yoga + Bike
-    [
-      {type:'YOGA', detail:'45 min · Hips, Hamstrings, Thoracic mobility'},
-      {type:'BIKE', detail:'30–45 min · Active recovery ride · low effort'},
-    ],
-    // 2 WED: Legs BSS + Bike
-    [
-      {type:'LEGS_BSS', ...legs},
-      {type:'BIKE',     detail:'30 min · Cross-training · moderate effort'},
-    ],
-    // 3 THU: ARM DAY only
+    // 0 MON: ARM DAY + Shadow Boxing (3 rounds after arms)
     [
       {type:'STRENGTH', detail:'ARM DAY · Hammer Curl, Close-Grip Press, Zottman Curl, Dead Hang · 45–50 min'},
+      {type:'BOXING',   detail:'3 × 3 min rounds · 1 min rest · exhale on every punch · 1–2 kg DBs · jab/cross/hook · build to 5 rounds by Wk 10'},
     ],
-    // 4 FRI: Legs RL + Zone 2 Run
+    // 1 TUE: Legs RL + cycle commute (Zone 2 built in)
     [
-      {type:'LEGS_RL',   ...legs},
-      {type:'ZONE2_RUN', detail:'30–45 min Zone 2 run · conversational pace'},
+      {type:'LEGS_RL', ...legs},
+      {type:'BIKE',    detail:'Commute · Zone 2 · easy pace both ways'},
     ],
-    // 5 SAT: Long Run + Legs RL (weekend — tick which day you do it)
+    // 2 WED: Yoga + cycle commute
     [
-      {type:'LONG_RUN', detail:'60–90 min · easy aerobic pace · weekend session'},
-      {type:'LEGS_RL',  ...legs, detail_override:'Weekend Legs RL session'},
+      {type:'YOGA', detail:'45 min · Hips, Hamstrings, Thoracic mobility · recovery focus'},
+      {type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'},
     ],
-    // 6 SUN: Rest (or swap with Saturday)
+    // 3 THU: Legs BSS + cycle commute
+    [
+      {type:'LEGS_BSS', ...legs},
+      {type:'BIKE',     detail:'Commute · Zone 2 · easy pace both ways'},
+    ],
+    // 4 FRI: UPPER BODY Strength + Zone 2 Run + Shadow Boxing finisher
+    [
+      {type:'STRENGTH',  detail:'UPPER BODY · Pull-ups, Bent-Over Row, Flat Press, OHP, Farmers Walk · 45–50 min'},
+      {type:'ZONE2_RUN', detail:'30–40 min easy run · HR 120–140 · conversational pace · knee exercises after'},
+      {type:'BOXING',    detail:'2 × 3 min rounds · lighter finisher · jab-cross combinations · no dumbbells on Friday'},
+    ],
+    // 5 SAT: VO₂ Max intervals
+    [
+      {type:'ZONE2_RUN', detail:'VO₂ MAX · 5–10 min warm-up → 4 × 4 min @ 90% max HR (Zone 4–5) · 3 min jog recovery between · cool-down · total ~35–40 min'},
+    ],
+    // 6 SUN: Full rest
     [],
   ];
 }
@@ -1470,11 +1507,6 @@ function buildStrengthHTML() {
      s:'3 × 30 s  →  45 s  →  60 s',
      h:['Farmers Carry','Sled Pull'],
      c:'Hang still. Iron grip for Farmers Carry. Decompresses spine after leg days. High return.'},
-    {n:'Gentle Dead Bug',
-     s:'3 × 6 reps each side  →  8 reps',
-     h:['All stations'],
-     c:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.',
-     hernia:true},
   ];
 
   var UPPER_EXERCISES = [
@@ -1514,11 +1546,6 @@ function buildStrengthHTML() {
      s:'3 × 30 m @ 2×8 kg  →  3 × 40 m @ 2×10 kg',
      h:['Farmers Carry','Sandbag Lunges'],
      c:'Upright posture, tight core. Progress to 40m by Wk 10.'},
-    {n:'Gentle Dead Bug',
-     s:'3 × 6 reps each side  →  8 reps',
-     h:['All stations'],
-     c:'Lie on back, exhale gently, lower ONE heel 10 cm only. No breath-holding. STOP if any lower-ab pain.',
-     hernia:true},
   ];
 
   function exRow(r, i) {
@@ -1609,16 +1636,16 @@ function buildStrengthHTML() {
 
   // ARM DAY
   h += buildDay(
-    'ARM DAY  ·  THURSDAY',
-    'Thursday · 3 sets per exercise · 45–50 min · Rest 60 s (Foundation), 45 s (Build), 30 s (Peak)',
+    'ARM DAY  ·  MONDAY',
+    'Monday · 3 sets per exercise · 45–50 min · Rest 60 s (Foundation), 45 s (Build), 30 s (Peak)',
     '#C4B5FD',
     ARM_EXERCISES
   );
 
   // UPPER BODY DAY
   h += buildDay(
-    'UPPER BODY DAY  ·  MONDAY',
-    'Monday · 3–4 sets per exercise · 45–50 min · Superset rows with presses to save time',
+    'UPPER BODY DAY  ·  FRIDAY',
+    'Friday · 3–4 sets per exercise · 45–50 min · Superset rows with presses to save time',
     '#93C5FD',
     UPPER_EXERCISES
   );
@@ -1658,6 +1685,52 @@ function buildStrengthHTML() {
   h += 'Any bulging or visible protrusion. Any discomfort that lingers after the session. ';
   h += '<strong style="color:#F87171">If any of these happen — skip core entirely and see your GP before continuing.</strong>';
   h += '</div></div></div>';
+
+  // Shadow Boxing section
+  h += '<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">';
+  h += '<div style="font-size:10px;letter-spacing:1.5px;font-weight:700;color:#FCD34D;margin-bottom:12px">&#x1F94A; SHADOW BOXING — CORE & CONDITIONING</div>';
+
+  h += '<div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11px;color:var(--sub);line-height:1.7">';
+  h += '<strong style="color:var(--accent)">Why boxing for your hernia:</strong> Dynamic rotational core engagement in short controlled bursts — not sustained intra-abdominal pressure like planks. ';
+  h += 'Exhale on every punch. Never hold your breath or brace hard. Start without dumbbells. Add 1–2 kg only once breathing pattern is automatic.';
+  h += '</div>';
+
+  var boxDays = [
+    {day:'MONDAY — after Arm Day', col:'#C4B5FD', rounds:'3 rounds',
+     detail:'3 × 3 min rounds · 1 min rest between · use 1–2 kg dumbbells once comfortable · build to 5 rounds by Week 10'},
+    {day:'FRIDAY — after Upper Body + Run', col:'#93C5FD', rounds:'2 rounds',
+     detail:'2 × 3 min rounds · lighter finisher only · no dumbbells on Friday (arms already fatigued) · focus on footwork and breathing'},
+  ];
+
+  boxDays.forEach(function(bd) {
+    h += '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:8px;border-left:3px solid '+bd.col+'">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    h += '<span style="font-size:11px;font-weight:700;color:'+bd.col+'">'+bd.day+'</span>';
+    h += '<span style="font-size:10px;color:var(--accent);font-weight:700">'+bd.rounds+'</span>';
+    h += '</div>';
+    h += '<div style="font-size:11px;color:var(--sub);line-height:1.6">'+bd.detail+'</div>';
+    h += '</div>';
+  });
+
+  h += '<div style="margin-top:10px">';
+  h += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:8px">ROUND STRUCTURE (3 min)</div>';
+  var roundSteps = [
+    {t:'0:00–0:30','a':'Jabs only — left-right · easy pace · find your rhythm'},
+    {t:'0:30–1:00','a':'Jab-cross combinations · exhale on every cross'},
+    {t:'1:00–1:30','a':'Hooks — lighter rotation · controlled core engagement'},
+    {t:'1:30–2:00','a':'Footwork only — move around, no punches · active recovery'},
+    {t:'2:00–2:30','a':'Free combinations — whatever feels natural'},
+    {t:'2:30–3:00','a':'Fast jabs to finish — high tempo · push through'},
+  ];
+  roundSteps.forEach(function(s, i) {
+    var bg = i%2===0 ? 'var(--surface)' : 'var(--surface2)';
+    h += '<div style="display:grid;grid-template-columns:70px 1fr;gap:10px;padding:7px 10px;background:'+bg+';border-radius:5px;margin-bottom:2px">';
+    h += '<span style="font-family:monospace;font-size:10px;font-weight:700;color:var(--accent)">'+s.t+'</span>';
+    h += '<span style="font-size:11px;color:var(--sub)">'+s.a+'</span>';
+    h += '</div>';
+  });
+  h += '</div>';
+  h += '</div>';
 
   h += '</div>'; // end strength section
   return h;
@@ -1958,6 +2031,172 @@ function exportCSV() {
 // ═══════════════════════════════════════════════════════════════
 // OVERVIEW
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY CHART — last 28 days bar chart
+// ═══════════════════════════════════════════════════════════════
+function renderActivityChart() {
+  var chartEl = document.getElementById('activity-chart');
+  var datesEl = document.getElementById('chart-dates');
+  if (!chartEl) return;
+
+  // Build count map from completions directly (works even if state not initialised)
+  var countByISO = {};
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    // Session IDs start with ISO date: "2026-04-12_TYPE_N"
+    var iso = id.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      countByISO[iso] = (countByISO[iso] || 0) + 1;
+    }
+  });
+
+  // Build 28 days of data
+  var days = [];
+  var maxCount = 0;
+  for (var i = 27; i >= 0; i--) {
+    var offset = TODAY_D - i;
+    var iso    = isoFromOffset(offset);
+    var date   = dateFromDayOffset(offset);
+    var count  = countByISO[iso] || 0;
+    if (count > maxCount) maxCount = count;
+    days.push({iso: iso, date: date, count: count, isToday: offset === TODAY_D});
+  }
+  if (maxCount === 0) maxCount = 1; // avoid division by zero
+
+  // Bar colours by session count
+  function barCol(n) {
+    if (n === 0) return 'var(--surface2)';
+    if (n === 1) return '#166534';
+    if (n === 2) return '#16A34A';
+    if (n === 3) return '#4ADE80';
+    return '#86EFAC';
+  }
+
+  // Draw bars
+  var barHTML = '';
+  days.forEach(function(d) {
+    var heightPct = d.count > 0 ? Math.max(12, Math.round((d.count / maxCount) * 100)) : 6;
+    var col = d.isToday ? 'var(--accent)' : barCol(d.count);
+    var border = d.isToday ? '2px solid var(--accent)' : 'none';
+    var title = d.date.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})
+              + ': ' + d.count + ' session' + (d.count !== 1 ? 's' : '');
+    barHTML += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:default" title="'+title+'">';
+    barHTML += '<div style="width:100%;background:'+col+';border-radius:2px 2px 0 0;'
+             + 'height:'+heightPct+'%;min-height:'+(d.count>0?'8':'3')+'px;border:'+border+';box-sizing:border-box;transition:height 0.3s"></div>';
+    barHTML += '</div>';
+  });
+  chartEl.innerHTML = barHTML;
+
+  // Date labels — show every 7th day (Mondays)
+  var labelHTML = '';
+  var shown = 0;
+  // Show 4 labels: day 0, 7, 14, 21
+  [0, 7, 14, 21].forEach(function(idx) {
+    var d = days[idx];
+    if (d) {
+      labelHTML += '<span>'+d.date.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'})+'</span>';
+    }
+  });
+  labelHTML += '<span>Today</span>';
+  if (datesEl) datesEl.innerHTML = labelHTML;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HEATMAP — every day since plan start
+// ═══════════════════════════════════════════════════════════════
+function renderHeatmap() {
+  var el = document.getElementById('heatmap');
+  if (!el) return;
+
+  var EPOCH_OFF = 0; // day 0 = plan start
+  var totalDays = TODAY_D + 1; // days from plan start up to today
+
+  // Build count map from completions (works even if state not loaded for that day)
+  var hmCountByISO = {};
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    var iso = id.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      hmCountByISO[iso] = (hmCountByISO[iso] || 0) + 1;
+    }
+  });
+
+  // Build grid: group by week columns, 7 rows (Mon–Sun)
+  var weeks = [];
+  var week  = [];
+  for (var d = 0; d < totalDays; d++) {
+    var iso   = isoFromOffset(d);
+    var count = hmCountByISO[iso] || 0;
+    week.push({d: d, iso: iso, count: count});
+    if (week.length === 7) { weeks.push(week); week = []; }
+  }
+  if (week.length > 0) weeks.push(week); // last partial week
+
+  function cellCol(n) {
+    if (n === 0) return 'var(--surface2)';
+    if (n === 1) return '#166534';
+    if (n === 2) return '#16A34A';
+    if (n === 3) return '#4ADE80';
+    return '#86EFAC';
+  }
+
+  // Render as flex row of week columns
+  var h = '<div style="display:flex;gap:3px">';
+  // Day labels column
+  h += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:4px">';
+  ['M','T','W','T','F','S','S'].forEach(function(lbl) {
+    h += '<div style="width:10px;height:10px;font-size:7px;color:var(--muted);display:flex;align-items:center;justify-content:center">'+lbl+'</div>';
+  });
+  h += '</div>';
+
+  // Week columns
+  weeks.forEach(function(wk, wi) {
+    h += '<div style="display:flex;flex-direction:column;gap:3px">';
+    for (var di = 0; di < 7; di++) {
+      var cell = wk[di];
+      if (!cell) {
+        // empty future cell
+        h += '<div style="width:10px;height:10px;border-radius:2px;background:transparent"></div>';
+      } else {
+        var isToday = cell.d === TODAY_D;
+        var col  = isToday ? 'var(--accent)' : cellCol(cell.count);
+        var date = dateFromDayOffset(cell.d);
+        var tip  = date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})
+                 + ': ' + cell.count + ' session' + (cell.count!==1?'s':'');
+        h += '<div title="'+tip+'" style="width:10px;height:10px;border-radius:2px;background:'+col
+           + (isToday?';outline:1px solid var(--accent)':'')
+           + ';cursor:default"></div>';
+      }
+    }
+    h += '</div>';
+
+    // Month label every 4 weeks approx
+    if (wi > 0 && wk[0] && wk[0].d % 28 < 7) {
+      // skip — we'll use a simpler approach
+    }
+  });
+  h += '</div>';
+
+  // Month labels below
+  h += '<div style="display:flex;gap:3px;margin-top:4px;margin-left:14px">';
+  weeks.forEach(function(wk, wi) {
+    if (wk[0]) {
+      var d0 = dateFromDayOffset(wk[0].d);
+      // Show month label at start of each month
+      var day = d0.getUTCDate();
+      if (day <= 7 || wi === 0) {
+        h += '<div style="width:10px;font-size:7px;color:var(--muted);white-space:nowrap;overflow:visible">'
+           + d0.toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})+'</div>';
+      } else {
+        h += '<div style="width:10px"></div>';
+      }
+    }
+  });
+  h += '</div>';
+
+  el.innerHTML = h;
+}
+
 function updateOverview() {
   const now = new Date();
   const phases = [
@@ -1973,6 +2212,10 @@ function updateOverview() {
   }
   document.getElementById('ov-phase').textContent     = ph.n;
   document.getElementById('ov-phase-sub').textContent = ph.sub;
+
+  // Render charts
+  renderActivityChart();
+  renderHeatmap();
 
   // Journey timeline
   var now2 = new Date();
@@ -2143,6 +2386,7 @@ const EXTRA_SESSIONS = [
   {type:'STRENGTH',  icon:'💪', label:'Strength',           sub:'Upper body or arms'},
   {type:'YOGA',      icon:'🧘', label:'Yoga',               sub:'Mobility & recovery'},
   {type:'BIKE',      icon:'🚴', label:'Bike',               sub:'Cross-training ride'},
+  {type:'BOXING',    icon:'🥊', label:'Shadow Boxing',      sub:'3–5 rounds · 3 min each'},
 ];
 
 let addModalTargetISO = null;

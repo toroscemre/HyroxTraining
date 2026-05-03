@@ -2547,8 +2547,7 @@ async function init() {
 
   saveAll();
 
-  weekOffset = Math.round((mondayOffset(new Date()) - mondayOffset(new Date('2026-03-30T00:00:00Z'))) / 7);
-  weekOffset = Math.max(0, Math.min(13, weekOffset));
+  weekOffset = 0; // always start on current week — use < > arrows to navigate
 
   updateTopbar();
   setInterval(updateTopbar, 60000);

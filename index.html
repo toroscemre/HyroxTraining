@@ -1041,9 +1041,37 @@ function ensureWeek(mondayOff) {
   }
 }
 
+// Force-reset a week with the new template, preserving only existing completions
+// Used when the plan changes mid-programme
+function forceResetWeek(mondayOff) {
+  const idx = wkIdxFromMondayOffset(mondayOff);
+  if (idx < 0 || idx >= 14) return;
+  const tmpl = buildTemplate(WEEKS[idx]);
+  for (let d = 0; d < 7; d++) {
+    const iso = isoFromOffset(mondayOff + d);
+    // Keep any extra sessions the user manually added, discard old plan sessions
+    const extras = (state[iso] || []).filter(s => s.extra === true);
+    const newSessions = tmpl[d].map((s,i) => ({...s, id:`${iso}_${s.type}_${i}`}));
+    state[iso] = [...newSessions, ...extras];
+  }
+}
+
 // Pre-load all 14 weeks
 function initState() {
   for (let w = 0; w < 14; w++) ensureWeek(w * 7);
+}
+
+// Reset current week + all future weeks to new template
+// Called once after plan change — leaves past weeks intact
+function resetFutureWeeks() {
+  const todayMon = mondayOffset(new Date());
+  for (let w = 0; w < 14; w++) {
+    const monOff = w * 7;
+    if (monOff >= todayMon) {
+      forceResetWeek(monOff);
+    }
+  }
+  saveAll();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2477,6 +2505,16 @@ async function init() {
   await loadAll();
 
   initState();
+
+  // Plan version check — if plan changed, reset current+future weeks
+  // Increment PLAN_VERSION when weekly structure changes
+  const PLAN_VERSION = 'v3_may2026';
+  if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
+    console.log('New plan detected — resetting current + future weeks');
+    resetFutureWeeks();
+    localStorage.setItem('hyrox_plan_version', PLAN_VERSION);
+  }
+
   saveAll();
 
   weekOffset = Math.round((mondayOffset(new Date()) - mondayOffset(new Date('2026-03-30T00:00:00Z'))) / 7);

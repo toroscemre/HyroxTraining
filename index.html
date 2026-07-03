@@ -404,6 +404,7 @@ body.sb-collapsed #topbar{padding-left:76px}
   transform:translateY(70px);opacity:0;transition:all 0.3s;z-index:600}
 .toast.show{transform:translateY(0);opacity:1}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </head>
 <body>
 
@@ -550,24 +551,16 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="tl-marker" id="tl-marker"></div>
   </div>
 
-  <!-- Activity bar chart — last 28 days -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
-    <div style="margin-bottom:14px">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">DAILY ACTIVITY — LAST 28 DAYS</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:3px">Sessions completed per day · colour = session type</div>
+  <!-- Trend chart: Strength / Running / Yoga — monthly clean lines -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">MONTHLY TRAINING TRENDS — STRENGTH · RUNNING · YOGA</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="trend-kpi"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px" id="trend-legend"></div>
+    <div style="position:relative;width:100%;height:220px;margin-bottom:24px">
+      <canvas id="trend-chart" role="img" aria-label="Monthly strength running and yoga sessions Jul 2024 to present"></canvas>
     </div>
-    <div id="activity-chart" style="display:flex;align-items:flex-end;gap:2px;height:100px;margin-bottom:8px"></div>
-    <div id="chart-dates" style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:12px;padding:0 1px"></div>
-    <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-  </div>
-
-  <!-- Training heatmap — monthly -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
-    <div style="margin-bottom:12px">
-      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">TRAINING HEATMAP — MONTHLY</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:3px">Each column = one month · rows = days 1–31 · colour = session type trained</div>
-    </div>
-    <div id="heatmap" style="overflow-x:auto;padding-bottom:4px"></div>
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">LAST 6 MONTHS vs PREVIOUS 6</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="trend-compare"></div>
   </div>
 
 </div>
@@ -2463,8 +2456,8 @@ function renderHeatmap() {
 function updateOverview() {
   const now = new Date();
   const phases = [
-    {s:'2026-03-30',e:'2026-07-11',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
-    {s:'2026-07-14',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'Compound lifting + HYROX intro'},
+    {s:'2026-03-30',e:'2026-07-05',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
+    {s:'2026-07-06',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
     {s:'2026-10-12',e:'2027-02-28',n:'Phase 3 · Race Specific',sub:'Full simulations'},
     {s:'2027-03-01',e:'2027-04-16',n:'Phase 4 · Taper',        sub:'Sharpen & rest'},
     {s:'2027-04-01',e:'2027-04-01',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
@@ -2476,9 +2469,7 @@ function updateOverview() {
   document.getElementById('ov-phase').textContent     = ph.n;
   document.getElementById('ov-phase-sub').textContent = ph.sub;
 
-  // Render charts
-  renderActivityChart();
-  renderHeatmap();
+  // Charts rendered separately via renderTrendChart()
 
   // Journey timeline
   var now2 = new Date();
@@ -2610,7 +2601,7 @@ function nav(id) {
   if (id==='p1found')  renderPhaseWeeks('p1-found-c',WEEKS.slice(0,5));
   if (id==='p1build')  renderPhaseWeeks('p1-build-c',WEEKS.slice(5,10));
   if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
-  if (id==='overview') updateOverview();
+  if (id==='overview') { updateOverview(); setTimeout(renderTrendChart, 200); }
   if (id==='history')  renderHistory();
 }
 
@@ -3040,6 +3031,239 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// TREND CHART — Strength / Running / Yoga (clean lines only)
+// ═══════════════════════════════════════════════════════════
+var TREND_RAW = [
+  {d:"2024-07-01",c:"Strength"},{d:"2024-07-16",c:"Strength"},
+  {d:"2024-08-01",c:"Strength"},{d:"2024-08-16",c:"Strength"},
+  {d:"2024-09-01",c:"Strength"},{d:"2024-09-08",c:"Strength"},{d:"2024-09-15",c:"Strength"},{d:"2024-09-22",c:"Strength"},
+  {d:"2024-09-01",c:"Running"},{d:"2024-09-16",c:"Running"},
+  {d:"2024-10-01",c:"Strength"},{d:"2024-10-11",c:"Strength"},{d:"2024-10-21",c:"Strength"},
+  {d:"2024-10-01",c:"Running"},
+  {d:"2024-11-01",c:"Strength"},{d:"2024-11-11",c:"Strength"},{d:"2024-11-21",c:"Strength"},
+  {d:"2024-11-01",c:"Running"},
+  {d:"2024-12-30",c:"Yoga"},
+  {d:"2025-01-03",c:"Strength"},{d:"2025-01-08",c:"Strength"},{d:"2025-01-15",c:"Strength"},{d:"2025-01-23",c:"Strength"},
+  {d:"2025-01-13",c:"Yoga"},{d:"2025-01-20",c:"Yoga"},{d:"2025-01-27",c:"Yoga"},
+  {d:"2025-01-15",c:"Running"},{d:"2025-01-18",c:"Running"},{d:"2025-01-29",c:"Running"},
+  {d:"2025-02-04",c:"Strength"},{d:"2025-02-12",c:"Strength"},
+  {d:"2025-02-10",c:"Yoga"},{d:"2025-02-24",c:"Yoga"},
+  {d:"2025-02-08",c:"Running"},{d:"2025-02-12",c:"Running"},{d:"2025-02-15",c:"Running"},
+  {d:"2025-03-04",c:"Strength"},{d:"2025-03-08",c:"Strength"},
+  {d:"2025-03-03",c:"Yoga"},{d:"2025-03-10",c:"Yoga"},
+  {d:"2025-03-01",c:"Running"},{d:"2025-03-05",c:"Running"},{d:"2025-03-12",c:"Running"},
+  {d:"2025-04-05",c:"Running"},{d:"2025-04-23",c:"Running"},
+  {d:"2025-05-19",c:"Yoga"},{d:"2025-05-26",c:"Yoga"},
+  {d:"2025-05-24",c:"Running"},{d:"2025-05-28",c:"Running"},
+  {d:"2025-06-30",c:"Strength"},
+  {d:"2025-07-07",c:"Strength"},{d:"2025-07-09",c:"Strength"},{d:"2025-07-11",c:"Strength"},
+  {d:"2025-07-14",c:"Strength"},{d:"2025-07-17",c:"Strength"},{d:"2025-07-21",c:"Strength"},
+  {d:"2025-07-24",c:"Strength"},{d:"2025-07-27",c:"Strength"},{d:"2025-07-28",c:"Strength"},{d:"2025-07-31",c:"Strength"},
+  {d:"2025-08-04",c:"Strength"},{d:"2025-08-07",c:"Strength"},{d:"2025-08-11",c:"Strength"},
+  {d:"2025-08-14",c:"Strength"},{d:"2025-08-18",c:"Strength"},
+  {d:"2025-08-05",c:"Yoga"},{d:"2025-08-30",c:"Yoga"},
+  {d:"2025-08-16",c:"Running"},{d:"2025-08-23",c:"Running"},
+  {d:"2025-09-08",c:"Strength"},{d:"2025-09-11",c:"Strength"},{d:"2025-09-15",c:"Strength"},
+  {d:"2025-09-17",c:"Strength"},{d:"2025-09-22",c:"Strength"},{d:"2025-09-25",c:"Strength"},{d:"2025-09-29",c:"Strength"},
+  {d:"2025-09-23",c:"Yoga"},
+  {d:"2025-09-06",c:"Running"},{d:"2025-09-14",c:"Running"},{d:"2025-09-17",c:"Running"},{d:"2025-09-20",c:"Running"},{d:"2025-09-27",c:"Running"},
+  {d:"2025-10-02",c:"Strength"},{d:"2025-10-13",c:"Strength"},{d:"2025-10-16",c:"Strength"},
+  {d:"2025-10-20",c:"Strength"},{d:"2025-10-24",c:"Strength"},{d:"2025-10-27",c:"Strength"},
+  {d:"2025-10-10",c:"Yoga"},{d:"2025-10-22",c:"Yoga"},
+  {d:"2025-10-12",c:"Running"},{d:"2025-10-18",c:"Running"},{d:"2025-10-26",c:"Running"},
+  {d:"2025-11-03",c:"Strength"},{d:"2025-11-13",c:"Strength"},{d:"2025-11-20",c:"Strength"},
+  {d:"2025-11-22",c:"Strength"},{d:"2025-11-26",c:"Strength"},
+  {d:"2025-11-16",c:"Yoga"},
+  {d:"2025-11-01",c:"Running"},{d:"2025-11-09",c:"Running"},{d:"2025-11-15",c:"Running"},
+  {d:"2025-11-22",c:"Running"},{d:"2025-11-29",c:"Running"},
+  {d:"2025-12-01",c:"Strength"},{d:"2025-12-15",c:"Strength"},{d:"2025-12-17",c:"Strength"},{d:"2025-12-29",c:"Strength"},
+  {d:"2025-12-09",c:"Yoga"},{d:"2025-12-30",c:"Yoga"},
+  {d:"2025-12-01",c:"Running"},{d:"2025-12-13",c:"Running"},{d:"2025-12-20",c:"Running"},
+  {d:"2026-01-01",c:"Strength"},{d:"2026-01-05",c:"Strength"},{d:"2026-01-08",c:"Strength"},
+  {d:"2026-01-12",c:"Strength"},{d:"2026-01-29",c:"Strength"},
+  {d:"2026-01-27",c:"Yoga"},
+  {d:"2026-01-03",c:"Running"},{d:"2026-01-11",c:"Running"},{d:"2026-01-13",c:"Running"},{d:"2026-01-31",c:"Running"},
+  {d:"2026-02-02",c:"Strength"},{d:"2026-02-09",c:"Strength"},{d:"2026-02-13",c:"Strength"},{d:"2026-02-19",c:"Strength"},
+  {d:"2026-02-10",c:"Yoga"},{d:"2026-02-17",c:"Yoga"},
+  {d:"2026-02-15",c:"Running"},
+  {d:"2026-03-02",c:"Strength"},{d:"2026-03-05",c:"Strength"},
+  {d:"2026-04-06",c:"Strength"},{d:"2026-04-07",c:"Strength"},{d:"2026-04-09",c:"Strength"},
+  {d:"2026-04-13",c:"Strength"},{d:"2026-04-20",c:"Strength"},{d:"2026-04-27",c:"Strength"},
+  {d:"2026-04-14",c:"Running"},{d:"2026-04-21",c:"Running"},{d:"2026-04-28",c:"Yoga"},
+  {d:"2026-05-04",c:"Strength"},{d:"2026-05-11",c:"Strength"},{d:"2026-05-18",c:"Strength"},{d:"2026-05-25",c:"Strength"},
+  {d:"2026-05-05",c:"Running"},{d:"2026-05-12",c:"Running"},{d:"2026-05-19",c:"Running"},{d:"2026-05-26",c:"Yoga"},
+  {d:"2026-06-01",c:"Strength"},{d:"2026-06-08",c:"Strength"},{d:"2026-06-15",c:"Strength"},
+  {d:"2026-06-22",c:"Strength"},{d:"2026-06-29",c:"Strength"},
+  {d:"2026-06-02",c:"Running"},{d:"2026-06-09",c:"Running"},{d:"2026-06-23",c:"Running"},{d:"2026-06-30",c:"Running"},
+  {d:"2026-06-16",c:"Yoga"},
+  {d:"2026-07-01",c:"Strength"},{d:"2026-07-02",c:"Running"},{d:"2026-07-03",c:"Yoga"},
+];
+
+var TREND_SERIES = [
+  {key:'Strength', light:'#2a78d6', dark:'#3987e5'},
+  {key:'Running',  light:'#1baf7a', dark:'#199e70'},
+  {key:'Yoga',     light:'#4a3aa7', dark:'#9085e9'},
+];
+var trendChartInst = null;
+
+function renderTrendChart() {
+  if (!window.Chart) { setTimeout(renderTrendChart, 300); return; }
+  var el = document.getElementById('trend-chart');
+  if (!el) return;
+
+  var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var muted = '#898781';
+  var gridC = isDark ? '#272B3A' : '#E2E4EE';
+  function sc(s){ return isDark ? s.dark : s.light; }
+
+  var byMo = {};
+  TREND_RAW.forEach(function(r){
+    var mo = r.d.slice(0,7);
+    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    byMo[mo][r.c]++;
+  });
+  Object.keys(completions).forEach(function(id){
+    if (!completions[id].done) return;
+    var mo = id.slice(0,7);
+    if (!/^\d{4}-\d{2}$/.test(mo)) return;
+    var rest = id.slice(11);
+    var lastU = rest.lastIndexOf('_');
+    var type = lastU >= 0 ? rest.slice(0,lastU) : rest;
+    var cat = type==='YOGA' ? 'Yoga'
+            : (type==='STRENGTH'||type==='HERO') ? 'Strength'
+            : (type==='ZONE2_RUN'||type==='LONG_RUN'||type==='VO2_MAX') ? 'Running'
+            : null;
+    if (!cat) return;
+    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    byMo[mo][cat]++;
+  });
+
+  var allMo = [];
+  var c2 = new Date('2024-07-01T00:00:00Z');
+  var now2 = new Date();
+  while (c2 <= now2) {
+    var k = c2.toISOString().slice(0,7);
+    if (!byMo[k]) byMo[k] = {Strength:0,Running:0,Yoga:0};
+    allMo.push(k);
+    c2.setUTCMonth(c2.getUTCMonth()+1);
+  }
+
+  var labels = allMo.map(function(m){
+    var parts = m.split('-');
+    var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return parts[1]==='01' ? names[parseInt(parts[1])-1]+"'"+parts[0].slice(2) : names[parseInt(parts[1])-1];
+  });
+
+  function rolling3(arr){
+    return arr.map(function(_,i){
+      var sl = arr.slice(Math.max(0,i-2),i+1);
+      return Math.round(sl.reduce(function(a,b){return a+b;},0)/sl.length*10)/10;
+    });
+  }
+
+  var last6 = allMo.slice(-6), prev6 = allMo.slice(-12,-6);
+  function sum6(mos,cat){ return mos.reduce(function(s,m){return s+(byMo[m][cat]||0);},0); }
+
+  var kpiEl = document.getElementById('trend-kpi');
+  if (kpiEl) {
+    kpiEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s){
+      var l=sum6(last6,s.key), p=sum6(prev6,s.key), d=l-p;
+      var dCol = d>0?'#22C55E':d<0?'#EF4444':muted;
+      var div = document.createElement('div');
+      div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid '+sc(s);
+      div.innerHTML = '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">'+s.key.toUpperCase()+'</div>'
+        +'<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'+l+'</div>'
+        +'<div style="font-size:10px;color:'+dCol+';margin-top:5px">'+(d>0?'+':'')+d+' vs prev 6mo</div>';
+      kpiEl.appendChild(div);
+    });
+  }
+
+  var legEl = document.getElementById('trend-legend');
+  if (legEl) {
+    legEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s){
+      var sp = document.createElement('span');
+      sp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.innerHTML = '<span style="width:14px;height:3px;background:'+sc(s)+';border-radius:2px;display:inline-block"></span>'+s.key;
+      legEl.appendChild(sp);
+    });
+    var dsp = document.createElement('span');
+    dsp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+    dsp.innerHTML = '<span style="width:16px;height:0;border-top:2px dashed '+muted+';display:inline-block"></span>3-mo avg';
+    legEl.appendChild(dsp);
+  }
+
+  var datasets = [];
+  TREND_SERIES.forEach(function(s){
+    var vals = allMo.map(function(m){return byMo[m][s.key]||0;});
+    var avg  = rolling3(vals);
+    var col  = sc(s);
+    datasets.push({
+      label:s.key, data:vals,
+      borderColor:col, backgroundColor:'transparent',
+      fill:false, borderWidth:2,
+      pointRadius:2.5, pointHoverRadius:5,
+      pointBackgroundColor:col, tension:0.35,
+    });
+    datasets.push({
+      label:s.key+' avg', data:avg,
+      borderColor:col, borderWidth:1.5, borderDash:[5,4],
+      pointRadius:0, fill:false, tension:0.35,
+    });
+  });
+
+  if (trendChartInst) { trendChartInst.destroy(); trendChartInst=null; }
+  trendChartInst = new Chart(el, {
+    type:'line',
+    data:{labels:labels, datasets:datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          filter:function(ctx){ return !ctx.dataset.label.includes('avg'); },
+          callbacks:{label:function(ctx){ return '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions'; }}
+        }
+      },
+      scales:{
+        x:{
+          ticks:{color:muted,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:13},
+          grid:{display:false}, border:{display:false}
+        },
+        y:{
+          ticks:{color:muted,font:{size:10},stepSize:2},
+          grid:{color:gridC}, border:{display:false}, min:0
+        }
+      }
+    }
+  });
+
+  var cmpEl = document.getElementById('trend-compare');
+  if (cmpEl) {
+    cmpEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s){
+      var l=sum6(last6,s.key), p=sum6(prev6,s.key), d=l-p;
+      var dCol = d>0?'#22C55E':d<0?'#EF4444':muted;
+      var div = document.createElement('div');
+      div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px 14px;border-left:3px solid '+sc(s);
+      div.innerHTML = '<div style="font-size:9px;color:var(--muted);margin-bottom:8px">'+s.key.toUpperCase()+'</div>'
+        +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">'
+        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">LAST 6MO</div>'
+        +'<div style="font-family:monospace;font-size:20px;color:var(--text)">'+l+'</div></div>'
+        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">PREV 6MO</div>'
+        +'<div style="font-family:monospace;font-size:20px;color:var(--muted)">'+p+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:9px;color:var(--muted);margin-bottom:2px">CHANGE</div>'
+        +'<div style="font-family:monospace;font-size:18px;font-weight:700;color:'+dCol+'">'+(d>0?'+':'')+d+'</div></div>'
+        +'</div>';
+      cmpEl.appendChild(div);
+    });
+  }
+}
+
 async function init() {
   await loadAll();
 
@@ -3047,7 +3271,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v6_phase2_6jul2026';
+  const PLAN_VERSION = 'v8_clean_overview_jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();
@@ -3068,6 +3292,7 @@ async function init() {
 
   updateOverview();
   updateGlobalStats();
+  setTimeout(renderTrendChart, 400);
 
   document.getElementById('note-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();

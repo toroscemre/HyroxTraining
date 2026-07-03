@@ -30,6 +30,8 @@
   --c-yoga:#F9A8D4; --bg-yoga:#220018;
   --c-bike:#6EE7B7; --bg-bike:#042014;
   --c-longrun:#FCA5A5; --bg-longrun:#280A00;
+  --c-station:#FB923C; --bg-station:#1a0f00;
+  --c-hero:#FACC15;    --bg-hero:#1a1400;
 
   --radius:10px;
   --sidebar:268px;
@@ -165,7 +167,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess[data-t="ZONE2_RUN"]{background:var(--bg-zone2r);   border-left-color:var(--c-zone2r)}
 .sess[data-t="YOGA"]     {background:var(--bg-yoga);     border-left-color:var(--c-yoga)}
 .sess[data-t="BIKE"]     {background:var(--bg-bike);     border-left-color:var(--c-bike)}
-.sess[data-t="LONG_RUN"] {background:var(--bg-longrun);  border-left-color:var(--c-longrun)}
+.sess[data-t="LONG_RUN"]      {background:var(--bg-longrun);  border-left-color:var(--c-longrun)}
+.sess[data-t="HYROX_STATION"]{background:var(--bg-station); border-left-color:var(--c-station)}
+.sess[data-t="HERO"]         {background:var(--bg-hero);    border-left-color:var(--c-hero)}
 
 .sess-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .sess-icon{font-size:14px}
@@ -177,7 +181,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess[data-t="ZONE2_RUN"].sess-title{color:var(--c-zone2r)}
 .sess[data-t="YOGA"]     .sess-title{color:var(--c-yoga)}
 .sess[data-t="BIKE"]     .sess-title{color:var(--c-bike)}
-.sess[data-t="LONG_RUN"] .sess-title{color:var(--c-longrun)}
+.sess[data-t="LONG_RUN"]       .sess-title{color:var(--c-longrun)}
+.sess[data-t="HYROX_STATION"] .sess-title{color:var(--c-station)}
+.sess[data-t="HERO"]          .sess-title{color:var(--c-hero)}
 
 .sess-time{font-family:monospace;font-size:10px;color:var(--muted)}
 .sess-detail{font-size:11px;color:var(--sub);line-height:1.5;margin-top:3px}
@@ -477,7 +483,7 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div style="width:6px;height:6px;border-radius:50%;background:var(--peak)"></div> Peak · Wk 11–14
   </div>
 
-  <div class="sb-item" onclick="nav('phase2')" style="opacity:0.5">
+  <div class="sb-item" onclick="nav('phase2')">
     <div class="sb-dot" style="background:var(--p2)"></div>
     <div class="sb-label">
       Phase 2 · Gym Strength
@@ -728,9 +734,76 @@ body.sb-collapsed #topbar{padding-left:76px}
 <!-- PHASES 2/3/4 -->
 <div class="view" id="view-phase2">
   <div class="page-title" style="color:var(--p2)">Phase 2 · Gym Strength</div>
-  <div class="page-sub">Jul – Oct 2026 · Weeks 15–27</div>
-  <div class="empty"><div class="empty-icon">🏋️</div><div class="empty-title">Not Planned Yet</div>
-  <div class="empty-text">Phase 2 introduces compound lifting and HYROX station-specific training.<br>Plan will be added when Phase 1 is complete.</div></div>
+  <div class="page-sub">6 Jul – 11 Oct 2026 · 14 weeks · 3 training days + VO₂ Max Saturday</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid #FACC15">
+      <div style="font-size:9px;letter-spacing:1.5px;color:#FACC15;margin-bottom:6px">MONDAY</div>
+      <div style="font-size:13px;font-weight:700">💪 Home Strength</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Combined Upper + Arms + Shadow Boxing · 55–60 min</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid #60A5FA">
+      <div style="font-size:9px;letter-spacing:1.5px;color:#60A5FA;margin-bottom:6px">TUESDAY</div>
+      <div style="font-size:13px;font-weight:700">🚴 Bike Commute</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Zone 2 · easy both ways</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid #F9A8D4">
+      <div style="font-size:9px;letter-spacing:1.5px;color:#F9A8D4;margin-bottom:6px">WEDNESDAY</div>
+      <div style="font-size:13px;font-weight:700">🧘 Yoga + Bike</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">45 min mobility · commute bike</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid rgba(249,115,22,0.4);border-radius:10px;padding:16px;border-top:3px solid #F97316">
+      <div style="font-size:9px;letter-spacing:1.5px;color:#F97316;margin-bottom:6px">THURSDAY — ALTERNATING</div>
+      <div style="font-size:13px;font-weight:700">🏟️ Stations / 💪 Hero</div>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:rgba(249,115,22,0.1);border-radius:6px;padding:7px 8px;font-size:10px;color:#F97316;font-weight:700">ODD WEEKS<br><span style="font-weight:400;color:var(--sub)">HYROX Stations</span></div>
+        <div style="background:rgba(250,204,21,0.1);border-radius:6px;padding:7px 8px;font-size:10px;color:#FACC15;font-weight:700">EVEN WEEKS<br><span style="font-weight:400;color:var(--sub)">Hero Full Body</span></div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid var(--border);opacity:0.45">
+      <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px">FRIDAY</div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted)">Rest</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid #F43F5E">
+      <div style="font-size:9px;letter-spacing:1.5px;color:#F43F5E;margin-bottom:6px">SATURDAY</div>
+      <div style="font-size:13px;font-weight:700">🔥 VO₂ Max Run</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">4×4 min @ 90% max HR · Whoop-validated</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+    <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:18px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#F97316;margin-bottom:8px">🏟️ ODD WEEKS — HYROX STATIONS</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.7">All 8 stations at the gym. Wks 1–4: learn movements, no load pressure. Wks 5+: progressive loads. Track time per station every visit — this is your primary race-prep data.</div>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px">
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">SkiErg</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Sled Push</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Sled Pull</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Burpee BJ</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Rowing</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Farmers Carry</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Sandbag Lunges</span>
+        <span style="font-size:9px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:4px;padding:2px 7px;color:#F97316">Wall Balls</span>
+      </div>
+    </div>
+    <div style="background:rgba(250,204,21,0.07);border:1px solid rgba(250,204,21,0.3);border-radius:10px;padding:18px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#FACC15;margin-bottom:8px">💪 EVEN WEEKS — HERO FULL BODY</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.7">Group fitness class — weights and kettlebells. Trains your entire body with compound movements. Builds the foundational strength that makes HYROX station loads feel manageable. Feel stronger immediately.</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted)">⏱ ~45–60 min · full body · kettlebells + free weights · progressive compound movement</div>
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#FACC15;margin-bottom:14px">🎯 PHASE 2 BENCHMARKS — TEST MONTHLY</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px">
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">SKIERG 1,000M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 5:00</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">ROWING 1,000M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 4:10</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">WALL BALLS 100</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 6:00</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">FARMERS CARRY 200M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 2:30</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">SLED PUSH 50M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 45 s</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">SANDBAG LUNGES 100M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 5:00</div></div>
+    </div>
+  </div>
 </div>
 <div class="view" id="view-phase3">
   <div class="page-title" style="color:var(--p3)">Phase 3 · Race Specific</div>
@@ -839,8 +912,10 @@ const SPORT_META = {
   YOGA:      {label:'Yoga',             icon:'🧘'},
   BIKE:      {label:'Bike',             icon:'🚴'},
   LONG_RUN:  {label:'Long Run',         icon:'🏅'},
-  BOXING:    {label:'Shadow Boxing',    icon:'🥊'},
-  VO2_MAX:   {label:'VO₂ Max Intervals',icon:'🔥'},
+  BOXING:        {label:'Shadow Boxing',       icon:'🥊'},
+  VO2_MAX:       {label:'VO₂ Max Intervals',    icon:'🔥'},
+  HYROX_STATION: {label:'HYROX Stations',        icon:'🏟️'},
+  HERO:          {label:'Hero Full Body',         icon:'💪'},
 };
 
 const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
@@ -1067,7 +1142,61 @@ function buildTemplate(wkData) {
   ];
 }
 
+// ════════════════════════════════════════════════════════════
+// PHASE 2 — GYM STRENGTH  (6 Jul – 11 Oct 2026)
+// Mon: Combined Home Strength + Shadow Boxing
+// Tue: Bike commute
+// Wed: Yoga + Bike commute
+// Thu ODD  weeks: HYROX Stations + Bike commute
+// Thu EVEN weeks: Hero Full Body + Bike commute
+// Fri: Rest   Sat: VO2 Max Run   Sun: Rest
+// ════════════════════════════════════════════════════════════
+const PHASE2_START = new Date('2026-07-06T00:00:00Z');
+const PHASE2_END   = new Date('2026-10-11T00:00:00Z');
+
+function isPhase2(mondayOff) {
+  var d = dateFromDayOffset(mondayOff);
+  return d >= PHASE2_START && d <= PHASE2_END;
+}
+function p2WeekNum(mondayOff) {
+  return Math.floor((mondayOff - daysSinceEpoch(PHASE2_START)) / 7) + 1;
+}
+function buildPhase2Template(mondayOff) {
+  var wn  = p2WeekNum(mondayOff);
+  var odd = wn % 2 === 1;
+  var thu = odd
+    ? {type:'HYROX_STATION', detail:'All 8 stations · progressive loads each visit · track time per station · bring water · hernia-safe movements'}
+    : {type:'HERO',          detail:'Hero Full Body group class · weights + kettlebells · full compound session · builds race-station strength'};
+  return [
+    // 0 MON
+    [{type:'STRENGTH', detail:'COMBINED HOME STRENGTH · Pull-ups, Bent-Over Row, Flat Press, OHP, Hammer Curl, Tricep Extension, Farmers Walk · 55-60 min'},
+     {type:'BOXING',   detail:'Shadow Boxing finisher · 3x3 min rounds · 1 min rest · 1-2 kg DBs · exhale on every punch · build to 5 rounds by Wk 8'}],
+    // 1 TUE
+    [{type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'}],
+    // 2 WED
+    [{type:'YOGA', detail:'45 min · Hips, Hamstrings, Thoracic · recovery focus'},
+     {type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'}],
+    // 3 THU
+    [thu,
+     {type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'}],
+    // 4 FRI
+    [],
+    // 5 SAT
+    [{type:'VO2_MAX', detail:'5-10 min warm-up → 4x4 min @ 90% max HR (Zone 4-5) · 3 min jog recovery between · easy cool-down · total ~35-40 min · Whoop-validated'}],
+    // 6 SUN
+    [],
+  ];
+}
+
 function ensureWeek(mondayOff) {
+  if (isPhase2(mondayOff)) {
+    var t2 = buildPhase2Template(mondayOff);
+    for (var d2=0;d2<7;d2++) {
+      var i2 = isoFromOffset(mondayOff+d2);
+      if (!state[i2]) state[i2] = t2[d2].map(function(s,i){return Object.assign({},s,{id:i2+'_'+s.type+'_'+i,phase:'PHASE2'});});
+    }
+    return;
+  }
   const idx = wkIdxFromMondayOffset(mondayOff);
   if (idx < 0 || idx >= 14) return;
   const tmpl = buildTemplate(WEEKS[idx]);
@@ -1082,6 +1211,15 @@ function ensureWeek(mondayOff) {
 // Force-reset a week with the new template, preserving only existing completions
 // Used when the plan changes mid-programme
 function forceResetWeek(mondayOff) {
+  if (isPhase2(mondayOff)) {
+    var t2 = buildPhase2Template(mondayOff);
+    for (var d2=0;d2<7;d2++) {
+      var i2 = isoFromOffset(mondayOff+d2);
+      var ex = (state[i2]||[]).filter(function(s){return s.extra===true;});
+      state[i2] = t2[d2].map(function(s,i){return Object.assign({},s,{id:i2+'_'+s.type+'_'+i,phase:'PHASE2'});}).concat(ex);
+    }
+    return;
+  }
   const idx = wkIdxFromMondayOffset(mondayOff);
   if (idx < 0 || idx >= 14) return;
   const tmpl = buildTemplate(WEEKS[idx]);
@@ -1097,6 +1235,9 @@ function forceResetWeek(mondayOff) {
 // Pre-load all 14 weeks
 function initState() {
   for (let w = 0; w < 14; w++) ensureWeek(w * 7);
+  // Phase 2: 6 Jul – 11 Oct 2026 (14 weeks)
+  var p2off = daysSinceEpoch(PHASE2_START);
+  for (var pw=0; pw<14; pw++) ensureWeek(p2off + pw*7);
 }
 
 // Reset current week + all future weeks to new template
@@ -1122,18 +1263,31 @@ function curMondayOff() {
 
 function renderWeek() {
   const monOff = curMondayOff();
-  const idx    = wkIdxFromMondayOffset(monOff);
-  const wd     = idx >= 0 && idx < 14 ? WEEKS[idx] : null;
-  const phase  = wd ? wd.p : '—';
+  const idx   = wkIdxFromMondayOffset(monOff);
+  const wd    = idx >= 0 && idx < 14 ? WEEKS[idx] : null;
+  const _isP2 = isPhase2(monOff);
+  const phase = _isP2 ? 'GYM STRENGTH' : (wd ? wd.p : '—');
 
   ensureWeek(monOff);
 
-  document.getElementById('wk-num').textContent   = wd ? `WEEK ${wd.wk}` : '—';
-  document.getElementById('wk-dates').textContent = `${fmtDate(monOff)} – ${fmtDate(monOff+6)}`;
-  document.getElementById('ps-wk').textContent    = wd ? `W${wd.wk}` : '—';
   const pill = document.getElementById('wk-pill');
-  pill.textContent = phase;
-  pill.style.background = PHASE_COL[phase] || '#555';
+  if (_isP2) {
+    var _wn  = p2WeekNum(monOff);
+    var _odd = _wn % 2 === 1;
+    document.getElementById('wk-num').textContent   = 'PHASE 2 · WK ' + _wn;
+    document.getElementById('wk-dates').textContent = fmtDate(monOff) + ' – ' + fmtDate(monOff+6);
+    document.getElementById('ps-wk').textContent    = 'P2·W' + _wn;
+    pill.textContent      = _odd ? '🏟️ STATIONS WEEK' : '💪 HERO WEEK';
+    pill.style.background = _odd ? '#F97316' : '#FACC15';
+    pill.style.color      = '#000';
+  } else {
+    document.getElementById('wk-num').textContent   = wd ? 'WEEK ' + wd.wk : '—';
+    document.getElementById('wk-dates').textContent = fmtDate(monOff) + ' – ' + fmtDate(monOff+6);
+    document.getElementById('ps-wk').textContent    = wd ? 'W' + wd.wk : '—';
+    pill.textContent      = phase;
+    pill.style.background = PHASE_COL[phase] || '#555';
+    pill.style.color      = '#fff';
+  }
 
   const grid = document.getElementById('cal');
   grid.innerHTML = '';
@@ -2497,7 +2651,9 @@ const EXTRA_SESSIONS = [
   {type:'YOGA',      icon:'🧘', label:'Yoga',               sub:'Mobility & recovery'},
   {type:'BIKE',      icon:'🚴', label:'Bike',               sub:'Cross-training ride'},
   {type:'BOXING',    icon:'🥊', label:'Shadow Boxing',      sub:'3–5 rounds · 3 min each'},
-  {type:'VO2_MAX',   icon:'🔥', label:'VO₂ Max Intervals',   sub:'4×4 min @ 90% HR · Whoop-validated'},
+  {type:'VO2_MAX',       icon:'🔥', label:'VO₂ Max Intervals', sub:'4x4 min @ 90% HR · Whoop-validated'},
+  {type:'HYROX_STATION', icon:'🏟️',  label:'HYROX Stations',    sub:'All 8 stations · gym session'},
+  {type:'HERO',          icon:'💪',  label:'Hero Full Body',    sub:'Group class · weights + kettlebells'},
 ];
 
 let addModalTargetISO = null;
@@ -2891,7 +3047,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v3_may2026';
+  const PLAN_VERSION = 'v6_phase2_6jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

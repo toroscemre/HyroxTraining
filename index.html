@@ -525,31 +525,26 @@ body.sb-collapsed #topbar{padding-left:76px}
   <div class="page-title">HYROX Rotterdam 2027</div>
   <div class="page-sub">For the kids 🧡 · Individual Competitor</div>
 
-  <!-- Top row: countdown + phase + sessions -->
+  <!-- Top row: Days In / Current Phase / Days to Race -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+    <div class="ov-card" style="text-align:center">
+      <div class="ov-lbl">DAYS IN</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:#4ADE80;line-height:1" id="ov-daysin">—</div>
+      <div class="ov-sub">since 30 Mar 2026</div>
+    </div>
+    <div class="ov-card" style="text-align:center;border-color:rgba(249,115,22,0.4)">
+      <div class="ov-lbl">CURRENT PHASE</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);line-height:1.2;margin:8px 0" id="ov-phase">—</div>
+      <div class="ov-sub" id="ov-phase-sub">—</div>
+    </div>
     <div class="ov-card" style="text-align:center">
       <div class="ov-lbl">DAYS TO RACE</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:#F43F5E;line-height:1" id="ov-days">—</div>
       <div class="ov-sub">1 April 2027 · Rotterdam</div>
     </div>
-    <div class="ov-card" style="text-align:center">
-      <div class="ov-lbl">CURRENT PHASE</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--p1);line-height:1.2;margin:8px 0" id="ov-phase">—</div>
-      <div class="ov-sub" id="ov-phase-sub">—</div>
-    </div>
-    <div class="ov-card" style="text-align:center">
-      <div class="ov-lbl">SESSIONS DONE</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--accent);line-height:1" id="ov-done">0</div>
-      <div class="ov-sub">total logged</div>
-    </div>
   </div>
 
-  <!-- Journey bar -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px">
-    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">JOURNEY TO ROTTERDAM</div>
-    <div class="tl-bar" id="tl-bar"></div>
-    <div class="tl-marker" id="tl-marker"></div>
-  </div>
+
 
   <!-- Trend chart: Strength / Running / Yoga — monthly clean lines -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
@@ -2455,6 +2450,10 @@ function renderHeatmap() {
 
 function updateOverview() {
   const now = new Date();
+  var planStart2 = new Date('2026-03-30T00:00:00Z');
+  var daysInVal = Math.max(0, Math.floor((now - planStart2) / 86400000));
+  var daysInEl = document.getElementById('ov-daysin');
+  if (daysInEl) daysInEl.textContent = daysInVal;
   const phases = [
     {s:'2026-03-30',e:'2026-07-05',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
     {s:'2026-07-06',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
@@ -2480,79 +2479,6 @@ function updateOverview() {
   var daysLeft = Math.ceil((RACE.getTime() - now2.getTime()) / 86400000);
   var todayStr = now2.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 
-  var PDEFS = [
-    {name:'Phase 1',  sub:'Base Fitness',  start:'2026-03-30', end:'2026-07-11', c:'#4ADE80'},
-    {name:'Phase 2',  sub:'Gym Strength',  start:'2026-07-14', end:'2026-10-11', c:'#FACC15'},
-    {name:'Phase 3',  sub:'Race Specific', start:'2026-10-12', end:'2027-02-28', c:'#FB923C'},
-    {name:'Phase 4',  sub:'Taper',         start:'2027-03-01', end:'2027-03-31', c:'#A78BFA'},
-    {name:'RACE',     sub:'Rotterdam',     start:'2027-04-01', end:'2027-04-01', c:'#F43F5E'},
-  ];
-
-  // Build bar
-  var barH = '';
-  PDEFS.forEach(function(ph) {
-    var ps = new Date(ph.start).getTime();
-    var pe = new Date(ph.end).getTime();
-    var w  = ((pe - ps) / totalDuration * 100).toFixed(2);
-    var past = now2 > new Date(ph.end);
-    var act  = now2 >= new Date(ph.start) && now2 <= new Date(ph.end);
-    var op   = past ? '0.4' : act ? '1' : '0.5';
-    var fw   = act ? '800' : '600';
-    var fc   = past ? 'rgba(0,0,0,0.6)' : act ? '#000' : 'rgba(255,255,255,0.75)';
-    var fs   = act ? '9px' : '8px';
-    var txt  = ph.name + (past ? ' ✓' : act ? ' ◀' : '');
-    barH += '<div style="width:'+w+'%;background:'+ph.c+';opacity:'+op
-          + ';display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:default" title="'+ph.name+' — '+ph.sub+'">'
-          + '<span style="font-size:'+fs+';font-weight:'+fw+';color:'+fc+';white-space:nowrap;padding:0 3px">'+txt+'</span>'
-          + '</div>';
-  });
-  document.getElementById('tl-bar').innerHTML = barH;
-
-  // Build marker + stats + legend
-  var pinLeft = Math.min(pct, 97).toFixed(1);
-  var mH = '';
-
-  // YOU ARE HERE pin
-  mH += '<div style="position:relative;height:28px;margin-bottom:14px">';
-  mH +=   '<div style="position:absolute;left:'+pinLeft+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center">';
-  mH +=     '<div style="width:2px;height:14px;background:var(--accent)"></div>';
-  mH +=     '<div style="font-size:9px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:0.5px;margin-top:2px">TODAY '+todayStr+'</div>';
-  mH +=   '</div>';
-  mH += '</div>';
-
-  // Three stat boxes
-  mH += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
-  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
-  mH +=     '<div style="font-family:monospace;font-size:26px;color:#4ADE80;line-height:1">'+daysDone+'</div>';
-  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">DAYS IN</div>';
-  mH +=   '</div>';
-  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
-  mH +=     '<div style="font-family:monospace;font-size:26px;color:var(--accent);line-height:1">'+daysLeft+'</div>';
-  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">DAYS LEFT</div>';
-  mH +=   '</div>';
-  mH +=   '<div style="flex:1;min-width:80px;text-align:center;background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
-  mH +=     '<div style="font-family:monospace;font-size:26px;color:#A78BFA;line-height:1">'+pct.toFixed(0)+'%</div>';
-  mH +=     '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px">COMPLETE</div>';
-  mH +=   '</div>';
-  mH += '</div>';
-
-  // Phase legend row
-  mH += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-  PDEFS.forEach(function(ph) {
-    var past = now2 > new Date(ph.end);
-    var act  = now2 >= new Date(ph.start) && now2 <= new Date(ph.end);
-    var op   = past ? '0.45' : act ? '1' : '0.6';
-    var fc   = act ? 'var(--text)' : 'var(--muted)';
-    var fw   = act ? '700' : '400';
-    mH += '<div style="display:flex;align-items:center;gap:4px">';
-    mH +=   '<div style="width:9px;height:9px;border-radius:2px;background:'+ph.c+';opacity:'+op+'"></div>';
-    mH +=   '<span style="font-size:10px;color:'+fc+';font-weight:'+fw+'">'+ph.name+'</span>';
-    mH +=   '<span style="font-size:9px;color:var(--muted)">'+ph.sub+(past?' ✓':act?' ←':'')+'</span>';
-    mH += '</div>';
-  });
-  mH += '</div>';
-
-  document.getElementById('tl-marker').innerHTML = mH;
 
 }
 
@@ -3132,8 +3058,8 @@ function renderTrendChart() {
     var lastU = rest.lastIndexOf('_');
     var type = lastU >= 0 ? rest.slice(0,lastU) : rest;
     var cat = type==='YOGA' ? 'Yoga'
-            : (type==='STRENGTH'||type==='HERO') ? 'Strength'
-            : (type==='ZONE2_RUN'||type==='LONG_RUN'||type==='VO2_MAX') ? 'Running'
+            : (type==='STRENGTH'||type==='HERO'||type==='HYROX_STATION') ? 'Strength'
+            : (type==='ZONE2_RUN'||type==='LONG_RUN'||type==='VO2_MAX'||type==='ZONE2') ? 'Running'
             : null;
     if (!cat) return;
     if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
@@ -3271,7 +3197,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v8_clean_overview_jul2026';
+  const PLAN_VERSION = 'v9_hyrox_mapped_jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

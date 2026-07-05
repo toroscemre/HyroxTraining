@@ -1483,7 +1483,6 @@ function updateGlobalStats() {
   let total = 0;
   Object.values(completions).forEach(c => { if (c.done) total++; });
   document.getElementById('sb-total').textContent = total;
-  document.getElementById('ov-done').textContent  = total;
 
   // Streak
   let streak = 0;
@@ -2109,7 +2108,7 @@ function updateOverview() {
   if (daysInEl) daysInEl.textContent = daysInVal;
   const phases = [
     {s:'2026-03-30',e:'2026-07-05',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
-    {s:'2026-07-06',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
+    {s:'2026-07-05',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
     {s:'2026-10-12',e:'2027-02-28',n:'Phase 3 · Race Specific',sub:'Full simulations'},
     {s:'2027-03-01',e:'2027-04-16',n:'Phase 4 · Taper',        sub:'Sharpen & rest'},
     {s:'2027-04-01',e:'2027-04-01',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
@@ -2850,7 +2849,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v9_hyrox_mapped_jul2026';
+  const PLAN_VERSION = 'v10_crash_fixed_jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

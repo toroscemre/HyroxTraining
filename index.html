@@ -456,6 +456,10 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="sb-dot" style="background:#22D3EE"></div>
     <div class="sb-label">Training History</div>
   </div>
+  <div class="sb-item" onclick="nav('monthly')">
+    <div class="sb-dot" style="background:#A78BFA"></div>
+    <div class="sb-label">Monthly View</div>
+  </div>
   <div class="sb-item" onclick="nav('stations')">
     <div class="sb-dot" style="background:#FACC15"></div>
     <div class="sb-label">Stations</div>
@@ -2191,6 +2195,7 @@ function nav(id) {
   if (id==='p1build')  renderPhaseWeeks('p1-build-c',WEEKS.slice(5,10));
   if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
   if (id==='overview') { updateOverview(); setTimeout(renderTrendChart, 200); }
+  if (id==='monthly') renderMonthlyView();
   if (id==='history')  renderHistory();
 }
 
@@ -2837,6 +2842,247 @@ function renderTrendChart() {
 }
 
 
+
+// ═══════════════════════════════════════════════════════════
+// MONTHLY VIEW — Excel + Strava + Planner takvim görünümü
+// ═══════════════════════════════════════════════════════════
+var MV_CATS = {
+  Running:  {col:'#2563EB',bg:'#DBEAFE',dkCol:'#93C5FD',dkBg:'#1E3A5F',label:'Koşu'},
+  Strength: {col:'#EA580C',bg:'#FFEDD5',dkCol:'#FED7AA',dkBg:'#431407',label:'Güç'},
+  Yoga:     {col:'#7C3AED',bg:'#EDE9FE',dkCol:'#C4B5FD',dkBg:'#2E1065',label:'Yoga'},
+  Cycling:  {col:'#DB2777',bg:'#FCE7F3',dkCol:'#F9A8D4',dkBg:'#500724',label:'Bisiklet'},
+  Legs:     {col:'#DC2626',bg:'#FEE2E2',dkCol:'#FCA5A5',dkBg:'#450A0A',label:'Bacak'},
+  Core:     {col:'#0891B2',bg:'#CFFAFE',dkCol:'#67E8F9',dkBg:'#083344',label:'Core'},
+  Boxing:   {col:'#D97706',bg:'#FEF3C7',dkCol:'#FCD34D',dkBg:'#451A03',label:'Boks'},
+  Unknown:  {col:'#1D4ED8',bg:'#BFDBFE',dkCol:'#60A5FA',dkBg:'#1E3A5F',label:'Strava?'},
+};
+
+function mvCatCol(cat, prop) {
+  var info = MV_CATS[cat] || MV_CATS.Unknown;
+  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+  return dark ? info['dk'+prop.charAt(0).toUpperCase()+prop.slice(1)] : info[prop];
+}
+
+var MV_EXCEL = [
+  {date:'2026-01-06',cat:'Strength',name:'Arms'},{date:'2026-01-06',cat:'Yoga',name:'Yoga'},
+  {date:'2026-01-08',cat:'Strength',name:'Upper Body'},{date:'2026-01-10',cat:'Running',name:'Run'},
+  {date:'2026-01-13',cat:'Strength',name:'Arms'},{date:'2026-01-15',cat:'Running',name:'Run'},
+  {date:'2026-01-17',cat:'Yoga',name:'Yoga'},{date:'2026-01-19',cat:'Strength',name:'Arms'},
+  {date:'2026-01-20',cat:'Running',name:'Run'},{date:'2026-01-22',cat:'Strength',name:'Upper Body'},
+  {date:'2026-01-24',cat:'Running',name:'Run'},{date:'2026-01-27',cat:'Yoga',name:'Yoga'},
+  {date:'2026-02-02',cat:'Strength',name:'Arms'},{date:'2026-02-03',cat:'Yoga',name:'Yoga'},
+  {date:'2026-02-05',cat:'Strength',name:'Upper Body'},{date:'2026-02-07',cat:'Running',name:'Run'},
+  {date:'2026-02-09',cat:'Strength',name:'Upper Body'},{date:'2026-02-10',cat:'Yoga',name:'Yoga'},
+  {date:'2026-02-12',cat:'Strength',name:'Arms'},{date:'2026-02-14',cat:'Running',name:'Run'},
+  {date:'2026-02-16',cat:'Strength',name:'Arms'},{date:'2026-02-17',cat:'Yoga',name:'Yoga'},
+  {date:'2026-02-19',cat:'Yoga',name:'Yoga'},
+  {date:'2026-03-09',cat:'Strength',name:'Upper Body'},{date:'2026-03-12',cat:'Strength',name:'Arms'},
+  {date:'2026-03-16',cat:'Legs',name:'Legs'},{date:'2026-03-19',cat:'Strength',name:'Arms'},
+  {date:'2026-03-30',cat:'Strength',name:'Arms'},{date:'2026-03-30',cat:'Legs',name:'Legs'},
+  {date:'2026-04-01',cat:'Legs',name:'Legs'},{date:'2026-04-01',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-02',cat:'Legs',name:'Legs'},{date:'2026-04-02',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-02',cat:'Running',name:'Zone 2'},{date:'2026-04-02',cat:'Strength',name:'Upper Body'},
+  {date:'2026-04-03',cat:'Legs',name:'Legs'},{date:'2026-04-04',cat:'Running',name:'Run'},
+  {date:'2026-04-06',cat:'Strength',name:'Arms'},{date:'2026-04-06',cat:'Running',name:'Zone 2'},{date:'2026-04-06',cat:'Legs',name:'Legs'},
+  {date:'2026-04-08',cat:'Yoga',name:'Yoga'},{date:'2026-04-08',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-09',cat:'Strength',name:'Upper Body'},{date:'2026-04-09',cat:'Legs',name:'Legs'},
+  {date:'2026-04-10',cat:'Legs',name:'Legs'},{date:'2026-04-11',cat:'Running',name:'Run'},
+  {date:'2026-04-12',cat:'Legs',name:'Legs'},
+  {date:'2026-04-13',cat:'Strength',name:'Arms'},{date:'2026-04-13',cat:'Running',name:'Zone 2'},
+  {date:'2026-04-14',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-15',cat:'Yoga',name:'Yoga'},{date:'2026-04-15',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-16',cat:'Cycling',name:'Bike'},{date:'2026-04-17',cat:'Strength',name:'Upper Body'},
+  {date:'2026-04-18',cat:'Cycling',name:'Bike'},{date:'2026-04-19',cat:'Legs',name:'Legs'},
+  {date:'2026-04-20',cat:'Strength',name:'Arms'},{date:'2026-04-20',cat:'Running',name:'Zone 2'},{date:'2026-04-20',cat:'Legs',name:'Legs'},
+  {date:'2026-04-21',cat:'Cycling',name:'Bike'},{date:'2026-04-21',cat:'Legs',name:'Legs'},{date:'2026-04-21',cat:'Yoga',name:'Yoga'},
+  {date:'2026-04-22',cat:'Cycling',name:'Bike'},{date:'2026-04-23',cat:'Cycling',name:'Bike'},
+  {date:'2026-04-24',cat:'Strength',name:'Upper Body'},{date:'2026-04-24',cat:'Running',name:'Zone 2'},
+  {date:'2026-05-04',cat:'Strength',name:'Arms'},{date:'2026-05-04',cat:'Boxing',name:'Box'},{date:'2026-05-04',cat:'Cycling',name:'Bike'},
+  {date:'2026-05-05',cat:'Cycling',name:'Bike'},{date:'2026-05-06',cat:'Cycling',name:'Bike'},{date:'2026-05-07',cat:'Cycling',name:'Bike'},
+  {date:'2026-05-09',cat:'Running',name:'Run'},{date:'2026-05-11',cat:'Strength',name:'Upper Body'},
+  {date:'2026-05-12',cat:'Cycling',name:'Bike'},{date:'2026-05-13',cat:'Cycling',name:'Bike'},
+  {date:'2026-05-15',cat:'Cycling',name:'Bike'},{date:'2026-05-15',cat:'Legs',name:'Legs'},{date:'2026-05-15',cat:'Strength',name:'Upper Body'},
+  {date:'2026-05-18',cat:'Cycling',name:'Bike'},{date:'2026-05-18',cat:'Legs',name:'Legs'},{date:'2026-05-18',cat:'Strength',name:'Arms'},
+  {date:'2026-05-19',cat:'Cycling',name:'Bike'},{date:'2026-05-20',cat:'Cycling',name:'Bike'},{date:'2026-05-21',cat:'Cycling',name:'Bike'},
+  {date:'2026-05-22',cat:'Strength',name:'Arms'},
+  {date:'2026-05-26',cat:'Cycling',name:'Bike'},{date:'2026-05-27',cat:'Cycling',name:'Bike'},{date:'2026-05-28',cat:'Cycling',name:'Bike'},
+  {date:'2026-05-29',cat:'Strength',name:'Upper Body'},{date:'2026-05-30',cat:'Running',name:'Run'},
+  {date:'2026-06-01',cat:'Strength',name:'Upper Body'},{date:'2026-06-01',cat:'Boxing',name:'Box'},
+  {date:'2026-06-02',cat:'Cycling',name:'Bike'},{date:'2026-06-03',cat:'Yoga',name:'Yoga'},{date:'2026-06-03',cat:'Cycling',name:'Bike'},
+  {date:'2026-06-04',cat:'Cycling',name:'Bike'},{date:'2026-06-05',cat:'Running',name:'Zone 2'},
+  {date:'2026-06-07',cat:'Running',name:'Run'},{date:'2026-06-08',cat:'Strength',name:'Upper Body'},
+  {date:'2026-06-09',cat:'Cycling',name:'Bike'},{date:'2026-06-09',cat:'Legs',name:'Legs'},
+  {date:'2026-06-10',cat:'Cycling',name:'Bike'},{date:'2026-06-11',cat:'Cycling',name:'Bike'},
+  {date:'2026-06-13',cat:'Running',name:'Run'},
+  {date:'2026-06-15',cat:'Strength',name:'Arms'},{date:'2026-06-15',cat:'Legs',name:'Legs'},
+  {date:'2026-06-16',cat:'Cycling',name:'Bike'},{date:'2026-06-17',cat:'Cycling',name:'Bike'},{date:'2026-06-17',cat:'Running',name:'Run'},
+  {date:'2026-06-18',cat:'Cycling',name:'Bike'},{date:'2026-06-19',cat:'Strength',name:'Arms'},
+  {date:'2026-06-22',cat:'Strength',name:'Arms'},{date:'2026-06-22',cat:'Legs',name:'Legs'},
+  {date:'2026-06-23',cat:'Cycling',name:'Bike'},{date:'2026-06-24',cat:'Cycling',name:'Bike'},
+  {date:'2026-06-25',cat:'Cycling',name:'Bike'},{date:'2026-06-25',cat:'Strength',name:'Hero'},
+  {date:'2026-06-27',cat:'Running',name:'Run'},{date:'2026-06-28',cat:'Strength',name:'HYROX'},
+  {date:'2026-06-29',cat:'Cycling',name:'Bike'},{date:'2026-06-29',cat:'Legs',name:'Legs'},
+  {date:'2026-07-07',cat:'Legs',name:'Legs'},{date:'2026-07-07',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-08',cat:'Yoga',name:'Yoga'},{date:'2026-07-08',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-09',cat:'Strength',name:'HYROX'},{date:'2026-07-09',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-11',cat:'Running',name:'Run'},
+  {date:'2026-07-13',cat:'Strength',name:'Arms'},{date:'2026-07-13',cat:'Legs',name:'Legs'},{date:'2026-07-13',cat:'Core',name:'Core'},
+  {date:'2026-07-14',cat:'Cycling',name:'Bike'},{date:'2026-07-15',cat:'Running',name:'Run'},{date:'2026-07-15',cat:'Strength',name:'Arms'},
+  {date:'2026-07-16',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-17',cat:'Strength',name:'Hero'},{date:'2026-07-17',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-20',cat:'Running',name:'Run'},{date:'2026-07-20',cat:'Core',name:'Core'},
+  {date:'2026-07-21',cat:'Cycling',name:'Bike'},{date:'2026-07-21',cat:'Yoga',name:'Yoga'},{date:'2026-07-21',cat:'Running',name:'Zone 2'},
+  {date:'2026-07-22',cat:'Strength',name:'Arms'},{date:'2026-07-22',cat:'Running',name:'Run'},{date:'2026-07-22',cat:'Cycling',name:'Bike'},
+  {date:'2026-07-23',cat:'Cycling',name:'Bike'},{date:'2026-07-23',cat:'Strength',name:'Hero'},
+  {date:'2026-07-25',cat:'Cycling',name:'Bike'},{date:'2026-07-25',cat:'Strength',name:'Upper Body'},{date:'2026-07-25',cat:'Core',name:'Core'},
+  {date:'2026-07-26',cat:'Running',name:'Run'},{date:'2026-07-26',cat:'Cycling',name:'Bike'},{date:'2026-07-26',cat:'Strength',name:'Arms'},
+  {date:'2026-07-27',cat:'Core',name:'Core'},{date:'2026-07-27',cat:'Legs',name:'Legs'},
+  {date:'2026-07-28',cat:'Running',name:'Run'},{date:'2026-07-28',cat:'Core',name:'Core'},
+  {date:'2026-07-29',cat:'Running',name:'Run'},{date:'2026-07-30',cat:'Running',name:'Run'},
+];
+
+var MV_MONTHS   = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07'];
+var MV_MO_NAMES = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz'];
+var mvIdx = MV_MONTHS.length - 1;
+
+function mvStravaCat(t){ return {Run:'Running',Yoga:'Yoga',Workout:null,Walk:null}[t]||null; }
+
+function mvDedupeStrava(acts) {
+  var seen=[], result=[];
+  acts.forEach(function(a){
+    var dup=seen.find(function(s){return s.type===a.type&&Math.abs((s.dur||0)-(a.dur||0))<=5;});
+    if(!dup){seen.push(a);result.push(a);}
+    else if((a.dur||0)>(dup.dur||0)){dup.dur=a.dur;}
+  });
+  return result;
+}
+
+function mvBuildDayMap(mo) {
+  var dayMap={};
+
+  // Excel
+  MV_EXCEL.filter(function(a){return a.date.startsWith(mo);}).forEach(function(a){
+    if(!dayMap[a.date])dayMap[a.date]=[];
+    dayMap[a.date].push({cat:a.cat,name:a.name,dur:null,source:'excel',matched:false});
+  });
+
+  // Strava from stravaActivities (live sync)
+  var stravaData = typeof stravaActivities !== 'undefined' ? stravaActivities : [];
+  var stravaByDay={};
+  stravaData.filter(function(a){return a.date&&a.date.startsWith(mo);}).forEach(function(a){
+    if(!stravaByDay[a.date])stravaByDay[a.date]=[];
+    stravaByDay[a.date].push({date:a.date,type:a.type,name:a.name,dur:a.duration});
+  });
+
+  Object.keys(stravaByDay).forEach(function(date){
+    var deduped=mvDedupeStrava(stravaByDay[date]);
+    var dayActs=dayMap[date]||[];
+    deduped.forEach(function(sa){
+      var cat=mvStravaCat(sa.type);
+      if(!cat)return;
+      var match=dayActs.find(function(e){return e.cat===cat&&!e.matched;});
+      if(match){match.dur=sa.dur;match.matched=true;}
+      else{
+        if(!dayMap[date])dayMap[date]=[];
+        dayMap[date].push({cat:'Unknown',name:sa.name,dur:sa.dur,source:'strava_only',matched:false});
+      }
+    });
+  });
+
+  return dayMap;
+}
+
+function mvGetDays(mo){var p=mo.split('-');return new Date(+p[0],+p[1],0).getDate();}
+function mvGetFirstDow(mo){var p=mo.split('-');var d=new Date(+p[0],+p[1]-1,1).getDay();return d===0?6:d-1;}
+
+function renderMonthlyView() {
+  var moEl=document.getElementById('mv-month-label');
+  var totEl=document.getElementById('mv-total');
+  var legEl=document.getElementById('mv-legend');
+  var gridEl=document.getElementById('mv-grid');
+  var catEl=document.getElementById('mv-cat-summary');
+  var umEl=document.getElementById('mv-unmatched');
+  if(!moEl)return;
+
+  var mo=MV_MONTHS[mvIdx];
+  moEl.textContent=MV_MO_NAMES[mvIdx]+' 2026';
+
+  var dayMap=mvBuildDayMap(mo);
+  var totalActs=Object.values(dayMap).reduce(function(s,a){return s+a.length;},0);
+  totEl.textContent=totalActs+' aktivite';
+
+  // Legend
+  legEl.innerHTML='';
+  ['Running','Strength','Yoga','Cycling','Legs','Core','Boxing','Unknown'].forEach(function(cat){
+    legEl.innerHTML+='<span style="background:'+mvCatCol(cat,'bg')+';color:'+mvCatCol(cat,'col')
+      +';border-radius:10px;padding:2px 8px;font-size:10px;font-weight:500">'+MV_CATS[cat].label+'</span>';
+  });
+
+  // Grid
+  gridEl.innerHTML='';
+  var days=mvGetDays(mo), firstDow=mvGetFirstDow(mo);
+  var today=new Date().toISOString().slice(0,10);
+  for(var i=0;i<firstDow;i++) gridEl.innerHTML+='<div></div>';
+  for(var d=1;d<=days;d++){
+    var iso=mo+'-'+(d<10?'0':'')+d;
+    var acts=dayMap[iso]||[];
+    var isToday=iso===today;
+    var pills='';
+    acts.forEach(function(a){
+      var lbl=a.name.length>9?a.name.slice(0,8)+'…':a.name;
+      var dur=a.dur?(' · '+a.dur+'dk'):'';
+      pills+='<div style="background:'+mvCatCol(a.cat,'bg')+';color:'+mvCatCol(a.cat,'col')
+        +';border-radius:5px;padding:1px 4px;font-size:9px;font-weight:500;margin-bottom:1px'
+        +';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+a.name+dur+'">'+lbl+'</div>';
+    });
+    gridEl.innerHTML+='<div style="border:1px solid '+(isToday?mvCatCol('Running','col'):'var(--border)')
+      +';border-radius:6px;padding:3px;min-height:72px;background:'+(isToday?mvCatCol('Running','bg'):'var(--surface)') + ';">'
+      +'<div style="font-size:10px;font-weight:'+(isToday?'600':'400')
+      +';color:'+(isToday?mvCatCol('Running','col'):'var(--muted)')+';margin-bottom:2px">'+d+'</div>'
+      +(acts.length===0?'<div style="font-size:8px;color:var(--border);text-align:center;padding-top:10px">·</div>':pills)
+      +'</div>';
+  }
+
+  // Category summary
+  var catCount={};
+  Object.values(dayMap).forEach(function(acts){acts.forEach(function(a){catCount[a.cat]=(catCount[a.cat]||0)+1;});});
+  catEl.innerHTML='';
+  Object.keys(catCount).filter(function(c){return c!=='Unknown';})
+    .sort(function(a,b){return catCount[b]-catCount[a];}).forEach(function(cat){
+    var pct=Math.round(catCount[cat]/totalActs*100);
+    catEl.innerHTML+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
+      +'<span style="background:'+mvCatCol(cat,'bg')+';color:'+mvCatCol(cat,'col')
+      +';border-radius:5px;padding:2px 7px;font-size:10px;font-weight:500;min-width:62px;text-align:center">'
+      +MV_CATS[cat].label+'</span>'
+      +'<div style="flex:1;height:4px;background:var(--border);border-radius:2px">'
+      +'<div style="height:4px;background:'+mvCatCol(cat,'col')+';border-radius:2px;width:'+pct+'%"></div></div>'
+      +'<span style="font-size:11px;color:var(--sub);min-width:16px;text-align:right">'+catCount[cat]+'</span>'
+      +'</div>';
+  });
+
+  // Unmatched
+  var unmatched=[];
+  Object.entries(dayMap).forEach(function(e){
+    e[1].forEach(function(a){if(a.source==='strava_only')unmatched.push({date:e[0],name:a.name,dur:a.dur});});
+  });
+  umEl.innerHTML='';
+  if(unmatched.length>0){
+    unmatched.forEach(function(a){
+      umEl.innerHTML+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'
+        +'<span style="font-size:10px;color:var(--muted);min-width:36px">'+a.date.slice(5)+'</span>'
+        +'<span style="background:'+mvCatCol('Unknown','bg')+';color:'+mvCatCol('Unknown','col')
+        +';border-radius:5px;padding:2px 7px;font-size:10px">'+a.name+'</span>'
+        +(a.dur?'<span style="font-size:10px;color:var(--sub)">'+a.dur+'dk</span>':'')
+        +'</div>';
+    });
+  } else {
+    umEl.innerHTML='<div style="font-size:11px;color:var(--sub)">Tüm aktiviteler eşleşti ✓</div>';
+  }
+}
+
+function mvPrev(){ if(mvIdx>0){mvIdx--;renderMonthlyView();} }
+function mvNext(){ if(mvIdx<MV_MONTHS.length-1){mvIdx++;renderMonthlyView();} }
+
 async function init() {
   await loadAll();
 
@@ -2844,7 +3090,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v12_strava_live_jul2026';
+  const PLAN_VERSION = 'v13_monthly_view_jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();
@@ -2876,3 +3122,46 @@ init();
 </script>
 </body>
 </html>
+<div class="view" id="view-monthly">
+  <div class="page-title" style="color:#A78BFA">Monthly View</div>
+  <div class="page-sub">2026 · Excel Log + Strava + Planner birleşimi · aylık takvim</div>
+
+  <!-- Month nav -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="mvPrev()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8249;</button>
+      <span style="font-size:18px;font-weight:700;min-width:160px;text-align:center;color:var(--text)" id="mv-month-label"></span>
+      <button onclick="mvNext()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8250;</button>
+    </div>
+    <div style="font-size:20px;font-weight:700;color:var(--text)" id="mv-total"></div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem" id="mv-legend"></div>
+
+  <!-- Day headers -->
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px">
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Pzt</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Sal</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Çar</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Per</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Cum</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Cmt</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Paz</div>
+  </div>
+
+  <!-- Calendar grid -->
+  <div id="mv-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:1rem"></div>
+
+  <!-- Summary -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+    <div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">KATEGORİ ÖZET</div>
+      <div id="mv-cat-summary"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">STRAVA EŞLESİMEYENLER</div>
+      <div id="mv-unmatched"></div>
+    </div>
+  </div>
+</div>

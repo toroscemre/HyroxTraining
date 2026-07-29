@@ -892,18 +892,23 @@ const WEEKS = [
 ];
 
 const SPORT_META = {
-  LEGS_RL:   {label:'Hyrox Legs RL',    icon:'🦵'},
-  LEGS_BSS:  {label:'Hyrox Legs BSS',   icon:'🦵'},
-  STRENGTH:  {label:'Strength',         icon:'💪'},
-  ZONE2:     {label:'Zone 2',           icon:'❤️'},
-  ZONE2_RUN: {label:'Zone 2 Run',       icon:'🏃'},
-  YOGA:      {label:'Yoga',             icon:'🧘'},
-  BIKE:      {label:'Bike',             icon:'🚴'},
-  LONG_RUN:  {label:'Long Run',         icon:'🏅'},
-  BOXING:        {label:'Shadow Boxing',       icon:'🥊'},
-  VO2_MAX:       {label:'VO₂ Max Intervals',    icon:'🔥'},
-  HYROX_STATION: {label:'HYROX Stations',        icon:'🏟️'},
-  HERO:          {label:'Hero Full Body',         icon:'💪'},
+  INTERVAL:      {label:'Interval Run',   icon:'⚡'},
+  THRESHOLD:     {label:'Threshold Run',  icon:'🔥'},
+  ZONE2_RUN:     {label:'Zone 2 Run',     icon:'🏃'},
+  HYROX_STATION: {label:'HYROX',          icon:'🏟️'},
+  HERO:          {label:'Hero',           icon:'🏋️'},
+  STRENGTH:      {label:'Upper Body',     icon:'💪'},
+  BOXING:        {label:'Arms',           icon:'💪'},
+  YOGA:          {label:'Yoga',           icon:'🧘'},
+  CORE:          {label:'Core',           icon:'🎯'},
+  BOX:           {label:'Boxing',         icon:'🥊'},
+  LEGS:          {label:'Legs',           icon:'🦵'},
+  BIKE:          {label:'Bike',           icon:'🚴'},
+  LEGS_RL:       {label:'Legs',           icon:'🦵'},
+  LEGS_BSS:      {label:'Legs',           icon:'🦵'},
+  ZONE2:         {label:'Zone 2 Run',     icon:'🏃'},
+  LONG_RUN:      {label:'Zone 2 Run',     icon:'🏃'},
+  VO2_MAX:       {label:'Interval Run',   icon:'⚡'},
 };
 
 const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
@@ -951,16 +956,17 @@ const RACE_TARGETS = [
 // ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
-let state       = {}; // { ISO: [{type,id,...}] }
-let completions = {}; // { cardId: {done,note,ts} }
-let benchInputs = {}; // { label: string }
+let state            = {};
+let completions      = {};
+let benchInputs      = {};
+let stravaActivities = [];
 let weekOffset  = 0;  // in weeks from current week
 let activeNoteId = null;
 
 // ═══════════════════════════════════════════════════════════════
 // GOOGLE SHEETS SYNC — syncs across all your devices
 // ═══════════════════════════════════════════════════════════════
-const SYNC_URL = 'https://script.google.com/macros/s/AKfycby5AhcZqt3KH4qMy5rfACE-gZIRieXCAXZ5mjkcEcw82dSN6X2DmPsRy5y0ITs7YkAy/exec';
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbyV73L7d0YiwQ2VDPFdH_eNITDtpnxq4nQ9jZNC52n8zKFmkdW25RnTcdEwgF6heDEP/exec';
 
 let saveTimer = null;
 
@@ -980,6 +986,7 @@ function setSyncUI(status, msg) {
 }
 
 function saveAll() {
+  setTimeout(renderTrendChart, 100);
   // Save locally first — instant fallback if offline
   try {
     localStorage.setItem('hyrox3_state', JSON.stringify(state));
@@ -1017,9 +1024,11 @@ async function loadAll() {
     const s = localStorage.getItem('hyrox3_state');
     const c = localStorage.getItem('hyrox3_comp');
     const b = localStorage.getItem('hyrox3_bench');
-    if (s) state       = JSON.parse(s);
-    if (c) completions = JSON.parse(c);
-    if (b) benchInputs = JSON.parse(b);
+    const sv = localStorage.getItem('hyrox_strava');
+    if (s)  state            = JSON.parse(s);
+    if (c)  completions      = JSON.parse(c);
+    if (b)  benchInputs      = JSON.parse(b);
+    if (sv) stravaActivities = JSON.parse(sv);
   } catch(e) {}
 
   // Then pull from cloud and use if newer
@@ -1033,9 +1042,10 @@ async function loadAll() {
         const localTs = parseInt(localStorage.getItem('hyrox_ts') || '0');
         const cloudTs = data.ts || 0;
         if (cloudTs >= localTs) {
-          if (data.state)       state       = data.state;
-          if (data.completions) completions = data.completions;
-          if (data.benchInputs) benchInputs = data.benchInputs;
+          if (data.state)       state            = data.state;
+          if (data.completions) completions      = data.completions;
+          if (data.benchInputs) benchInputs      = data.benchInputs;
+          if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
           localStorage.setItem('hyrox_ts', cloudTs.toString());
         }
       }
@@ -1065,9 +1075,10 @@ async function forceSync() {
       const text = await res.text();
       if (text && text.trim().startsWith('{')) {
         const data = JSON.parse(text);
-        if (data.state)       state       = data.state;
-        if (data.completions) completions = data.completions;
-        if (data.benchInputs) benchInputs = data.benchInputs;
+        if (data.state)       state            = data.state;
+        if (data.completions) completions      = data.completions;
+        if (data.benchInputs) benchInputs      = data.benchInputs;
+        if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
         localStorage.setItem('hyrox_ts', (data.ts || Date.now()).toString());
       }
       setSyncUI('ok', '☁️ Up to date');
@@ -2211,18 +2222,18 @@ function closeSidebarMobile() {
 
 // ── ADD EXTRA SESSION ──────────────────────────────────────────
 const EXTRA_SESSIONS = [
-  {type:'ZONE2_RUN', icon:'🏃', label:'Zone 2 Run',       sub:'Easy run · HR 120–140 bpm'},
-  {type:'LONG_RUN',  icon:'🏅', label:'Long Run',          sub:'60–90 min easy aerobic'},
-  {type:'ZONE2',     icon:'❤️', label:'Zone 2 Cardio',     sub:'30–45 min easy cardio'},
-  {type:'LEGS_RL',   icon:'🦵', label:'Hyrox Legs RL',     sub:'Reverse lunge session'},
-  {type:'LEGS_BSS',  icon:'🦵', label:'Hyrox Legs BSS',    sub:'Bulgarian split squat'},
-  {type:'STRENGTH',  icon:'💪', label:'Strength',           sub:'Upper body or arms'},
-  {type:'YOGA',      icon:'🧘', label:'Yoga',               sub:'Mobility & recovery'},
-  {type:'BIKE',      icon:'🚴', label:'Bike',               sub:'Cross-training ride'},
-  {type:'BOXING',    icon:'🥊', label:'Shadow Boxing',      sub:'3–5 rounds · 3 min each'},
-  {type:'VO2_MAX',       icon:'🔥', label:'VO₂ Max Intervals', sub:'4x4 min @ 90% HR · Whoop-validated'},
-  {type:'HYROX_STATION', icon:'🏟️',  label:'HYROX Stations',    sub:'All 8 stations · gym session'},
-  {type:'HERO',          icon:'💪',  label:'Hero Full Body',    sub:'Group class · weights + kettlebells'},
+  {type:'INTERVAL',      icon:'⚡',  label:'Interval Run',   sub:'4×4 min @ 90% HR · VO₂ Max · Whoop-validated'},
+  {type:'THRESHOLD',     icon:'🔥',  label:'Threshold Run',  sub:'Tempo · comfortably hard · lactate threshold'},
+  {type:'ZONE2_RUN',     icon:'🏃',  label:'Zone 2 Run',     sub:'Easy · HR 120–140 bpm · conversational'},
+  {type:'HYROX_STATION', icon:'🏟️', label:'HYROX',    sub:'All 8 stations · progressive loads'},
+  {type:'HERO',          icon:'🏋️', label:'Hero',      sub:'Full body group class · weights + kettlebells'},
+  {type:'STRENGTH',      icon:'💪',  label:'Upper Body',     sub:'Pull-ups, Row, Press, OHP, Farmers Walk'},
+  {type:'BOXING',        icon:'💪',  label:'Arms',           sub:'Hammer Curl, Tricep, Dead Hang · 45 min'},
+  {type:'YOGA',          icon:'🧘',  label:'Yoga',           sub:'Mobility · hips, hamstrings, thoracic'},
+  {type:'CORE',          icon:'🎯',  label:'Core',           sub:'Hernia-safe · Dead Bug · shadow boxing'},
+  {type:'BOX',           icon:'🥊',  label:'Boxing',         sub:'Shadow boxing · 3×3 min rounds'},
+  {type:'LEGS',          icon:'🦵',  label:'Legs',           sub:'Squat, lunge, calf raise'},
+  {type:'BIKE',          icon:'🚴',  label:'Bike',           sub:'Commute or training ride · Zone 2'},
 ];
 
 let addModalTargetISO = null;
@@ -2613,78 +2624,94 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════════
 // TREND CHART — Strength / Running / Yoga (clean lines only)
 // ═══════════════════════════════════════════════════════════
-var TREND_RAW = [
-  {d:"2024-07-01",c:"Strength"},{d:"2024-07-16",c:"Strength"},
-  {d:"2024-08-01",c:"Strength"},{d:"2024-08-16",c:"Strength"},
-  {d:"2024-09-01",c:"Strength"},{d:"2024-09-08",c:"Strength"},{d:"2024-09-15",c:"Strength"},{d:"2024-09-22",c:"Strength"},
-  {d:"2024-09-01",c:"Running"},{d:"2024-09-16",c:"Running"},
-  {d:"2024-10-01",c:"Strength"},{d:"2024-10-11",c:"Strength"},{d:"2024-10-21",c:"Strength"},
-  {d:"2024-10-01",c:"Running"},
-  {d:"2024-11-01",c:"Strength"},{d:"2024-11-11",c:"Strength"},{d:"2024-11-21",c:"Strength"},
-  {d:"2024-11-01",c:"Running"},
-  {d:"2024-12-30",c:"Yoga"},
-  {d:"2025-01-03",c:"Strength"},{d:"2025-01-08",c:"Strength"},{d:"2025-01-15",c:"Strength"},{d:"2025-01-23",c:"Strength"},
-  {d:"2025-01-13",c:"Yoga"},{d:"2025-01-20",c:"Yoga"},{d:"2025-01-27",c:"Yoga"},
-  {d:"2025-01-15",c:"Running"},{d:"2025-01-18",c:"Running"},{d:"2025-01-29",c:"Running"},
-  {d:"2025-02-04",c:"Strength"},{d:"2025-02-12",c:"Strength"},
-  {d:"2025-02-10",c:"Yoga"},{d:"2025-02-24",c:"Yoga"},
-  {d:"2025-02-08",c:"Running"},{d:"2025-02-12",c:"Running"},{d:"2025-02-15",c:"Running"},
-  {d:"2025-03-04",c:"Strength"},{d:"2025-03-08",c:"Strength"},
-  {d:"2025-03-03",c:"Yoga"},{d:"2025-03-10",c:"Yoga"},
-  {d:"2025-03-01",c:"Running"},{d:"2025-03-05",c:"Running"},{d:"2025-03-12",c:"Running"},
-  {d:"2025-04-05",c:"Running"},{d:"2025-04-23",c:"Running"},
-  {d:"2025-05-19",c:"Yoga"},{d:"2025-05-26",c:"Yoga"},
-  {d:"2025-05-24",c:"Running"},{d:"2025-05-28",c:"Running"},
-  {d:"2025-06-30",c:"Strength"},
-  {d:"2025-07-07",c:"Strength"},{d:"2025-07-09",c:"Strength"},{d:"2025-07-11",c:"Strength"},
-  {d:"2025-07-14",c:"Strength"},{d:"2025-07-17",c:"Strength"},{d:"2025-07-21",c:"Strength"},
-  {d:"2025-07-24",c:"Strength"},{d:"2025-07-27",c:"Strength"},{d:"2025-07-28",c:"Strength"},{d:"2025-07-31",c:"Strength"},
-  {d:"2025-08-04",c:"Strength"},{d:"2025-08-07",c:"Strength"},{d:"2025-08-11",c:"Strength"},
-  {d:"2025-08-14",c:"Strength"},{d:"2025-08-18",c:"Strength"},
-  {d:"2025-08-05",c:"Yoga"},{d:"2025-08-30",c:"Yoga"},
-  {d:"2025-08-16",c:"Running"},{d:"2025-08-23",c:"Running"},
-  {d:"2025-09-08",c:"Strength"},{d:"2025-09-11",c:"Strength"},{d:"2025-09-15",c:"Strength"},
-  {d:"2025-09-17",c:"Strength"},{d:"2025-09-22",c:"Strength"},{d:"2025-09-25",c:"Strength"},{d:"2025-09-29",c:"Strength"},
-  {d:"2025-09-23",c:"Yoga"},
-  {d:"2025-09-06",c:"Running"},{d:"2025-09-14",c:"Running"},{d:"2025-09-17",c:"Running"},{d:"2025-09-20",c:"Running"},{d:"2025-09-27",c:"Running"},
-  {d:"2025-10-02",c:"Strength"},{d:"2025-10-13",c:"Strength"},{d:"2025-10-16",c:"Strength"},
-  {d:"2025-10-20",c:"Strength"},{d:"2025-10-24",c:"Strength"},{d:"2025-10-27",c:"Strength"},
-  {d:"2025-10-10",c:"Yoga"},{d:"2025-10-22",c:"Yoga"},
-  {d:"2025-10-12",c:"Running"},{d:"2025-10-18",c:"Running"},{d:"2025-10-26",c:"Running"},
-  {d:"2025-11-03",c:"Strength"},{d:"2025-11-13",c:"Strength"},{d:"2025-11-20",c:"Strength"},
-  {d:"2025-11-22",c:"Strength"},{d:"2025-11-26",c:"Strength"},
-  {d:"2025-11-16",c:"Yoga"},
-  {d:"2025-11-01",c:"Running"},{d:"2025-11-09",c:"Running"},{d:"2025-11-15",c:"Running"},
-  {d:"2025-11-22",c:"Running"},{d:"2025-11-29",c:"Running"},
-  {d:"2025-12-01",c:"Strength"},{d:"2025-12-15",c:"Strength"},{d:"2025-12-17",c:"Strength"},{d:"2025-12-29",c:"Strength"},
-  {d:"2025-12-09",c:"Yoga"},{d:"2025-12-30",c:"Yoga"},
-  {d:"2025-12-01",c:"Running"},{d:"2025-12-13",c:"Running"},{d:"2025-12-20",c:"Running"},
-  {d:"2026-01-01",c:"Strength"},{d:"2026-01-05",c:"Strength"},{d:"2026-01-08",c:"Strength"},
-  {d:"2026-01-12",c:"Strength"},{d:"2026-01-29",c:"Strength"},
-  {d:"2026-01-27",c:"Yoga"},
-  {d:"2026-01-03",c:"Running"},{d:"2026-01-11",c:"Running"},{d:"2026-01-13",c:"Running"},{d:"2026-01-31",c:"Running"},
-  {d:"2026-02-02",c:"Strength"},{d:"2026-02-09",c:"Strength"},{d:"2026-02-13",c:"Strength"},{d:"2026-02-19",c:"Strength"},
-  {d:"2026-02-10",c:"Yoga"},{d:"2026-02-17",c:"Yoga"},
-  {d:"2026-02-15",c:"Running"},
-  {d:"2026-03-02",c:"Strength"},{d:"2026-03-05",c:"Strength"},
-  {d:"2026-04-06",c:"Strength"},{d:"2026-04-07",c:"Strength"},{d:"2026-04-09",c:"Strength"},
-  {d:"2026-04-13",c:"Strength"},{d:"2026-04-20",c:"Strength"},{d:"2026-04-27",c:"Strength"},
-  {d:"2026-04-14",c:"Running"},{d:"2026-04-21",c:"Running"},{d:"2026-04-28",c:"Yoga"},
-  {d:"2026-05-04",c:"Strength"},{d:"2026-05-11",c:"Strength"},{d:"2026-05-18",c:"Strength"},{d:"2026-05-25",c:"Strength"},
-  {d:"2026-05-05",c:"Running"},{d:"2026-05-12",c:"Running"},{d:"2026-05-19",c:"Running"},{d:"2026-05-26",c:"Yoga"},
-  {d:"2026-06-01",c:"Strength"},{d:"2026-06-08",c:"Strength"},{d:"2026-06-15",c:"Strength"},
-  {d:"2026-06-22",c:"Strength"},{d:"2026-06-29",c:"Strength"},
-  {d:"2026-06-02",c:"Running"},{d:"2026-06-09",c:"Running"},{d:"2026-06-23",c:"Running"},{d:"2026-06-30",c:"Running"},
-  {d:"2026-06-16",c:"Yoga"},
-  {d:"2026-07-01",c:"Strength"},{d:"2026-07-02",c:"Running"},{d:"2026-07-03",c:"Yoga"},
-];
-
+// ═══════════════════════════════════════════════════════════
+// TREND CHART — 3 sources: HIST_BASELINE + Strava + Planner
+// ═══════════════════════════════════════════════════════════
 var TREND_SERIES = [
   {key:'Strength', light:'#2a78d6', dark:'#3987e5'},
   {key:'Running',  light:'#1baf7a', dark:'#199e70'},
   {key:'Yoga',     light:'#4a3aa7', dark:'#9085e9'},
 ];
 var trendChartInst = null;
+
+function histToTrendCat(category, activity) {
+  var cat = (category || '').toLowerCase();
+  var act = (activity  || '').toLowerCase();
+  if (act === 'yoga' || (cat === 'mobility' && act.includes('yoga'))) return 'Yoga';
+  if (cat === 'strength') return 'Strength';
+  if (cat === 'running')  return 'Running';
+  if (cat === 'legs')     return 'Strength';
+  return null;
+}
+
+function plannerToTrendCat(type) {
+  if (type === 'YOGA') return 'Yoga';
+  if (type === 'STRENGTH' || type === 'HERO' || type === 'HYROX_STATION'
+      || type === 'BOXING' || type === 'CORE' || type === 'BOX'
+      || type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Strength';
+  if (type === 'ZONE2_RUN' || type === 'LONG_RUN' || type === 'VO2_MAX'
+      || type === 'ZONE2' || type === 'INTERVAL' || type === 'THRESHOLD') return 'Running';
+  return null;
+}
+
+function buildTrendData() {
+  var byMo = {};
+  var baseline = typeof HIST_BASELINE !== 'undefined' ? HIST_BASELINE : [];
+
+  // ── Source 1: HIST_BASELINE ───────────────────────────────
+  baseline.forEach(function(r) {
+    var cat = histToTrendCat(r.category, r.activity);
+    if (!cat) return;
+    var mo = r.date.slice(0,7);
+    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    byMo[mo][cat]++;
+  });
+
+  // Build a set of baseline date+cat pairs to avoid double counting
+  var baselineSet = new Set();
+  baseline.forEach(function(r) {
+    var cat = histToTrendCat(r.category, r.activity);
+    if (cat) baselineSet.add(r.date + '_' + cat);
+  });
+
+  // ── Source 2: Strava (auto-synced from WHOOP) ─────────────
+  var strava = typeof stravaActivities !== 'undefined' ? stravaActivities : [];
+  var stravaSet = new Set();
+  strava.forEach(function(a) {
+    if (!a.date || !a.category) return;
+    var c = (a.category || '').toLowerCase();
+    var cat = c === 'running'  ? 'Running'
+            : c === 'strength' ? 'Strength'
+            : c === 'yoga'     ? 'Yoga'
+            : null;
+    if (!cat) return;
+    if (baselineSet.has(a.date + '_' + cat)) return; // already in baseline
+    var mo = a.date.slice(0,7);
+    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    byMo[mo][cat]++;
+    stravaSet.add(a.date + '_' + cat);
+  });
+
+  // ── Source 3: Weekly planner completions ──────────────────
+  var comp = typeof completions !== 'undefined' ? completions : {};
+  Object.keys(comp).forEach(function(id) {
+    if (!comp[id].done) return;
+    var mo = id.slice(0,7);
+    if (mo.length !== 7 || mo[4] !== '-') return;
+    var rest = id.slice(11);
+    var lastU = rest.lastIndexOf('_');
+    var type = lastU >= 0 ? rest.slice(0,lastU) : rest;
+    var cat = plannerToTrendCat(type);
+    if (!cat) return;
+    var iso = id.slice(0,10);
+    if (baselineSet.has(iso + '_' + cat)) return; // in baseline
+    if (stravaSet.has(iso + '_' + cat))   return; // already from Strava
+    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    byMo[mo][cat]++;
+  });
+
+  return byMo;
+}
 
 function renderTrendChart() {
   if (!window.Chart) { setTimeout(renderTrendChart, 300); return; }
@@ -2696,27 +2723,7 @@ function renderTrendChart() {
   var gridC = isDark ? '#272B3A' : '#E2E4EE';
   function sc(s){ return isDark ? s.dark : s.light; }
 
-  var byMo = {};
-  TREND_RAW.forEach(function(r){
-    var mo = r.d.slice(0,7);
-    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
-    byMo[mo][r.c]++;
-  });
-  Object.keys(completions).forEach(function(id){
-    if (!completions[id].done) return;
-    var mo = id.slice(0,7);
-    if (!/^\d{4}-\d{2}$/.test(mo)) return;
-    var rest = id.slice(11);
-    var lastU = rest.lastIndexOf('_');
-    var type = lastU >= 0 ? rest.slice(0,lastU) : rest;
-    var cat = type==='YOGA' ? 'Yoga'
-            : (type==='STRENGTH'||type==='HERO'||type==='HYROX_STATION') ? 'Strength'
-            : (type==='ZONE2_RUN'||type==='LONG_RUN'||type==='VO2_MAX'||type==='ZONE2') ? 'Running'
-            : null;
-    if (!cat) return;
-    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
-    byMo[mo][cat]++;
-  });
+  var byMo = buildTrendData();
 
   var allMo = [];
   var c2 = new Date('2024-07-01T00:00:00Z');
@@ -2728,22 +2735,23 @@ function renderTrendChart() {
     c2.setUTCMonth(c2.getUTCMonth()+1);
   }
 
+  var MO_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var labels = allMo.map(function(m){
-    var parts = m.split('-');
-    var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return parts[1]==='01' ? names[parseInt(parts[1])-1]+"'"+parts[0].slice(2) : names[parseInt(parts[1])-1];
+    var yr=m.slice(0,4), mo=m.slice(5,7);
+    return mo==='01' ? MO_NAMES[parseInt(mo,10)-1]+"'"+yr.slice(2) : MO_NAMES[parseInt(mo,10)-1];
   });
 
   function rolling3(arr){
     return arr.map(function(_,i){
-      var sl = arr.slice(Math.max(0,i-2),i+1);
+      var sl=arr.slice(Math.max(0,i-2),i+1);
       return Math.round(sl.reduce(function(a,b){return a+b;},0)/sl.length*10)/10;
     });
   }
 
-  var last6 = allMo.slice(-6), prev6 = allMo.slice(-12,-6);
+  var last6=allMo.slice(-6), prev6=allMo.slice(-12,-6);
   function sum6(mos,cat){ return mos.reduce(function(s,m){return s+(byMo[m][cat]||0);},0); }
 
+  // KPI cards
   var kpiEl = document.getElementById('trend-kpi');
   if (kpiEl) {
     kpiEl.innerHTML = '';
@@ -2759,81 +2767,67 @@ function renderTrendChart() {
     });
   }
 
+  // Legend
   var legEl = document.getElementById('trend-legend');
   if (legEl) {
     legEl.innerHTML = '';
     TREND_SERIES.forEach(function(s){
-      var sp = document.createElement('span');
-      sp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
-      sp.innerHTML = '<span style="width:14px;height:3px;background:'+sc(s)+';border-radius:2px;display:inline-block"></span>'+s.key;
+      var sp=document.createElement('span');
+      sp.style.cssText='display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.innerHTML='<span style="width:14px;height:3px;background:'+sc(s)+';border-radius:2px;display:inline-block"></span>'+s.key;
       legEl.appendChild(sp);
     });
-    var dsp = document.createElement('span');
-    dsp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
-    dsp.innerHTML = '<span style="width:16px;height:0;border-top:2px dashed '+muted+';display:inline-block"></span>3-mo avg';
+    var dsp=document.createElement('span');
+    dsp.style.cssText='display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+    dsp.innerHTML='<span style="width:16px;height:0;border-top:2px dashed '+muted+';display:inline-block"></span>3-mo avg';
     legEl.appendChild(dsp);
   }
 
-  var datasets = [];
+  var datasets=[];
   TREND_SERIES.forEach(function(s){
-    var vals = allMo.map(function(m){return byMo[m][s.key]||0;});
-    var avg  = rolling3(vals);
-    var col  = sc(s);
-    datasets.push({
-      label:s.key, data:vals,
-      borderColor:col, backgroundColor:'transparent',
-      fill:false, borderWidth:2,
-      pointRadius:2.5, pointHoverRadius:5,
-      pointBackgroundColor:col, tension:0.35,
-    });
-    datasets.push({
-      label:s.key+' avg', data:avg,
-      borderColor:col, borderWidth:1.5, borderDash:[5,4],
-      pointRadius:0, fill:false, tension:0.35,
-    });
+    var vals=allMo.map(function(m){return byMo[m][s.key]||0;});
+    var avg=rolling3(vals);
+    var col=sc(s);
+    datasets.push({label:s.key,data:vals,borderColor:col,backgroundColor:'transparent',
+      fill:false,borderWidth:2,pointRadius:2.5,pointHoverRadius:5,pointBackgroundColor:col,tension:0.35});
+    datasets.push({label:s.key+' avg',data:avg,borderColor:col,borderWidth:1.5,
+      borderDash:[5,4],pointRadius:0,fill:false,tension:0.35});
   });
 
-  if (trendChartInst) { trendChartInst.destroy(); trendChartInst=null; }
-  trendChartInst = new Chart(el, {
+  if (trendChartInst){trendChartInst.destroy();trendChartInst=null;}
+  trendChartInst = new Chart(el,{
     type:'line',
-    data:{labels:labels, datasets:datasets},
+    data:{labels:labels,datasets:datasets},
     options:{
-      responsive:true, maintainAspectRatio:false,
+      responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
         tooltip:{
-          filter:function(ctx){ return !ctx.dataset.label.includes('avg'); },
-          callbacks:{label:function(ctx){ return '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions'; }}
+          filter:function(ctx){return !ctx.dataset.label.includes('avg');},
+          callbacks:{label:function(ctx){return '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions';}}
         }
       },
       scales:{
-        x:{
-          ticks:{color:muted,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:13},
-          grid:{display:false}, border:{display:false}
-        },
-        y:{
-          ticks:{color:muted,font:{size:10},stepSize:2},
-          grid:{color:gridC}, border:{display:false}, min:0
-        }
+        x:{ticks:{color:muted,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:13},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:muted,font:{size:10},stepSize:2},grid:{color:gridC},border:{display:false},min:0}
       }
     }
   });
 
-  var cmpEl = document.getElementById('trend-compare');
-  if (cmpEl) {
-    cmpEl.innerHTML = '';
+  // Compare cards
+  var cmpEl=document.getElementById('trend-compare');
+  if (cmpEl){
+    cmpEl.innerHTML='';
     TREND_SERIES.forEach(function(s){
-      var l=sum6(last6,s.key), p=sum6(prev6,s.key), d=l-p;
-      var dCol = d>0?'#22C55E':d<0?'#EF4444':muted;
-      var div = document.createElement('div');
-      div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px 14px;border-left:3px solid '+sc(s);
-      div.innerHTML = '<div style="font-size:9px;color:var(--muted);margin-bottom:8px">'+s.key.toUpperCase()+'</div>'
+      var l=sum6(last6,s.key),p=sum6(prev6,s.key),d=l-p;
+      var dCol=d>0?'#22C55E':d<0?'#EF4444':muted;
+      var div=document.createElement('div');
+      div.style.cssText='background:var(--surface2);border-radius:8px;padding:12px 14px;border-left:3px solid '+sc(s);
+      div.innerHTML='<div style="font-size:9px;color:var(--muted);margin-bottom:8px">'+s.key.toUpperCase()+'</div>'
         +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">'
-        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">LAST 6MO</div>'
-        +'<div style="font-family:monospace;font-size:20px;color:var(--text)">'+l+'</div></div>'
-        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">PREV 6MO</div>'
-        +'<div style="font-family:monospace;font-size:20px;color:var(--muted)">'+p+'</div></div>'
+        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">LAST 6MO</div><div style="font-family:monospace;font-size:20px;color:var(--text)">'+l+'</div></div>'
+        +'<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">PREV 6MO</div><div style="font-family:monospace;font-size:20px;color:var(--muted)">'+p+'</div></div>'
         +'<div style="text-align:right"><div style="font-size:9px;color:var(--muted);margin-bottom:2px">CHANGE</div>'
         +'<div style="font-family:monospace;font-size:18px;font-weight:700;color:'+dCol+'">'+(d>0?'+':'')+d+'</div></div>'
         +'</div>';
@@ -2842,6 +2836,7 @@ function renderTrendChart() {
   }
 }
 
+
 async function init() {
   await loadAll();
 
@@ -2849,7 +2844,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v10_crash_fixed_jul2026';
+  const PLAN_VERSION = 'v12_strava_live_jul2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

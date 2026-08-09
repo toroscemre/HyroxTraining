@@ -560,6 +560,17 @@ body.sb-collapsed #topbar{padding-left:76px}
     </div>
   </div>
 
+  <!-- Pie chart: total 2026 activity split across the 5 categories -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">2026 TOTAL — ACTIVITY SPLIT</div>
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div style="position:relative;width:220px;height:220px;flex-shrink:0">
+        <canvas id="trend-pie" role="img" aria-label="Share of 2026 training sessions by category"></canvas>
+      </div>
+      <div style="flex:1;min-width:160px;display:flex;flex-direction:column;gap:10px" id="trend-pie-legend"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- TRAINING HISTORY -->
@@ -969,7 +980,7 @@ let activeNoteId = null;
 // ═══════════════════════════════════════════════════════════════
 // GOOGLE SHEETS SYNC — syncs across all your devices
 // ═══════════════════════════════════════════════════════════════
-const SYNC_URL = 'https://script.google.com/macros/s/AKfycbwS47liavlVvfv3R-rN6TpM2SI5bY2Za6hoOXz90-GbqRA9GKvO-EaI_moWvOfhGN-O/exec';
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbzp5BakRJ1N01W0cUYPMw2MLs9RrBr8tD1M8qsilLf7tEnL37zlx6o6zCjLCiLnnEt5/exec';
 
 let saveTimer = null;
 
@@ -2840,6 +2851,59 @@ function renderTrendChart() {
       scales:{
         x:{stacked:true,ticks:{color:muted,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:13},grid:{display:false},border:{display:false}},
         y:{stacked:true,ticks:{color:muted,font:{size:10},stepSize:2},grid:{color:gridC},border:{display:false},min:0}
+      }
+    }
+  });
+
+  renderTrendPie(byMo, allMo, isDark);
+}
+
+var trendPieInst = null;
+function renderTrendPie(byMo, allMo, isDark) {
+  var el = document.getElementById('trend-pie');
+  if (!el || !window.Chart) return;
+
+  function sc(s){ return isDark ? s.dark : s.light; }
+  var totals = TREND_SERIES.map(function(s){
+    return allMo.reduce(function(sum,m){ return sum + (byMo[m][s.key]||0); }, 0);
+  });
+  var grandTotal = totals.reduce(function(a,b){return a+b;},0);
+
+  var legEl = document.getElementById('trend-pie-legend');
+  if (legEl) {
+    legEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s,i){
+      var pct = grandTotal ? Math.round(totals[i]/grandTotal*100) : 0;
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px';
+      row.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px">'
+          +'<span style="width:10px;height:10px;border-radius:2px;background:'+sc(s)+';display:inline-block"></span>'
+          +'<span style="font-size:12px;color:var(--sub)">'+s.key+'</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:baseline;gap:6px">'
+          +'<span style="font-family:monospace;font-size:15px;color:var(--text)">'+totals[i]+'</span>'
+          +'<span style="font-size:10px;color:var(--muted)">('+pct+'%)</span>'
+        +'</div>';
+      legEl.appendChild(row);
+    });
+  }
+
+  if (trendPieInst){trendPieInst.destroy();trendPieInst=null;}
+  trendPieInst = new Chart(el,{
+    type:'doughnut',
+    data:{
+      labels: TREND_SERIES.map(function(s){return s.key;}),
+      datasets:[{data:totals,backgroundColor:TREND_SERIES.map(sc),borderColor:'var(--surface)',borderWidth:2}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          var pct = grandTotal ? Math.round(ctx.parsed/grandTotal*100) : 0;
+          return '  '+ctx.label+': '+ctx.parsed+' sessions ('+pct+'%)';
+        }}}
       }
     }
   });

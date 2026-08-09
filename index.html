@@ -2661,6 +2661,23 @@ function histToTrendCat(category, activity) {
   return null;
 }
 
+// Known planner session types, longest-first so "LEGS_RL" matches before "LEGS" etc.
+// Completion ids look like "2026-08-03_HERO_extra_1785694198533" or "2026-08-04_BIKE_0" —
+// the old "strip after last underscore" approach broke on any "_extra_<timestamp>" id
+// (yielding "HERO_extra", which matches nothing), silently dropping every manually-added
+// "extra" session from the trend chart. Matching against a known-type list fixes this.
+var KNOWN_PLANNER_TYPES = ['ZONE2_RUN','LONG_RUN','VO2_MAX','HYROX_STATION','LEGS_RL','LEGS_BSS',
+  'ZONE2','INTERVAL','THRESHOLD','STRENGTH','HERO','BOXING','CORE','BOX','LEGS','YOGA','BIKE']
+  .sort(function(a,b){ return b.length-a.length; });
+
+function extractPlannerType(rest) {
+  for (var i=0;i<KNOWN_PLANNER_TYPES.length;i++) {
+    var t = KNOWN_PLANNER_TYPES[i];
+    if (rest === t || rest.indexOf(t+'_') === 0) return t;
+  }
+  return null;
+}
+
 function plannerToTrendCat(type) {
   if (type === 'YOGA') return 'Yoga';
   if (type === 'STRENGTH' || type === 'HERO' || type === 'HYROX_STATION'
@@ -2728,8 +2745,7 @@ function buildTrendData() {
     var mo = id.slice(0,7);
     if (mo.length !== 7 || mo[4] !== '-') return;
     var rest = id.slice(11);
-    var lastU = rest.lastIndexOf('_');
-    var type = lastU >= 0 ? rest.slice(0,lastU) : rest;
+    var type = extractPlannerType(rest);
     var cat = plannerToTrendCat(type);
     if (!cat) return;
     var iso = id.slice(0,10);

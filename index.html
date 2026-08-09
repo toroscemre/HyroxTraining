@@ -964,13 +964,14 @@ let state            = {};
 let completions      = {};
 let benchInputs      = {};
 let stravaActivities = [];
+let prePlanner       = [];  // Jan 1 – Mar 29, 2026: validated activity log from original GYM.xlsx (pre-dashboard era)
 let weekOffset  = 0;  // in weeks from current week
 let activeNoteId = null;
 
 // ═══════════════════════════════════════════════════════════════
 // GOOGLE SHEETS SYNC — syncs across all your devices
 // ═══════════════════════════════════════════════════════════════
-const SYNC_URL = 'https://script.google.com/macros/s/AKfycbyV73L7d0YiwQ2VDPFdH_eNITDtpnxq4nQ9jZNC52n8zKFmkdW25RnTcdEwgF6heDEP/exec';
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbwS47liavlVvfv3R-rN6TpM2SI5bY2Za6hoOXz90-GbqRA9GKvO-EaI_moWvOfhGN-O/exec';
 
 let saveTimer = null;
 
@@ -1029,10 +1030,12 @@ async function loadAll() {
     const c = localStorage.getItem('hyrox3_comp');
     const b = localStorage.getItem('hyrox3_bench');
     const sv = localStorage.getItem('hyrox_strava');
+    const pp = localStorage.getItem('hyrox_preplanner');
     if (s)  state            = JSON.parse(s);
     if (c)  completions      = JSON.parse(c);
     if (b)  benchInputs      = JSON.parse(b);
     if (sv) stravaActivities = JSON.parse(sv);
+    if (pp) prePlanner       = JSON.parse(pp);
   } catch(e) {}
 
   // Then pull from cloud and use if newer
@@ -1050,6 +1053,7 @@ async function loadAll() {
           if (data.completions) completions      = data.completions;
           if (data.benchInputs) benchInputs      = data.benchInputs;
           if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
+          if (data.prePlanner) { prePlanner = data.prePlanner; localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); }
           localStorage.setItem('hyrox_ts', cloudTs.toString());
         }
       }
@@ -1083,6 +1087,7 @@ async function forceSync() {
         if (data.completions) completions      = data.completions;
         if (data.benchInputs) benchInputs      = data.benchInputs;
         if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
+        if (data.prePlanner) { prePlanner = data.prePlanner; localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); }
         localStorage.setItem('hyrox_ts', (data.ts || Date.now()).toString());
       }
       setSyncUI('ok', '☁️ Up to date');
@@ -2632,28 +2637,38 @@ function toast(msg) {
 // ═══════════════════════════════════════════════════════════
 // TREND CHART — 3 sources: HIST_BASELINE + Strava + Planner
 // ═══════════════════════════════════════════════════════════
+// 5-category scheme agreed for the 2026 season (Aug 2026 validation pass):
+//   Running · Strength (incl. Boxing + Core) · Legs · Yoga · Cycling (planner-only —
+//   Strava never gets a manual "Cycling" activity type from WHOOP, so bike rides land
+//   under generic "Workout"/Strength and would contaminate that category if trusted).
+var TREND_CATS = ['Running','Strength','Legs','Yoga','Cycling'];
 var TREND_SERIES = [
-  {key:'Strength', light:'#2a78d6', dark:'#3987e5'},
-  {key:'Running',  light:'#1baf7a', dark:'#199e70'},
-  {key:'Yoga',     light:'#4a3aa7', dark:'#9085e9'},
+  {key:'Running',  light:'#2563EB', dark:'#93C5FD'},
+  {key:'Strength', light:'#EA580C', dark:'#FED7AA'},
+  {key:'Legs',     light:'#DC2626', dark:'#FCA5A5'},
+  {key:'Yoga',     light:'#7C3AED', dark:'#C4B5FD'},
+  {key:'Cycling',  light:'#DB2777', dark:'#F9A8D4'},
 ];
 var trendChartInst = null;
+
+function emptyMoRow(){ var o={}; TREND_CATS.forEach(function(c){o[c]=0;}); return o; }
 
 function histToTrendCat(category, activity) {
   var cat = (category || '').toLowerCase();
   var act = (activity  || '').toLowerCase();
   if (act === 'yoga' || (cat === 'mobility' && act.includes('yoga'))) return 'Yoga';
+  if (cat === 'legs')     return 'Legs';
   if (cat === 'strength') return 'Strength';
   if (cat === 'running')  return 'Running';
-  if (cat === 'legs')     return 'Strength';
   return null;
 }
 
 function plannerToTrendCat(type) {
   if (type === 'YOGA') return 'Yoga';
   if (type === 'STRENGTH' || type === 'HERO' || type === 'HYROX_STATION'
-      || type === 'BOXING' || type === 'CORE' || type === 'BOX'
-      || type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Strength';
+      || type === 'BOXING' || type === 'CORE' || type === 'BOX') return 'Strength';
+  if (type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Legs';
+  if (type === 'BIKE') return 'Cycling';
   if (type === 'ZONE2_RUN' || type === 'LONG_RUN' || type === 'VO2_MAX'
       || type === 'ZONE2' || type === 'INTERVAL' || type === 'THRESHOLD') return 'Running';
   return null;
@@ -2661,43 +2676,54 @@ function plannerToTrendCat(type) {
 
 function buildTrendData() {
   var byMo = {};
-  var baseline = typeof HIST_BASELINE !== 'undefined' ? HIST_BASELINE : [];
+  // HIST_BASELINE's own 2026-01..03 rows are superseded by the validated prePlanner
+  // (sourced directly from the original GYM.xlsx, Aug 2026 validation pass) — keep
+  // HIST_BASELINE for 2024–2025 only so the two don't double-count.
+  var baselineFull = typeof HIST_BASELINE !== 'undefined' ? HIST_BASELINE : [];
+  var baseline = baselineFull.filter(function(r){ return r.date < '2026-01-01'; });
 
-  // ── Source 1: HIST_BASELINE ───────────────────────────────
+  // ── Source 1: HIST_BASELINE (2024 – Dec 2025) ─────────────
+  var baselineSet = new Set();
   baseline.forEach(function(r) {
     var cat = histToTrendCat(r.category, r.activity);
     if (!cat) return;
     var mo = r.date.slice(0,7);
-    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    if (!byMo[mo]) byMo[mo] = emptyMoRow();
     byMo[mo][cat]++;
+    baselineSet.add(r.date + '_' + cat);
   });
 
-  // Build a set of baseline date+cat pairs to avoid double counting
-  var baselineSet = new Set();
-  baseline.forEach(function(r) {
-    var cat = histToTrendCat(r.category, r.activity);
-    if (cat) baselineSet.add(r.date + '_' + cat);
+  // ── Source 2: prePlanner (Jan 1 – Mar 29, 2026, from original Excel) ──
+  var pre = typeof prePlanner !== 'undefined' ? prePlanner : [];
+  var preSet = new Set();
+  pre.forEach(function(r) {
+    if (!r.date || !r.cat || TREND_CATS.indexOf(r.cat) === -1) return;
+    var mo = r.date.slice(0,7);
+    if (!byMo[mo]) byMo[mo] = emptyMoRow();
+    byMo[mo][r.cat]++;
+    preSet.add(r.date + '_' + r.cat);
   });
 
-  // ── Source 2: Strava (auto-synced from WHOOP) ─────────────
+  // ── Source 3: Strava (auto-synced from WHOOP, Jul 2026+) ──
+  // Only Running/Yoga are trusted from Strava — WHOOP workouts without a manual
+  // "Cycling" tag surface as generic Strength on Strava, so Strength/Legs/Cycling
+  // must come from the planner (source of truth for what was actually done).
   var strava = typeof stravaActivities !== 'undefined' ? stravaActivities : [];
   var stravaSet = new Set();
   strava.forEach(function(a) {
     if (!a.date || !a.category) return;
     var c = (a.category || '').toLowerCase();
-    var cat = c === 'running'  ? 'Running'
-            : c === 'strength' ? 'Strength'
-            : c === 'yoga'     ? 'Yoga'
-            : null;
+    var cat = c === 'running' ? 'Running' : c === 'yoga' ? 'Yoga' : null;
     if (!cat) return;
-    if (baselineSet.has(a.date + '_' + cat)) return; // already in baseline
+    if (baselineSet.has(a.date + '_' + cat)) return;
+    if (preSet.has(a.date + '_' + cat)) return;
     var mo = a.date.slice(0,7);
-    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    if (!byMo[mo]) byMo[mo] = emptyMoRow();
     byMo[mo][cat]++;
     stravaSet.add(a.date + '_' + cat);
   });
 
-  // ── Source 3: Weekly planner completions ──────────────────
+  // ── Source 4: Weekly planner completions (Mar 30, 2026+) ──
   var comp = typeof completions !== 'undefined' ? completions : {};
   Object.keys(comp).forEach(function(id) {
     if (!comp[id].done) return;
@@ -2709,9 +2735,10 @@ function buildTrendData() {
     var cat = plannerToTrendCat(type);
     if (!cat) return;
     var iso = id.slice(0,10);
-    if (baselineSet.has(iso + '_' + cat)) return; // in baseline
-    if (stravaSet.has(iso + '_' + cat))   return; // already from Strava
-    if (!byMo[mo]) byMo[mo] = {Strength:0,Running:0,Yoga:0};
+    if (baselineSet.has(iso + '_' + cat)) return;
+    if (preSet.has(iso + '_' + cat))      return;
+    if (stravaSet.has(iso + '_' + cat))   return; // Running/Yoga already counted via Strava
+    if (!byMo[mo]) byMo[mo] = emptyMoRow();
     byMo[mo][cat]++;
   });
 
@@ -2731,11 +2758,11 @@ function renderTrendChart() {
   var byMo = buildTrendData();
 
   var allMo = [];
-  var c2 = new Date('2024-07-01T00:00:00Z');
+  var c2 = new Date('2026-01-01T00:00:00Z');
   var now2 = new Date();
   while (c2 <= now2) {
     var k = c2.toISOString().slice(0,7);
-    if (!byMo[k]) byMo[k] = {Strength:0,Running:0,Yoga:0};
+    if (!byMo[k]) byMo[k] = emptyMoRow();
     allMo.push(k);
     c2.setUTCMonth(c2.getUTCMonth()+1);
   }

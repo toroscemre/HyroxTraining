@@ -3097,6 +3097,26 @@ var TREND_SERIES = [
 ];
 var trendChartInst = null;
 
+// Category filter for the monthly activity chart.
+// Empty object = show every category. Clicking a KPI card or legend entry
+// isolates that category; clicking it again releases it. Multiple categories
+// can be combined, and clearing the last one returns to showing everything.
+var trendFilter = {};
+
+function toggleTrendCat(key) {
+  var activeKeys = Object.keys(trendFilter).filter(function(k){ return trendFilter[k]; });
+  if (activeKeys.length === 0) {
+    // Nothing filtered yet — first click isolates the clicked category.
+    trendFilter = {};
+    trendFilter[key] = true;
+  } else if (trendFilter[key]) {
+    delete trendFilter[key];   // may fall back to "show all" if it was the last one
+  } else {
+    trendFilter[key] = true;   // add alongside the current selection
+  }
+  renderTrendChart();
+}
+
 function emptyMoRow(){ var o={}; TREND_CATS.forEach(function(c){o[c]=0;}); return o; }
 
 function histToTrendCat(category, activity) {
@@ -3240,35 +3260,62 @@ function renderTrendChart() {
 
   function sumAll(mos,cat){ return mos.reduce(function(s,m){return s+(byMo[m][cat]||0);},0); }
 
-  // KPI cards — total sessions per category, full period shown (2026 YTD)
+  // Which categories are currently shown. Empty set = show everything.
+  var active = TREND_SERIES.filter(function(s){ return trendFilter[s.key]; });
+  var showAll = active.length === 0;
+  function isOn(key){ return showAll || !!trendFilter[key]; }
+  var visible = TREND_SERIES.filter(function(s){ return isOn(s.key); });
+
+  // KPI cards — click to isolate a category, click again to release
   var kpiEl = document.getElementById('trend-kpi');
   if (kpiEl) {
     kpiEl.innerHTML = '';
     TREND_SERIES.forEach(function(s){
       var total = sumAll(allMo, s.key);
+      var on = isOn(s.key);
       var div = document.createElement('div');
-      div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid '+sc(s);
+      div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px 14px;'
+        + 'border-top:3px solid '+sc(s)+';cursor:pointer;transition:opacity .15s,transform .15s;'
+        + 'opacity:' + (on ? '1' : '0.35') + ';'
+        + (trendFilter[s.key] ? 'box-shadow:0 0 0 1px '+sc(s)+';' : '')
+        + '-webkit-tap-highlight-color:transparent';
+      div.title = trendFilter[s.key] ? 'Click to remove ' + s.key + ' from the chart'
+                                     : 'Click to show only ' + s.key;
       div.innerHTML = '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">'+s.key.toUpperCase()+'</div>'
         +'<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'+total+'</div>'
         +'<div style="font-size:10px;color:'+muted+';margin-top:5px">2026 YTD</div>';
+      div.addEventListener('click', function(){ toggleTrendCat(s.key); });
       kpiEl.appendChild(div);
     });
   }
 
-  // Legend
+  // Legend — same filter control, plus a reset when a filter is active
   var legEl = document.getElementById('trend-legend');
   if (legEl) {
     legEl.innerHTML = '';
     TREND_SERIES.forEach(function(s){
+      var on = isOn(s.key);
       var sp=document.createElement('span');
-      sp.style.cssText='display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.style.cssText='display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;'
+        +'color:var(--sub);opacity:'+(on?'1':'0.4')+';'
+        +(on?'':'text-decoration:line-through;')
+        +'-webkit-tap-highlight-color:transparent';
       sp.innerHTML='<span style="width:10px;height:10px;background:'+sc(s)+';border-radius:2px;display:inline-block"></span>'+s.key;
+      sp.addEventListener('click', function(){ toggleTrendCat(s.key); });
       legEl.appendChild(sp);
     });
+    if (!showAll) {
+      var reset=document.createElement('span');
+      reset.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:var(--accent);'
+        +'cursor:pointer;margin-left:4px;-webkit-tap-highlight-color:transparent';
+      reset.innerHTML='&#8635; Show all';
+      reset.addEventListener('click', function(){ trendFilter={}; renderTrendChart(); });
+      legEl.appendChild(reset);
+    }
   }
 
   var datasets=[];
-  TREND_SERIES.forEach(function(s){
+  visible.forEach(function(s){
     var vals=allMo.map(function(m){return byMo[m][s.key]||0;});
     var col=sc(s);
     datasets.push({label:s.key,data:vals,backgroundColor:col,borderRadius:3,

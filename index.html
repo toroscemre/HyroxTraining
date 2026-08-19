@@ -160,6 +160,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess.dragging{opacity:0.25;cursor:grabbing}
 .sess.done{opacity:0.6}
 
+/* Compact session cards for month-grid cells — same card, same handlers,
+   just with the long-form detail collapsed so 7 columns stay readable.
+   Full detail remains available via the card's title tooltip. */
+.mv-compact .sess-detail,
+.mv-compact .run-guide,
+.mv-compact .sess-reps,
+.mv-compact .sess-time{display:none}
+.mv-compact .sess{padding:4px 5px;border-left-width:3px;border-radius:5px;margin-bottom:3px}
+.mv-compact .sess:hover{transform:none;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.mv-compact .sess-top{gap:3px}
+.mv-compact .sess-icon{font-size:10px}
+.mv-compact .sess-title{font-size:9.5px;line-height:1.15}
+.mv-compact .sess-note{font-size:8px;margin-top:2px}
+.mv-compact .sess-actions{margin-top:3px;gap:3px}
+.mv-compact .chk{width:14px;height:14px;font-size:9px}
+.mv-compact .note-btn{font-size:8px;padding:0 3px}
+.mv-compact .drop-zone{min-height:26px}
+.mv-compact .mv-add{width:100%;margin-top:2px;padding:2px;font-size:9px;border-radius:4px;cursor:pointer;
+  border:1px dashed rgba(249,115,22,0.35);background:transparent;color:var(--accent);opacity:0;transition:opacity .15s}
+.mv-compact .mv-day:hover .mv-add{opacity:1}
+.mv-compact .drop-zone.drag-over{background:rgba(249,115,22,0.12);border-radius:4px}
+
 .sess[data-t="LEGS_RL"]  {background:var(--bg-legs-rl);  border-left-color:var(--c-legs-rl)}
 .sess[data-t="LEGS_BSS"] {background:var(--bg-legs-bss); border-left-color:var(--c-legs-bss)}
 .sess[data-t="STRENGTH"] {background:var(--bg-strength); border-left-color:var(--c-strength)}
@@ -492,14 +514,14 @@ body.sb-collapsed #topbar{padding-left:76px}
     <div class="sb-dot" style="background:var(--p2)"></div>
     <div class="sb-label">
       Phase 2 · Gym Strength
-      <div><span class="sb-badge" style="background:var(--p2);color:#000">Jul – Oct 2026</span></div>
+      <div><span class="sb-badge" style="background:var(--p2);color:#000">6 Jul – 30 Aug 2026</span></div>
     </div>
   </div>
-  <div class="sb-item" onclick="nav('phase3')" style="opacity:0.5">
+  <div class="sb-item" onclick="nav('phase3')">
     <div class="sb-dot" style="background:var(--p3)"></div>
     <div class="sb-label">
       Phase 3 · Race Specific
-      <div><span class="sb-badge" style="background:var(--p3);color:#fff">Oct 26 – Feb 27</span></div>
+      <div><span class="sb-badge" style="background:var(--p3);color:#fff">31 Aug – 1 Nov 2026</span></div>
     </div>
   </div>
   <div class="sb-item" onclick="nav('phase4')" style="opacity:0.5">
@@ -553,7 +575,7 @@ body.sb-collapsed #topbar{padding-left:76px}
   <!-- Trend chart: monthly training activity, stacked bar -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
     <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">MONTHLY TRAINING ACTIVITY — 2026</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px" id="trend-kpi"></div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px" id="trend-kpi"></div>
     <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px" id="trend-legend"></div>
     <div style="position:relative;width:100%;height:260px;margin-bottom:8px">
       <canvas id="trend-chart" role="img" aria-label="Monthly training sessions by category, 2026"></canvas>
@@ -735,7 +757,7 @@ body.sb-collapsed #topbar{padding-left:76px}
 <!-- PHASES 2/3/4 -->
 <div class="view" id="view-phase2">
   <div class="page-title" style="color:var(--p2)">Phase 2 · Gym Strength</div>
-  <div class="page-sub">6 Jul – 11 Oct 2026 · 14 weeks · 3 training days + VO₂ Max Saturday</div>
+  <div class="page-sub">6 Jul – 30 Aug 2026 · 8 weeks · 3 training days + VO₂ Max Saturday · Phase 3 takes over 31 Aug</div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid #FACC15">
@@ -805,12 +827,72 @@ body.sb-collapsed #topbar{padding-left:76px}
       <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:9px;color:var(--muted);letter-spacing:1px">SANDBAG LUNGES 100M</div><div style="font-family:monospace;font-size:18px;color:#F97316;margin-top:4px">&lt; 5:00</div></div>
     </div>
   </div>
+
+  <!-- Phase 2 calendar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 0 1rem;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="p2Prev()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8249;</button>
+      <span style="font-size:18px;font-weight:700;min-width:160px;text-align:center;color:var(--text)" id="p2-month-label"></span>
+      <button onclick="p2Next()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8250;</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted)" id="p2-progress"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">MON</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">TUE</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">WED</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">THU</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">FRI</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SAT</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SUN</div>
+  </div>
+  <div id="p2-grid" class="mv-compact" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
 </div>
+
 <div class="view" id="view-phase3">
   <div class="page-title" style="color:var(--p3)">Phase 3 · Race Specific</div>
-  <div class="page-sub">Oct 2026 – Feb 2027 · Weeks 28–48</div>
-  <div class="empty"><div class="empty-icon">⏱️</div><div class="empty-title">Not Planned Yet</div>
-  <div class="empty-text">Full race simulations, station power work, race-pace intervals.<br>Plan will be built after Phase 2 complete.</div></div>
+  <div class="page-sub">31 Aug – 1 Nov 2026 · 9 weeks · 3-day cycle ×2 per week</div>
+
+  <!-- Phase banner -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--p3);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:18px">
+      <div><div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:3px">CYCLE 1</div>
+        <div style="font-size:12px;color:var(--sub)">Mon gym · Tue recovery · Wed run</div></div>
+      <div><div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:3px">CYCLE 2</div>
+        <div style="font-size:12px;color:var(--sub)">Thu gym · Fri recovery · Sat run</div></div>
+      <div><div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:3px">SUNDAY</div>
+        <div style="font-size:12px;color:var(--sub)">Rest · optional yoga or 20 min walk</div></div>
+      <div><div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:3px">DELOAD</div>
+        <div style="font-size:12px;color:#F59E0B">Week 9 · 26 Oct – 1 Nov</div></div>
+    </div>
+  </div>
+
+  <!-- Month nav -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="p3Prev()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8249;</button>
+      <span style="font-size:18px;font-weight:700;min-width:160px;text-align:center;color:var(--text)" id="p3-month-label"></span>
+      <button onclick="p3Next()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8250;</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted)" id="p3-progress"></div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:1rem" id="p3-legend"></div>
+
+  <!-- Day headers -->
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">MON</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">TUE</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">WED</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">THU</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">FRI</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SAT</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SUN</div>
+  </div>
+
+  <!-- Calendar grid -->
+  <div id="p3-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
 </div>
 <div class="view" id="view-phase4">
   <div class="page-title" style="color:var(--p4)">Phase 4 · Taper</div>
@@ -917,6 +999,11 @@ const SPORT_META = {
   BOX:           {label:'Boxing',         icon:'🥊'},
   LEGS:          {label:'Legs',           icon:'🦵'},
   BIKE:          {label:'Bike',           icon:'🚴'},
+  SKIERG:        {label:'SkiErg',         icon:'⛷️'},
+  ROWERG:        {label:'RowErg',         icon:'🚣'},
+  SWIM:          {label:'Swim',           icon:'🏊'},
+  SICK:          {label:'Sick',           icon:'🤒'},
+  HOLIDAY:       {label:'Holiday',        icon:'🏖️'},
   LEGS_RL:       {label:'Legs',           icon:'🦵'},
   LEGS_BSS:      {label:'Legs',           icon:'🦵'},
   ZONE2:         {label:'Zone 2 Run',     icon:'🏃'},
@@ -1072,7 +1159,6 @@ async function loadAll() {
       updateOverview();
       updateLog();
       renderRunSessions();
-      renderRunSessions();
       setSyncUI('ok');
       setTimeout(() => setSyncUI('idle'), 2000);
     } else {
@@ -1160,7 +1246,7 @@ function buildTemplate(wkData) {
 }
 
 // ════════════════════════════════════════════════════════════
-// PHASE 2 — GYM STRENGTH  (6 Jul – 11 Oct 2026)
+// PHASE 2 — GYM STRENGTH  (6 Jul – 30 Aug 2026)
 // Mon: Combined Home Strength + Shadow Boxing
 // Tue: Bike commute
 // Wed: Yoga + Bike commute
@@ -1169,7 +1255,68 @@ function buildTemplate(wkData) {
 // Fri: Rest   Sat: VO2 Max Run   Sun: Rest
 // ════════════════════════════════════════════════════════════
 const PHASE2_START = new Date('2026-07-06T00:00:00Z');
-const PHASE2_END   = new Date('2026-10-11T00:00:00Z');
+// Phase 2 originally ran to 11 Oct 2026, but Phase 3 supersedes it from 31 Aug 2026
+// (the new 3-day cycle explicitly replaces the Thursday Hero class).
+const PHASE2_END   = new Date('2026-08-30T00:00:00Z');
+
+// ════════════════════════════════════════════════════════════
+// PHASE 3 · RACE SPECIFIC — 31 Aug 2026 – 1 Nov 2026 (9 weeks)
+// Repeating 3-day cycle run twice per week + Sunday rest:
+//   D1 HYROX gym session · D2 active recovery · D3 run
+// Runs alternate weekly: odd weeks Wed=Zone 2 / Sat=Interval, even weeks swapped.
+// Week 9 (26 Oct – 1 Nov) is a deload: 60% gym load, Zone 2 only, no intervals.
+// ════════════════════════════════════════════════════════════
+const PHASE3_START = new Date('2026-08-31T00:00:00Z');
+const PHASE3_END   = new Date('2026-11-01T00:00:00Z');
+const P3_DELOAD_WK = 9;
+
+function isPhase3(mondayOff) {
+  var d = dateFromDayOffset(mondayOff);
+  return d >= PHASE3_START && d <= PHASE3_END;
+}
+function p3WeekNum(mondayOff) {
+  return Math.floor((mondayOff - daysSinceEpoch(PHASE3_START)) / 7) + 1;
+}
+function buildPhase3Template(mondayOff) {
+  var wn = p3WeekNum(mondayOff);
+  var deload = wn === P3_DELOAD_WK;
+  var odd = wn % 2 === 1;
+
+  var gym = deload
+    ? {type:'HYROX_STATION', detail:'DELOAD · 60% load · 45 min · SkiErg, sled push/pull, wall balls, sandbag lunges, rowing · technique focus, no grinding'}
+    : {type:'HYROX_STATION', detail:'45 min · SkiErg, sled push/pull, wall balls, sandbag lunges, rowing · progressive load'};
+
+  var recovery = {type:'BIKE', detail:'Active recovery · office commute ~7km · low intensity, conversational'};
+
+  var zone2 = {type:'ZONE2_RUN', detail:'Easy · HR 120–140 bpm · conversational pace'};
+  var interval = deload
+    ? {type:'ZONE2_RUN', detail:'DELOAD · Zone 2 only · no intervals this week'}
+    : {type:'INTERVAL', detail:'Warm-up → 4×4 min @ 90% max HR · 3 min jog recovery · cool-down'};
+
+  // Odd weeks: Wed = Zone 2, Sat = Interval. Even weeks: swapped.
+  var wed = odd ? zone2 : interval;
+  var sat = odd ? interval : zone2;
+
+  return [
+    // 0 MON — Cycle 1 · Day 1
+    [Object.assign({}, gym, {cycle:'C1-D1'}),
+     {type:'STRENGTH', detail:'Upper body + grip · merge into gym session · Pull-ups, Row, OHP, Farmers Walk, Dead Hang', cycle:'C1-D1'}],
+    // 1 TUE — Cycle 1 · Day 2
+    [Object.assign({}, recovery, {cycle:'C1-D2'}),
+     {type:'CORE', detail:'Hernia-safe · Gentle Dead Bug + variations · stop on any lower-ab discomfort', cycle:'C1-D2'}],
+    // 2 WED — Cycle 1 · Day 3
+    [Object.assign({}, wed, {cycle:'C1-D3'})],
+    // 3 THU — Cycle 2 · Day 1
+    [Object.assign({}, gym, {cycle:'C2-D1'})],
+    // 4 FRI — Cycle 2 · Day 2
+    [Object.assign({}, recovery, {cycle:'C2-D2'}),
+     {type:'CORE', detail:'Hernia-safe · Gentle Dead Bug + variations · stop on any lower-ab discomfort', cycle:'C2-D2'}],
+    // 5 SAT — Cycle 2 · Day 3
+    [Object.assign({}, sat, {cycle:'C2-D3'})],
+    // 6 SUN — Rest
+    [{type:'YOGA', detail:'Rest day · optional 45 min mobility (hips, hamstrings, thoracic) or 20 min walk only', cycle:'REST'}],
+  ];
+}
 
 function isPhase2(mondayOff) {
   var d = dateFromDayOffset(mondayOff);
@@ -1206,6 +1353,14 @@ function buildPhase2Template(mondayOff) {
 }
 
 function ensureWeek(mondayOff) {
+  if (isPhase3(mondayOff)) {
+    var t3 = buildPhase3Template(mondayOff);
+    for (var d3=0;d3<7;d3++) {
+      var i3 = isoFromOffset(mondayOff+d3);
+      if (!state[i3]) state[i3] = t3[d3].map(function(s,i){return Object.assign({},s,{id:i3+'_'+s.type+'_'+i,phase:'PHASE3'});});
+    }
+    return;
+  }
   if (isPhase2(mondayOff)) {
     var t2 = buildPhase2Template(mondayOff);
     for (var d2=0;d2<7;d2++) {
@@ -1228,6 +1383,15 @@ function ensureWeek(mondayOff) {
 // Force-reset a week with the new template, preserving only existing completions
 // Used when the plan changes mid-programme
 function forceResetWeek(mondayOff) {
+  if (isPhase3(mondayOff)) {
+    var t3 = buildPhase3Template(mondayOff);
+    for (var d3=0;d3<7;d3++) {
+      var i3 = isoFromOffset(mondayOff+d3);
+      var ex3 = (state[i3]||[]).filter(function(s){return s.extra===true;});
+      state[i3] = t3[d3].map(function(s,i){return Object.assign({},s,{id:i3+'_'+s.type+'_'+i,phase:'PHASE3'});}).concat(ex3);
+    }
+    return;
+  }
   if (isPhase2(mondayOff)) {
     var t2 = buildPhase2Template(mondayOff);
     for (var d2=0;d2<7;d2++) {
@@ -1252,9 +1416,12 @@ function forceResetWeek(mondayOff) {
 // Pre-load all 14 weeks
 function initState() {
   for (let w = 0; w < 14; w++) ensureWeek(w * 7);
-  // Phase 2: 6 Jul – 11 Oct 2026 (14 weeks)
+  // Phase 2: 6 Jul – 30 Aug 2026 (8 weeks, truncated where Phase 3 takes over)
   var p2off = daysSinceEpoch(PHASE2_START);
-  for (var pw=0; pw<14; pw++) ensureWeek(p2off + pw*7);
+  for (var pw=0; pw<8; pw++) ensureWeek(p2off + pw*7);
+  // Phase 3: 31 Aug – 1 Nov 2026 (9 weeks)
+  var p3off = daysSinceEpoch(PHASE3_START);
+  for (var qw=0; qw<9; qw++) ensureWeek(p3off + qw*7);
 }
 
 // Reset current week + all future weeks to new template
@@ -1266,6 +1433,16 @@ function resetFutureWeeks() {
     if (monOff >= todayMon) {
       forceResetWeek(monOff);
     }
+  }
+  // Phase 2 weeks (6 Jul – 30 Aug 2026)
+  var p2off = daysSinceEpoch(PHASE2_START);
+  for (var pw=0; pw<8; pw++) {
+    if (p2off + pw*7 >= todayMon) forceResetWeek(p2off + pw*7);
+  }
+  // Phase 3 weeks (31 Aug – 1 Nov 2026)
+  var p3off = daysSinceEpoch(PHASE3_START);
+  for (var qw=0; qw<9; qw++) {
+    if (p3off + qw*7 >= todayMon) forceResetWeek(p3off + qw*7);
   }
   saveAll();
 }
@@ -1282,13 +1459,23 @@ function renderWeek() {
   const monOff = curMondayOff();
   const idx   = wkIdxFromMondayOffset(monOff);
   const wd    = idx >= 0 && idx < 14 ? WEEKS[idx] : null;
-  const _isP2 = isPhase2(monOff);
-  const phase = _isP2 ? 'GYM STRENGTH' : (wd ? wd.p : '—');
+  const _isP3 = isPhase3(monOff);
+  const _isP2 = !_isP3 && isPhase2(monOff);
+  const phase = _isP3 ? 'RACE SPECIFIC' : (_isP2 ? 'GYM STRENGTH' : (wd ? wd.p : '—'));
 
   ensureWeek(monOff);
 
   const pill = document.getElementById('wk-pill');
-  if (_isP2) {
+  if (_isP3) {
+    var _w3 = p3WeekNum(monOff);
+    var _dl = _w3 === P3_DELOAD_WK;
+    document.getElementById('wk-num').textContent   = 'PHASE 3 · WK ' + _w3;
+    document.getElementById('wk-dates').textContent = fmtDate(monOff) + ' – ' + fmtDate(monOff+6);
+    document.getElementById('ps-wk').textContent    = 'P3·W' + _w3;
+    pill.textContent      = _dl ? '🌙 DELOAD WEEK' : (_w3 % 2 === 1 ? '🏟️ WED Z2 · SAT INTERVAL' : '🏟️ WED INTERVAL · SAT Z2');
+    pill.style.background = _dl ? '#F59E0B' : '#8B5CF6';
+    pill.style.color      = _dl ? '#000' : '#fff';
+  } else if (_isP2) {
     var _wn  = p2WeekNum(monOff);
     var _odd = _wn % 2 === 1;
     document.getElementById('wk-num').textContent   = 'PHASE 2 · WK ' + _wn;
@@ -1367,6 +1554,200 @@ function renderWeek() {
   document.getElementById('ps-done').textContent  = wkDone;
   document.getElementById('ps-total').textContent = wkTotal;
   updateGlobalStats();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEW SYNC — every calendar (weekly planner, monthly, phase 2/3)
+// reads the same `state` + `completions` objects, so after any
+// mutation we simply re-render them all. That keeps the weekly
+// planner and the monthly view in lockstep in both directions.
+// ═══════════════════════════════════════════════════════════════
+function refreshAll() {
+  try { if (document.getElementById('cal'))     renderWeek(); }        catch(e){}
+  try { if (document.getElementById('mv-grid')) renderMonthlyView(); } catch(e){}
+  try { if (document.getElementById('p3-grid')) renderPhase3(); }      catch(e){}
+  try { if (document.getElementById('p2-grid')) renderPhase2(); }      catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING LOG
+// `updateLog()` and `exportCSV()` were referenced throughout the app
+// but never defined, so every tick threw a ReferenceError after saving
+// and the Training Log page never populated. Implemented here.
+// ═══════════════════════════════════════════════════════════════
+function logEntries() {
+  var idType = {};
+  Object.keys(state).forEach(function(iso){
+    (state[iso]||[]).forEach(function(s){ idType[s.id] = s.type; });
+  });
+  var rows = [];
+  Object.keys(completions).forEach(function(id){
+    var c = completions[id];
+    if (!c || !c.done) return;
+    var iso = c.iso || id.slice(0,10);
+    var type = idType[id] || (typeof extractPlannerType === 'function' ? extractPlannerType(id.slice(11)) : null);
+    if (!type) return;
+    rows.push({id:id, iso:iso, type:type, note:c.note || '', ts:c.ts || ''});
+  });
+  rows.sort(function(a,b){ return b.iso.localeCompare(a.iso); });
+  return rows;
+}
+
+function updateLog() {
+  var el = document.getElementById('log-list');
+  if (!el) return;
+  var rows = logEntries();
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No sessions logged yet</div>'
+      + '<div class="empty-text">Tick a session complete in the planner and it will appear here.</div></div>';
+    return;
+  }
+
+  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'
+    + rows.length + ' completed session' + (rows.length===1?'':'s') + '</div>';
+  var lastMonth = '';
+  rows.forEach(function(r){
+    var mo = r.iso.slice(0,7);
+    if (mo !== lastMonth) {
+      var y = parseInt(mo.slice(0,4),10), mi = parseInt(mo.slice(5,7),10)-1;
+      html += '<div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin:16px 0 8px">'
+           +  (MV_MO_NAMES[mi] || mo).toUpperCase() + ' ' + y + '</div>';
+      lastMonth = mo;
+    }
+    var meta = SPORT_META[r.type] || {label:r.type, icon:'📌'};
+    var cat = typeof plannerToTrendCat === 'function' ? plannerToTrendCat(r.type) : null;
+    var col = cat && typeof mvCatColour === 'function' ? mvCatColour(cat) : 'var(--accent)';
+    var dt = new Date(r.iso + 'T00:00:00Z');
+    var dstr = dt.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+    html += '<div style="display:flex;align-items:center;gap:10px;background:var(--surface);'
+         +  'border:1px solid var(--border);border-left:3px solid '+col+';border-radius:8px;'
+         +  'padding:9px 12px;margin-bottom:6px">'
+         +  '<span style="font-size:15px">'+meta.icon+'</span>'
+         +  '<div style="flex:1;min-width:0">'
+         +    '<div style="font-size:13px;color:var(--text)">'+meta.label+'</div>'
+         +    (r.note ? '<div style="font-size:11px;color:var(--sub);margin-top:2px">📝 '+r.note+'</div>' : '')
+         +  '</div>'
+         +  '<span style="font-family:monospace;font-size:11px;color:var(--muted);white-space:nowrap">'+dstr+'</span>'
+         +  '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function exportCSV() {
+  var rows = logEntries();
+  if (!rows.length) { toast('Nothing to export yet'); return; }
+  var out = 'date,type,label,category,note\n';
+  rows.slice().reverse().forEach(function(r){
+    var meta = SPORT_META[r.type] || {label:r.type};
+    var cat = typeof plannerToTrendCat === 'function' ? (plannerToTrendCat(r.type)||'') : '';
+    var note = (r.note||'').replace(/"/g,'""');
+    out += r.iso + ',' + r.type + ',"' + meta.label + '",' + cat + ',"' + note + '"\n';
+  });
+  var blob = new Blob([out], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'hyrox-training-log-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Exported ' + rows.length + ' sessions');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 8 × 1 KM RUN PACE LOG
+// `renderRunSessions()` and `addRunSession()` were referenced by the
+// benchmarks page and the sync handler but never defined, so the
+// benchmarks page threw before it finished rendering. Implemented here.
+// Stored inside benchInputs (already persisted to A1) under a reserved key.
+// ═══════════════════════════════════════════════════════════════
+var RUN_SESSION_KEY = '__runSessions';
+
+function getRunSessions() {
+  var raw = benchInputs[RUN_SESSION_KEY];
+  if (!raw) return [];
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch(e){ return []; }
+}
+function saveRunSessions(list) {
+  benchInputs[RUN_SESSION_KEY] = JSON.stringify(list);
+  saveAll();
+}
+
+function addRunSession() {
+  var date = prompt('Date of the session (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if (!date) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Use the format YYYY-MM-DD'); return; }
+  var paces = prompt('1 km paces in order, comma separated (e.g. 5:40,5:35,5:38):', '');
+  if (!paces) return;
+  var list = getRunSessions();
+  list.push({date:date, paces:paces.split(',').map(function(p){return p.trim();}).filter(Boolean)});
+  list.sort(function(a,b){ return b.date.localeCompare(a.date); });
+  saveRunSessions(list);
+  renderRunSessions();
+  toast('Run session logged');
+}
+
+function deleteRunSession(idx) {
+  var list = getRunSessions();
+  list.splice(idx,1);
+  saveRunSessions(list);
+  renderRunSessions();
+  toast('Session removed');
+}
+
+function paceToSec(p) {
+  var m = /^(\d+):(\d{1,2})$/.exec((p||'').trim());
+  if (!m) { var f = parseFloat(p); return isNaN(f) ? null : Math.round(f*60); }
+  return parseInt(m[1],10)*60 + parseInt(m[2],10);
+}
+function secToPace(s) {
+  if (s == null) return '—';
+  var m = Math.floor(s/60), r = Math.round(s%60);
+  if (r === 60) { m++; r = 0; }
+  return m + ':' + (r<10?'0':'') + r;
+}
+
+function renderRunSessions() {
+  var el = document.getElementById('run-sessions-list');
+  if (!el) return;
+  var list = getRunSessions();
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0">'
+      + 'No run sessions logged yet. Record your 1 km splits after a long run or an 8×1 km session '
+      + 'to see whether race pace is on track.</div>';
+    return;
+  }
+  var TARGET = 330; // 5:30/km in seconds
+  var html = '';
+  list.forEach(function(s, i){
+    var secs = s.paces.map(paceToSec).filter(function(v){ return v != null; });
+    var avg = secs.length ? Math.round(secs.reduce(function(a,b){return a+b;},0)/secs.length) : null;
+    var onTarget = avg != null && avg <= TARGET;
+    var dt = new Date(s.date + 'T00:00:00Z');
+    html += '<div style="border:1px solid var(--border);border-left:3px solid '
+         +  (onTarget ? '#22C55E' : 'var(--accent)')
+         +  ';border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--surface2)">'
+         +  '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'
+         +    '<span style="font-size:12px;color:var(--text)">'
+         +      dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})
+         +      ' · ' + s.paces.length + ' × 1 km</span>'
+         +    '<span style="display:flex;align-items:center;gap:8px">'
+         +      '<span style="font-family:monospace;font-size:14px;color:'+(onTarget?'#22C55E':'var(--accent)')+'">'
+         +        secToPace(avg) + '/km</span>'
+         +      '<button class="note-btn" onclick="deleteRunSession('+i+')" '
+         +        'style="color:#F87171;border-color:rgba(248,113,113,0.3)" title="Remove">&#10005;</button>'
+         +    '</span>'
+         +  '</div>'
+         +  '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+    s.paces.forEach(function(p, n){
+      var sec = paceToSec(p);
+      var good = sec != null && sec <= TARGET;
+      html += '<span title="Km '+(n+1)+'" style="font-family:monospace;font-size:10px;padding:2px 6px;border-radius:4px;'
+           +  'background:'+(good?'rgba(34,197,94,0.15)':'rgba(249,115,22,0.12)')+';'
+           +  'color:'+(good?'#22C55E':'var(--accent)')+'">'+p+'</span>';
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
 }
 
 function buildCard(sess, iso) {
@@ -1460,7 +1841,7 @@ function onDrop(e) {
   if (!state[toISO]) state[toISO] = [];
   state[toISO].push(moved);
 
-  saveAll(); renderWeek();
+  saveAll(); refreshAll();
   toast(`Moved ${SPORT_META[moved.type]?.label || moved.type} → ${fmtFull(daysSinceEpoch(new Date(toISO+'T00:00:00Z')))}`);
 }
 
@@ -1481,7 +1862,7 @@ function handleRemove(el) {
   state[iso] = state[iso].filter(function(s){ return s.id !== id; });
   if (completions[id]) delete completions[id];
   saveAll();
-  renderWeek();
+  refreshAll();
   toast('Session removed');
 }
 function toggleDone(e, id, iso) {
@@ -1489,7 +1870,7 @@ function toggleDone(e, id, iso) {
   const cur = completions[id] || {};
   const nowOn = !cur.done;
   completions[id] = {...cur, done:nowOn, ts:new Date().toISOString(), iso};
-  saveAll(); renderWeek(); updateLog();
+  saveAll(); refreshAll(); updateLog();
   if (nowOn) toast('Session complete ✓');
 }
 function openNote(e, id) {
@@ -1502,7 +1883,7 @@ function closeModal() { document.getElementById('note-modal').classList.remove('
 function saveNote() {
   if (!activeNoteId) return;
   completions[activeNoteId] = {...(completions[activeNoteId]||{}), note:document.getElementById('note-ta').value.trim()};
-  saveAll(); closeModal(); renderWeek(); updateLog(); toast('Note saved');
+  saveAll(); closeModal(); refreshAll(); updateLog(); toast('Note saved');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2137,8 +2518,8 @@ function updateOverview() {
   if (daysInEl) daysInEl.textContent = daysInVal;
   const phases = [
     {s:'2026-03-30',e:'2026-07-05',n:'Phase 1 · Base Fitness', sub:'Foundation → Build → Peak · 100 days'},
-    {s:'2026-07-05',e:'2026-10-11',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
-    {s:'2026-10-12',e:'2027-02-28',n:'Phase 3 · Race Specific',sub:'Full simulations'},
+    {s:'2026-07-06',e:'2026-08-30',n:'Phase 2 · Gym Strength', sub:'HYROX Stations · Hero Full Body · VO₂ Max'},
+    {s:'2026-08-31',e:'2026-11-01',n:'Phase 3 · Race Specific',sub:'CrossFit Hofplein ×2/wk · 3-day cycle · recovery-led'},
     {s:'2027-03-01',e:'2027-04-16',n:'Phase 4 · Taper',        sub:'Sharpen & rest'},
     {s:'2027-04-01',e:'2027-04-01',n:'🏁 RACE DAY',            sub:'HYROX Rotterdam'},
   ];
@@ -2187,6 +2568,51 @@ const NAV_MAP = {
 };
 const SUB_MAP = { p1found:0, p1build:1, p1peak:2 };
 
+// ═══════════════════════════════════════════════════════════════
+// PHASE 3 CALENDAR VIEW
+// ═══════════════════════════════════════════════════════════════
+var P3_MONTHS = ['2026-08','2026-09','2026-10','2026-11'];
+var p3Month = '2026-09';
+
+function p3Prev() { var i=P3_MONTHS.indexOf(p3Month); if(i>0){ p3Month=P3_MONTHS[i-1]; renderPhase3(); } }
+function p3Next() { var i=P3_MONTHS.indexOf(p3Month); if(i<P3_MONTHS.length-1){ p3Month=P3_MONTHS[i+1]; renderPhase3(); } }
+
+function renderPhase3() {
+  var lbl = document.getElementById('p3-month-label');
+  if (!lbl) return;
+  var yr = parseInt(p3Month.slice(0,4),10), mi = parseInt(p3Month.slice(5,7),10)-1;
+  lbl.textContent = MV_MO_NAMES[mi] + ' ' + yr;
+
+  // Legend — Phase 3 doesn't use Swim, so keep it out of the key
+  var legEl = document.getElementById('p3-legend');
+  if (legEl) {
+    legEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s){
+      if (s.key === 'Swim') return;
+      var sp = document.createElement('span');
+      sp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:'+mvCatColour(s.key)+';display:inline-block"></span>'+s.key;
+      legEl.appendChild(sp);
+    });
+  }
+
+  var res = renderPlannerGrid({
+    gridId:'p3-grid',
+    month: p3Month,
+    rangeStart: '2026-08-31',
+    rangeEnd:   '2026-11-01',
+    showCycle: true,
+    accent: 'var(--p3)',
+  });
+  if (!res) return;
+
+  var prog = document.getElementById('p3-progress');
+  if (prog) {
+    var pct = res.planned ? Math.round(res.done/res.planned*100) : 0;
+    prog.textContent = res.done + ' / ' + res.planned + ' sessions · ' + pct + '%';
+  }
+}
+
 function nav(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.sb-item,.sb-sub').forEach(n => n.classList.remove('active'));
@@ -2210,6 +2636,8 @@ function nav(id) {
   if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
   if (id==='overview') { updateOverview(); setTimeout(renderTrendChart, 200); }
   if (id==='monthly') renderMonthlyView();
+  if (id==='phase2')  renderPhase2();
+  if (id==='phase3')  renderPhase3();
   if (id==='history')  renderHistory();
 }
 
@@ -2253,6 +2681,11 @@ const EXTRA_SESSIONS = [
   {type:'BOX',           icon:'🥊',  label:'Boxing',         sub:'Shadow boxing · 3×3 min rounds'},
   {type:'LEGS',          icon:'🦵',  label:'Legs',           sub:'Squat, lunge, calf raise'},
   {type:'BIKE',          icon:'🚴',  label:'Bike',           sub:'Commute or training ride · Zone 2'},
+  {type:'SKIERG',        icon:'⛷️', label:'SkiErg',    sub:'Station work or test · 1,000m target < 5:00'},
+  {type:'ROWERG',        icon:'🚣',  label:'RowErg',         sub:'Station work or test · 1,000m target < 4:10'},
+  {type:'SWIM',          icon:'🏊',  label:'Swim',           sub:'Pool or open water · steady pace'},
+  {type:'SICK',          icon:'🤒',  label:'Sick',           sub:'No training · unwell'},
+  {type:'HOLIDAY',       icon:'🏖️', label:'Holiday',   sub:'No training · travel / time off'},
 ];
 
 let addModalTargetISO = null;
@@ -2273,15 +2706,18 @@ function openAddModal(iso) {
       </div>
     </div>`).join('');
 
-  // Build day selector — show current week days
-  const monOff = curMondayOff();
+  // Build day selector — show the week containing the clicked day.
+  // Previously this always used curMondayOff(), so pressing "+" on a day
+  // outside the planner's current week (now possible from the monthly and
+  // phase calendars) silently added the session to the wrong date.
+  const baseMon = iso ? mondayOffset(new Date(iso + 'T00:00:00Z')) : curMondayOff();
   const sel = document.getElementById('add-day-select');
   sel.innerHTML = '';
   for (let d = 0; d < 7; d++) {
-    const dayOff = monOff + d;
+    const dayOff = baseMon + d;
     const dayISO = isoFromOffset(dayOff);
     const dayDate = dateFromDayOffset(dayOff);
-    const label = DAY_NAMES[d] + ' ' + dayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+    const label = DAY_NAMES[d] + ' ' + dayDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
     const opt = document.createElement('option');
     opt.value = dayISO;
     opt.textContent = label;
@@ -2320,7 +2756,7 @@ function confirmAddSession() {
   state[targetISO].push(newSess);
   saveAll();
   closeAddModal();
-  renderWeek();
+  refreshAll();
   toast(`${meta.label} added to ${new Date(targetISO+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})} ✓`);
 }
 
@@ -2650,13 +3086,14 @@ function toast(msg) {
 //   Running · Strength (incl. Boxing + Core) · Legs · Yoga · Cycling (planner-only —
 //   Strava never gets a manual "Cycling" activity type from WHOOP, so bike rides land
 //   under generic "Workout"/Strength and would contaminate that category if trusted).
-var TREND_CATS = ['Running','Strength','Legs','Yoga','Cycling'];
+var TREND_CATS = ['Running','Strength','Legs','Yoga','Cycling','Swim'];
 var TREND_SERIES = [
   {key:'Running',  light:'#2563EB', dark:'#93C5FD'},
   {key:'Strength', light:'#EA580C', dark:'#FED7AA'},
   {key:'Legs',     light:'#DC2626', dark:'#FCA5A5'},
   {key:'Yoga',     light:'#7C3AED', dark:'#C4B5FD'},
   {key:'Cycling',  light:'#DB2777', dark:'#F9A8D4'},
+  {key:'Swim',     light:'#0891B2', dark:'#67E8F9'},
 ];
 var trendChartInst = null;
 
@@ -2678,7 +3115,8 @@ function histToTrendCat(category, activity) {
 // (yielding "HERO_extra", which matches nothing), silently dropping every manually-added
 // "extra" session from the trend chart. Matching against a known-type list fixes this.
 var KNOWN_PLANNER_TYPES = ['ZONE2_RUN','LONG_RUN','VO2_MAX','HYROX_STATION','LEGS_RL','LEGS_BSS',
-  'ZONE2','INTERVAL','THRESHOLD','STRENGTH','HERO','BOXING','CORE','BOX','LEGS','YOGA','BIKE']
+  'ZONE2','INTERVAL','THRESHOLD','STRENGTH','HERO','BOXING','CORE','BOX','LEGS','YOGA','BIKE','SWIM',
+  'SKIERG','ROWERG']
   .sort(function(a,b){ return b.length-a.length; });
 
 function extractPlannerType(rest) {
@@ -2691,8 +3129,10 @@ function extractPlannerType(rest) {
 
 function plannerToTrendCat(type) {
   if (type === 'YOGA') return 'Yoga';
+  if (type === 'SWIM') return 'Swim';
   if (type === 'STRENGTH' || type === 'HERO' || type === 'HYROX_STATION'
-      || type === 'BOXING' || type === 'CORE' || type === 'BOX') return 'Strength';
+      || type === 'BOXING' || type === 'CORE' || type === 'BOX'
+      || type === 'SKIERG' || type === 'ROWERG') return 'Strength';
   if (type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Legs';
   if (type === 'BIKE') return 'Cycling';
   if (type === 'ZONE2_RUN' || type === 'LONG_RUN' || type === 'VO2_MAX'
@@ -3009,147 +3449,318 @@ var MV_EXCEL = [
   {date:'2026-07-29',cat:'Running',name:'Run'},{date:'2026-07-30',cat:'Running',name:'Run'},
 ];
 
-var MV_MONTHS   = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07'];
-var MV_MO_NAMES = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz'];
-var mvIdx = MV_MONTHS.length - 1;
+// ═══════════════════════════════════════════════════════════════
+// PHASE METADATA — what each block of the programme is for.
+// Drives the banner shown above the monthly calendar.
+// ═══════════════════════════════════════════════════════════════
+var PHASE_INFO = [
+  {key:'P1', name:'Phase 1 · Foundation', start:'2026-03-30', end:'2026-07-05', col:'#22C55E',
+   focus:'100-day home base — legs (RL/BSS), full-body strength, Zone 2 running and weekend long runs.'},
+  {key:'P2', name:'Phase 2 · Gym Strength', start:'2026-07-06', end:'2026-08-30', col:'#F97316',
+   focus:'Hero class and HYROX station introduction, alternating weekly, on a serious running baseline.'},
+  {key:'P3', name:'Phase 3 · Race Specific', start:'2026-08-31', end:'2026-11-01', col:'#8B5CF6',
+   focus:'CrossFit Hofplein HYROX sessions twice weekly on a 3-day cycle, with recovery built into the structure.'},
+  {key:'P4', name:'Phase 4 · Taper', start:'2027-03-01', end:'2027-04-30', col:'#38BDF8',
+   focus:'Sharpen and rest. Volume down ~40%, intensity held, race-day rehearsal.'},
+];
 
-function mvStravaCat(t){ return {Run:'Running',Yoga:'Yoga',Workout:null,Walk:null}[t]||null; }
-
-function mvDedupeStrava(acts) {
-  var seen=[], result=[];
-  acts.forEach(function(a){
-    var dup=seen.find(function(s){return s.type===a.type&&Math.abs((s.dur||0)-(a.dur||0))<=5;});
-    if(!dup){seen.push(a);result.push(a);}
-    else if((a.dur||0)>(dup.dur||0)){dup.dur=a.dur;}
-  });
-  return result;
+function phaseForISO(iso) {
+  for (var i=0;i<PHASE_INFO.length;i++) {
+    if (iso >= PHASE_INFO[i].start && iso <= PHASE_INFO[i].end) return PHASE_INFO[i];
+  }
+  return null;
 }
 
-function mvBuildDayMap(mo) {
-  var dayMap={};
+// Monthly view spans the whole programme: Jan 2026 → race month Apr 2027.
+var MV_MONTHS = (function(){
+  var out=[], y=2026, m=1;
+  while (y < 2027 || (y===2027 && m<=4)) {
+    out.push(y + '-' + (m<10?'0':'') + m);
+    m++; if (m>12){ m=1; y++; }
+  }
+  return out;
+})();
+var MV_MO_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  // Excel
-  MV_EXCEL.filter(function(a){return a.date.startsWith(mo);}).forEach(function(a){
-    if(!dayMap[a.date])dayMap[a.date]=[];
-    dayMap[a.date].push({cat:a.cat,name:a.name,dur:null,source:'excel',matched:false});
-  });
+function mvDefaultIdx(){
+  var now = new Date().toISOString().slice(0,7);
+  var i = MV_MONTHS.indexOf(now);
+  return i >= 0 ? i : 0;
+}
+var mvIdx = mvDefaultIdx();
 
-  // Strava from stravaActivities (live sync)
-  var stravaData = typeof stravaActivities !== 'undefined' ? stravaActivities : [];
-  var stravaByDay={};
-  stravaData.filter(function(a){return a.date&&a.date.startsWith(mo);}).forEach(function(a){
-    if(!stravaByDay[a.date])stravaByDay[a.date]=[];
-    stravaByDay[a.date].push({date:a.date,type:a.type,name:a.name,dur:a.duration});
-  });
+// Planner state begins the day Phase 1 starts. Before that we only have the
+// validated pre-planner log (from the original GYM.xlsx), shown read-only.
+var PLANNER_STATE_START = '2026-03-30';
 
-  Object.keys(stravaByDay).forEach(function(date){
-    var deduped=mvDedupeStrava(stravaByDay[date]);
-    var dayActs=dayMap[date]||[];
-    deduped.forEach(function(sa){
-      var cat=mvStravaCat(sa.type);
-      if(!cat)return;
-      var match=dayActs.find(function(e){return e.cat===cat&&!e.matched;});
-      if(match){match.dur=sa.dur;match.matched=true;}
-      else{
-        if(!dayMap[date])dayMap[date]=[];
-        dayMap[date].push({cat:'Unknown',name:sa.name,dur:sa.dur,source:'strava_only',matched:false});
+function mvCatColour(cat) {
+  var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+  for (var i=0;i<TREND_SERIES.length;i++) {
+    if (TREND_SERIES[i].key === cat) return isDark ? TREND_SERIES[i].dark : TREND_SERIES[i].light;
+  }
+  return '#898781';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED PLANNER CALENDAR RENDERER
+// Used by the monthly view and by the Phase 2 / Phase 3 calendars.
+// Every cell is backed by `state[iso]`, so cards built here are the
+// same cards the weekly planner builds — tick, note, remove, drag
+// and drop all work identically and mutate the same objects.
+// ═══════════════════════════════════════════════════════════════
+function renderPlannerGrid(cfg) {
+  var grid = document.getElementById(cfg.gridId);
+  if (!grid) return null;
+
+  var yr = parseInt(cfg.month.slice(0,4),10);
+  var mo = parseInt(cfg.month.slice(5,7),10);
+
+  var first = new Date(Date.UTC(yr, mo-1, 1));
+  var dow = (first.getUTCDay() + 6) % 7;              // 0 = Monday
+  var gridStart = new Date(first.getTime() - dow*86400000);
+  var daysInMo = new Date(Date.UTC(yr, mo, 0)).getUTCDate();
+  var cells = Math.ceil((dow + daysInMo) / 7) * 7;
+
+  var todayISO = new Date().toISOString().slice(0,10);
+  var planned = 0, done = 0;
+  var catCount = {};
+
+  grid.innerHTML = '';
+
+  for (var c=0;c<cells;c++) {
+    var d = new Date(gridStart.getTime() + c*86400000);
+    var iso = d.toISOString().slice(0,10);
+    var inMonth = d.getUTCMonth() === mo-1;
+    var inRange = (!cfg.rangeStart || iso >= cfg.rangeStart) && (!cfg.rangeEnd || iso <= cfg.rangeEnd);
+
+    var cell = document.createElement('div');
+    cell.className = 'mv-day';
+    var isToday = iso === todayISO;
+    var border = isToday ? '1px solid var(--accent)' : '1px solid var(--border)';
+
+    // Deload weeks get an amber outline so they read as intentionally lighter.
+    var mOff = mondayOffset(d);
+    var deload = (typeof isPhase3 === 'function') && isPhase3(mOff) && p3WeekNum(mOff) === P3_DELOAD_WK;
+    if (deload && inMonth && inRange) border = '1px solid #F59E0B';
+
+    cell.style.cssText = 'min-height:96px;border:'+border+';border-radius:6px;padding:4px;'
+      + 'background:' + (inMonth ? 'var(--surface)' : 'transparent') + ';'
+      + 'opacity:' + (inMonth && inRange ? '1' : '0.32') + ';display:flex;flex-direction:column';
+
+    // ── Day header: number, cycle tag, phase dot ──
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;gap:3px';
+
+    var dayNum = '<span style="font-family:monospace;font-size:11px;'
+      + 'color:' + (isToday ? 'var(--accent)' : 'var(--muted)') + ';'
+      + 'font-weight:' + (isToday ? '700' : '400') + '">' + d.getUTCDate() + '</span>';
+
+    var tag = '';
+    var sessions = state[iso] || [];
+    if (inMonth && inRange && cfg.showCycle && sessions.length && sessions[0].cycle) {
+      var cyc = sessions[0].cycle;
+      var cycCol = cyc === 'REST' ? 'var(--muted)' : (cfg.accent || 'var(--p3)');
+      tag = '<span style="font-size:8px;letter-spacing:.4px;color:'+cycCol+';border:1px solid '+cycCol
+          + ';border-radius:3px;padding:0 3px;white-space:nowrap">'+cyc+'</span>';
+    } else if (inMonth && cfg.showPhaseDot) {
+      var ph = phaseForISO(iso);
+      if (ph) tag = '<span title="'+ph.name+'" style="width:6px;height:6px;border-radius:50%;background:'+ph.col+';display:inline-block"></span>';
+    }
+    hdr.innerHTML = dayNum + tag;
+    cell.appendChild(hdr);
+
+    // ── Sessions ──
+    if (inMonth && inRange) {
+      if (iso >= PLANNER_STATE_START) {
+        // Live planner cell: full drop zone + real session cards
+        var zone = document.createElement('div');
+        zone.className = 'drop-zone';
+        zone.dataset.iso = iso;
+        zone.style.cssText = 'flex:1';
+        zone.addEventListener('dragover',  onDragOver);
+        zone.addEventListener('dragleave', onDragLeave);
+        zone.addEventListener('drop',      onDrop);
+
+        sessions.forEach(function(sess){
+          if (sess.type === 'SICK' || sess.type === 'HOLIDAY') {
+            var badge = document.createElement('div');
+            var bm = SPORT_META[sess.type] || {label:sess.type, icon:'📌'};
+            badge.style.cssText = 'font-size:9px;color:var(--muted);border:1px dashed var(--border);'
+              + 'border-radius:4px;padding:2px 4px;margin-bottom:3px';
+            badge.textContent = bm.icon + ' ' + bm.label;
+            zone.appendChild(badge);
+            return;
+          }
+          var card = buildCard(sess, iso);
+          if (sess.detail) card.title = sess.detail;
+          zone.appendChild(card);
+          planned++;
+          if (completions[sess.id] && completions[sess.id].done) done++;
+          var cat = plannerToTrendCat(sess.type);
+          if (cat) catCount[cat] = (catCount[cat]||0) + 1;
+        });
+        cell.appendChild(zone);
+
+        var addBtn = document.createElement('button');
+        addBtn.className = 'mv-add';
+        addBtn.textContent = '+';
+        addBtn.title = 'Add session';
+        (function(capturedISO){
+          addBtn.addEventListener('click', function(e){ e.stopPropagation(); openAddModal(capturedISO); });
+        })(iso);
+        cell.appendChild(addBtn);
+      } else {
+        // Pre-planner era: validated historical log, read-only
+        var pre = (typeof prePlanner !== 'undefined' ? prePlanner : []).filter(function(r){ return r.date === iso; });
+        pre.forEach(function(r){
+          var pill = document.createElement('div');
+          pill.style.cssText = 'background:var(--surface2);border-left:2px solid '+mvCatColour(r.cat)
+            + ';border-radius:3px;padding:2px 4px;margin-bottom:2px;font-size:9px;color:var(--text)';
+          pill.textContent = r.name;
+          pill.title = r.name + ' · ' + r.cat + ' · logged before the planner existed';
+          cell.appendChild(pill);
+          planned++; done++;
+          catCount[r.cat] = (catCount[r.cat]||0) + 1;
+        });
       }
-    });
-  });
 
-  return dayMap;
+      // ── Optional Strava overlay ──
+      if (cfg.showStrava) {
+        var acts = (typeof stravaActivities !== 'undefined' ? stravaActivities : [])
+          .filter(function(a){ return a.date === iso; });
+        acts.forEach(function(a){
+          var s = document.createElement('div');
+          s.style.cssText = 'font-size:8px;color:#1D4ED8;background:rgba(37,99,235,0.10);'
+            + 'border-radius:3px;padding:1px 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+          s.textContent = '⟲ ' + a.name + (a.duration ? ' ' + a.duration + "'" : '');
+          s.title = 'Strava: ' + a.name + ' · ' + a.category + (a.duration ? ' · ' + a.duration + ' min' : '');
+          cell.appendChild(s);
+        });
+      }
+    }
+
+    grid.appendChild(cell);
+  }
+
+  return {planned:planned, done:done, catCount:catCount};
 }
 
-function mvGetDays(mo){var p=mo.split('-');return new Date(+p[0],+p[1],0).getDate();}
-function mvGetFirstDow(mo){var p=mo.split('-');var d=new Date(+p[0],+p[1]-1,1).getDay();return d===0?6:d-1;}
-
+// ═══════════════════════════════════════════════════════════════
+// MONTHLY VIEW
+// ═══════════════════════════════════════════════════════════════
 function renderMonthlyView() {
-  var moEl=document.getElementById('mv-month-label');
-  var totEl=document.getElementById('mv-total');
-  var legEl=document.getElementById('mv-legend');
-  var gridEl=document.getElementById('mv-grid');
-  var catEl=document.getElementById('mv-cat-summary');
-  var umEl=document.getElementById('mv-unmatched');
-  if(!moEl)return;
+  var lblEl = document.getElementById('mv-month-label');
+  if (!lblEl) return;
 
-  var mo=MV_MONTHS[mvIdx];
-  moEl.textContent=MV_MO_NAMES[mvIdx]+' 2026';
+  var mo = MV_MONTHS[mvIdx];
+  var yr = parseInt(mo.slice(0,4),10);
+  var mi = parseInt(mo.slice(5,7),10) - 1;
+  lblEl.textContent = MV_MO_NAMES[mi] + ' ' + yr;
 
-  var dayMap=mvBuildDayMap(mo);
-  var totalActs=Object.values(dayMap).reduce(function(s,a){return s+a.length;},0);
-  totEl.textContent=totalActs+' aktivite';
+  // Phase banner
+  var banner = document.getElementById('mv-phase-banner');
+  if (banner) {
+    // Sample the middle of the month first: transition months (e.g. July, where
+    // Phase 1 ends on the 5th) should show the phase that actually dominates them.
+    var ph = phaseForISO(mo + '-15') || phaseForISO(mo + '-28') || phaseForISO(mo + '-01');
+    if (ph) {
+      banner.style.borderLeft = '3px solid ' + ph.col;
+      banner.innerHTML = '<div style="font-size:9px;letter-spacing:1.5px;color:' + ph.col + ';margin-bottom:5px">'
+        + ph.name.toUpperCase() + '</div>'
+        + '<div style="font-size:12px;color:var(--sub);line-height:1.5">' + ph.focus + '</div>'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:6px">' + ph.start + ' → ' + ph.end + '</div>';
+    } else {
+      banner.style.borderLeft = '3px solid var(--border)';
+      banner.innerHTML = '<div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px">UNPLANNED PERIOD</div>'
+        + '<div style="font-size:12px;color:var(--sub);line-height:1.5">No phase template covers this month yet. '
+        + 'Sessions added here are kept and will sync with the weekly planner.</div>';
+    }
+  }
+
+  var showStrava = document.getElementById('mv-show-strava');
+  var res = renderPlannerGrid({
+    gridId:'mv-grid',
+    month: mo,
+    showStrava: !!(showStrava && showStrava.checked),
+    showPhaseDot: true,
+  });
+  if (!res) return;
+
+  var prog = document.getElementById('mv-progress');
+  if (prog) {
+    var pct = res.planned ? Math.round(res.done/res.planned*100) : 0;
+    prog.textContent = res.done + ' / ' + res.planned + ' sessions · ' + pct + '%';
+  }
 
   // Legend
-  legEl.innerHTML='';
-  ['Running','Strength','Yoga','Cycling','Legs','Core','Boxing','Unknown'].forEach(function(cat){
-    legEl.innerHTML+='<span style="background:'+mvCatCol(cat,'bg')+';color:'+mvCatCol(cat,'col')
-      +';border-radius:10px;padding:2px 8px;font-size:10px;font-weight:500">'+MV_CATS[cat].label+'</span>';
-  });
-
-  // Grid
-  gridEl.innerHTML='';
-  var days=mvGetDays(mo), firstDow=mvGetFirstDow(mo);
-  var today=new Date().toISOString().slice(0,10);
-  for(var i=0;i<firstDow;i++) gridEl.innerHTML+='<div></div>';
-  for(var d=1;d<=days;d++){
-    var iso=mo+'-'+(d<10?'0':'')+d;
-    var acts=dayMap[iso]||[];
-    var isToday=iso===today;
-    var pills='';
-    acts.forEach(function(a){
-      var lbl=a.name.length>9?a.name.slice(0,8)+'…':a.name;
-      var dur=a.dur?(' · '+a.dur+'dk'):'';
-      pills+='<div style="background:'+mvCatCol(a.cat,'bg')+';color:'+mvCatCol(a.cat,'col')
-        +';border-radius:5px;padding:1px 4px;font-size:9px;font-weight:500;margin-bottom:1px'
-        +';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+a.name+dur+'">'+lbl+'</div>';
+  var legEl = document.getElementById('mv-legend');
+  if (legEl) {
+    legEl.innerHTML = '';
+    TREND_SERIES.forEach(function(s){
+      var sp = document.createElement('span');
+      sp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:'+mvCatColour(s.key)+';display:inline-block"></span>'+s.key;
+      legEl.appendChild(sp);
     });
-    gridEl.innerHTML+='<div style="border:1px solid '+(isToday?mvCatCol('Running','col'):'var(--border)')
-      +';border-radius:6px;padding:3px;min-height:72px;background:'+(isToday?mvCatCol('Running','bg'):'var(--surface)') + ';">'
-      +'<div style="font-size:10px;font-weight:'+(isToday?'600':'400')
-      +';color:'+(isToday?mvCatCol('Running','col'):'var(--muted)')+';margin-bottom:2px">'+d+'</div>'
-      +(acts.length===0?'<div style="font-size:8px;color:var(--border);text-align:center;padding-top:10px">·</div>':pills)
-      +'</div>';
   }
 
   // Category summary
-  var catCount={};
-  Object.values(dayMap).forEach(function(acts){acts.forEach(function(a){catCount[a.cat]=(catCount[a.cat]||0)+1;});});
-  catEl.innerHTML='';
-  Object.keys(catCount).filter(function(c){return c!=='Unknown';})
-    .sort(function(a,b){return catCount[b]-catCount[a];}).forEach(function(cat){
-    var pct=Math.round(catCount[cat]/totalActs*100);
-    catEl.innerHTML+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
-      +'<span style="background:'+mvCatCol(cat,'bg')+';color:'+mvCatCol(cat,'col')
-      +';border-radius:5px;padding:2px 7px;font-size:10px;font-weight:500;min-width:62px;text-align:center">'
-      +MV_CATS[cat].label+'</span>'
-      +'<div style="flex:1;height:4px;background:var(--border);border-radius:2px">'
-      +'<div style="height:4px;background:'+mvCatCol(cat,'col')+';border-radius:2px;width:'+pct+'%"></div></div>'
-      +'<span style="font-size:11px;color:var(--sub);min-width:16px;text-align:right">'+catCount[cat]+'</span>'
-      +'</div>';
-  });
-
-  // Unmatched
-  var unmatched=[];
-  Object.entries(dayMap).forEach(function(e){
-    e[1].forEach(function(a){if(a.source==='strava_only')unmatched.push({date:e[0],name:a.name,dur:a.dur});});
-  });
-  umEl.innerHTML='';
-  if(unmatched.length>0){
-    unmatched.forEach(function(a){
-      umEl.innerHTML+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'
-        +'<span style="font-size:10px;color:var(--muted);min-width:36px">'+a.date.slice(5)+'</span>'
-        +'<span style="background:'+mvCatCol('Unknown','bg')+';color:'+mvCatCol('Unknown','col')
-        +';border-radius:5px;padding:2px 7px;font-size:10px">'+a.name+'</span>'
-        +(a.dur?'<span style="font-size:10px;color:var(--sub)">'+a.dur+'dk</span>':'')
-        +'</div>';
-    });
-  } else {
-    umEl.innerHTML='<div style="font-size:11px;color:var(--sub)">Tüm aktiviteler eşleşti ✓</div>';
+  var catEl = document.getElementById('mv-cat-summary');
+  if (catEl) {
+    catEl.innerHTML = '';
+    var keys = Object.keys(res.catCount).sort(function(a,b){ return res.catCount[b]-res.catCount[a]; });
+    if (!keys.length) {
+      catEl.innerHTML = '<div style="font-size:11px;color:var(--muted)">No sessions this month.</div>';
+    } else {
+      var max = res.catCount[keys[0]];
+      keys.forEach(function(cat){
+        var n = res.catCount[cat];
+        var w = Math.round(n/max*100);
+        catEl.innerHTML += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+          + '<span style="font-size:11px;color:var(--sub);min-width:64px">'+cat+'</span>'
+          + '<div style="flex:1;height:5px;background:var(--border);border-radius:3px">'
+          + '<div style="height:5px;background:'+mvCatColour(cat)+';border-radius:3px;width:'+w+'%"></div></div>'
+          + '<span style="font-family:monospace;font-size:12px;color:var(--text);min-width:18px;text-align:right">'+n+'</span>'
+          + '</div>';
+      });
+    }
   }
 }
 
-function mvPrev(){ if(mvIdx>0){mvIdx--;renderMonthlyView();} }
-function mvNext(){ if(mvIdx<MV_MONTHS.length-1){mvIdx++;renderMonthlyView();} }
+function mvPrev(){ if(mvIdx>0){ mvIdx--; renderMonthlyView(); } }
+function mvNext(){ if(mvIdx<MV_MONTHS.length-1){ mvIdx++; renderMonthlyView(); } }
+function mvToday(){ mvIdx = mvDefaultIdx(); renderMonthlyView(); }
+
+// ═══════════════════════════════════════════════════════════════
+// PHASE 2 CALENDAR
+// ═══════════════════════════════════════════════════════════════
+var P2_MONTHS = ['2026-07','2026-08'];
+var p2Month = '2026-07';
+
+function p2Prev(){ var i=P2_MONTHS.indexOf(p2Month); if(i>0){ p2Month=P2_MONTHS[i-1]; renderPhase2(); } }
+function p2Next(){ var i=P2_MONTHS.indexOf(p2Month); if(i<P2_MONTHS.length-1){ p2Month=P2_MONTHS[i+1]; renderPhase2(); } }
+
+function renderPhase2() {
+  var lbl = document.getElementById('p2-month-label');
+  if (!lbl) return;
+  var yr = parseInt(p2Month.slice(0,4),10), mi = parseInt(p2Month.slice(5,7),10)-1;
+  lbl.textContent = MV_MO_NAMES[mi] + ' ' + yr;
+
+  var res = renderPlannerGrid({
+    gridId:'p2-grid',
+    month: p2Month,
+    rangeStart: '2026-07-06',
+    rangeEnd:   '2026-08-30',
+    accent: '#F97316',
+  });
+  if (!res) return;
+
+  var prog = document.getElementById('p2-progress');
+  if (prog) {
+    var pct = res.planned ? Math.round(res.done/res.planned*100) : 0;
+    prog.textContent = res.done + ' / ' + res.planned + ' sessions · ' + pct + '%';
+  }
+}
 
 async function init() {
   await loadAll();
@@ -3158,7 +3769,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v13_monthly_view_jul2026';
+  const PLAN_VERSION = 'v15_phase3_race_specific_sep2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();
@@ -3192,44 +3803,47 @@ init();
 </html>
 <div class="view" id="view-monthly">
   <div class="page-title" style="color:#A78BFA">Monthly View</div>
-  <div class="page-sub">2026 · Excel Log + Strava + Planner birleşimi · aylık takvim</div>
+  <div class="page-sub">Full training calendar &middot; live planner &middot; add, move and tick sessions</div>
+
+  <!-- Phase banner for the displayed month -->
+  <div id="mv-phase-banner" style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;background:var(--surface)"></div>
 
   <!-- Month nav -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
     <div style="display:flex;align-items:center;gap:8px">
       <button onclick="mvPrev()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8249;</button>
-      <span style="font-size:18px;font-weight:700;min-width:160px;text-align:center;color:var(--text)" id="mv-month-label"></span>
+      <span style="font-size:18px;font-weight:700;min-width:170px;text-align:center;color:var(--text)" id="mv-month-label"></span>
       <button onclick="mvNext()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)">&#8250;</button>
+      <button onclick="mvToday()" style="margin-left:6px;padding:6px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--border);cursor:pointer;color:var(--sub);font-size:11px">Today</button>
     </div>
-    <div style="font-size:20px;font-weight:700;color:var(--text)" id="mv-total"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="font-size:13px;color:var(--muted)" id="mv-progress"></div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);cursor:pointer">
+        <input type="checkbox" id="mv-show-strava" onchange="renderMonthlyView()" style="cursor:pointer"> Strava
+      </label>
+    </div>
   </div>
 
   <!-- Legend -->
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem" id="mv-legend"></div>
+  <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:1rem" id="mv-legend"></div>
 
   <!-- Day headers -->
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px">
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Pzt</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Sal</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Çar</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Per</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Cum</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Cmt</div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">Paz</div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">MON</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">TUE</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">WED</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">THU</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">FRI</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SAT</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px">SUN</div>
   </div>
 
-  <!-- Calendar grid -->
-  <div id="mv-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:1rem"></div>
+  <!-- Calendar grid (planner-backed) -->
+  <div id="mv-grid" class="mv-compact" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:1rem"></div>
 
-  <!-- Summary -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
-    <div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">KATEGORİ ÖZET</div>
-      <div id="mv-cat-summary"></div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">STRAVA EŞLESİMEYENLER</div>
-      <div id="mv-unmatched"></div>
-    </div>
+  <!-- Category summary -->
+  <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px">CATEGORY SUMMARY &middot; THIS MONTH</div>
+    <div id="mv-cat-summary"></div>
   </div>
 </div>

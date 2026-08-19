@@ -1014,15 +1014,18 @@ const SPORT_META = {
 const PHASE_COL = {FOUNDATION:'var(--found)',BUILD:'var(--build)',PEAK:'var(--peak)'};
 const DAY_NAMES = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 
+// Official HYROX Men Open weights (source: PUMA x HYROX, verified Aug 2026)
+// Sled figures are TOTAL weight including the sled (~32 kg) + plates.
+// 4 × 12.5 m format for both sleds.
 const STATIONS = [
-  {name:'SkiErg',           emoji:'⛷️',  target:'1,000 m',            note:'Smooth pull cadence, breathe on extension'},
-  {name:'Sled Push',        emoji:'🔵',  target:'50 m @ 102 kg (M)',   note:'Low hips, drive through heels, eyes forward'},
-  {name:'Sled Pull',        emoji:'🟣',  target:'50 m @ 78 kg (M)',    note:'Lean back, pull with arms not just back'},
-  {name:'Burpee Broad Jump',emoji:'🟡',  target:'80 m',               note:'Steady pace, full hip extension on jump'},
-  {name:'Rowing',           emoji:'🚣',  target:'1,000 m',            note:'Target ~3:55/500 m split, legs-arms-arms-legs'},
-  {name:'Farmers Carry',    emoji:'💼',  target:'200 m @ 2×24 kg (M)',note:'Upright posture, tight core, small fast steps'},
-  {name:'Sandbag Lunges',   emoji:'🧱',  target:'100 m @ 20 kg (M)',  note:'Controlled descent, knee above ankle'},
-  {name:'Wall Balls',       emoji:'🟠',  target:'100 reps @ 6 kg (M)',note:'Breathe on catch, hip crease below parallel'},
+  {name:'SkiErg',           emoji:'⛷️',  target:'1,000 m',                note:'Smooth pull cadence, breathe on extension. Station 1.'},
+  {name:'Sled Push',        emoji:'🔵',  target:'4×12.5 m @ 152 kg incl. sled', note:'Station 2 · Low hips, drive through heels, eyes forward. 152 kg total (sled+plates). Arrives after 1 km SkiErg — legs pre-fatigued.'},
+  {name:'Sled Pull',        emoji:'🟣',  target:'4×12.5 m @ 103 kg incl. sled', note:'Station 3 · Lean back, pull rope with arms not just back. 103 kg total. Grip killer before Burpee Broad Jumps.'},
+  {name:'Burpee Broad Jump',emoji:'🟡',  target:'80 m',                   note:'Station 4 · Steady pace, full hip extension on jump. No weight, but high heart rate spike.'},
+  {name:'Rowing',           emoji:'🚣',  target:'1,000 m',                note:'Station 5 · Target ~3:55/500 m split, legs-arms-arms-legs sequence.'},
+  {name:'Farmers Carry',    emoji:'💼',  target:'200 m @ 2×24 kg',        note:'Station 6 · Upright posture, tight core, small fast steps. 2 × 24 kg kettlebells.'},
+  {name:'Sandbag Lunges',   emoji:'🧱',  target:'100 m @ 20 kg',          note:'Station 7 · Controlled descent, knee above ankle. 20 kg sandbag on shoulder or hugged to chest.'},
+  {name:'Wall Balls',       emoji:'🟠',  target:'100 reps @ 6 kg / 3 m',  note:'Station 8 · Breathe on catch, hip crease below parallel. 6 kg ball, 3 m target. Avg station time ~7:30 for Open men.'},
 ];
 
 // Benchmarks covering all 8 HYROX stations + key fitness tests
@@ -1031,8 +1034,8 @@ const BENCHMARKS = [
   {group:'BASE FITNESS', phase:'Phase 1', label:'Zone 2 HR stable 45 min',icon:'❤️', target:'120-140 bpm'},
   // All 8 HYROX stations
   {group:'HYROX STATIONS', phase:'Phase 1–2', label:'SkiErg — 1,000 m',         icon:'⛷️', target:'< 5:00'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Push — 50 m',          icon:'🔵', target:'< 45 s'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Pull — 50 m',          icon:'🟣', target:'< 40 s'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Push — 4×12.5 m',      icon:'🔵', target:'< 3:00 (Open avg)'},
+  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Pull — 4×12.5 m',      icon:'🟣', target:'< 3:30 (Open avg)'},
   {group:'HYROX STATIONS', phase:'Phase 2',   label:'Burpee Broad Jump — 80 m',  icon:'🟡', target:'< 3:30'},
   {group:'HYROX STATIONS', phase:'Phase 1–2', label:'Rowing — 1,000 m',          icon:'🚣', target:'< 4:10'},
   {group:'HYROX STATIONS', phase:'Phase 2',   label:'Farmers Carry — 200 m',     icon:'💼', target:'< 2:30'},
@@ -2464,32 +2467,97 @@ function renderBenchmarks() {
   const list = document.getElementById('bench-list');
   let html = '';
   let lastGroup = '';
+  var filled = 0;
+
   BENCHMARKS.forEach(b => {
     if (b.group !== lastGroup) {
-      html += `<div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);
-        padding:${lastGroup?'18px':'0'} 0 8px;text-transform:uppercase">${b.group}</div>`;
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);'
+           +  'padding:' + (lastGroup ? '18px' : '0') + ' 0 8px;text-transform:uppercase">' + b.group + '</div>';
       lastGroup = b.group;
     }
-    const val = benchInputs[b.label] || '';
-    html += `<div class="bench-row">
-      <div class="bench-icon">${b.icon}</div>
-      <div class="bench-info">
-        <div class="bench-phase">${b.phase.toUpperCase()} · ${b.group}</div>
-        <div class="bench-label">${b.label}</div>
-      </div>
-      <div class="bench-target">
-        <div class="bench-tl">TARGET</div>
-        <div class="bench-tv">${b.target}</div>
-      </div>
-      <div class="bench-result" onclick="this.querySelector('input').focus()">
-        <div class="bench-rl">MY RESULT — CLICK TO EDIT</div>
-        <input class="bench-input" value="${val}" placeholder="e.g. 4:45"
-          onchange="saveBench('${b.label.replace(/'/g,'\\')}',this.value)"
-          oninput="saveBench('${b.label.replace(/'/g,'\\')}',this.value)"
-          onclick="event.stopPropagation()">
-      </div>
-    </div>`;
+
+    var slug  = benchSlug(b.label);
+    var esc   = b.label.replace(/'/g, "\\'");
+    var hist  = benchHistory(b.label);
+    var spec  = parseTargetSpec(b.target);
+    var isTime = spec ? spec.isTime : /:/.test(b.target);
+    var best  = benchBest(b.label, spec);
+    var latest = hist.length ? parseResultVal(hist[hist.length-1].v) : null;
+    var first  = hist.length ? parseResultVal(hist[0].v) : null;
+    if (hist.length) filled++;
+
+    // Progress against the target
+    var hit = false, deltaTxt = '', deltaCol = 'var(--muted)';
+    if (spec && best != null) {
+      hit = spec.lowerBetter ? best <= spec.val : best >= spec.val;
+      var gap = spec.lowerBetter ? best - spec.val : spec.val - best;
+      if (hit) { deltaTxt = 'TARGET MET'; deltaCol = '#22C55E'; }
+      else { deltaTxt = fmtResultVal(Math.abs(gap), isTime) + ' to go'; deltaCol = 'var(--accent)'; }
+    }
+
+    // Improvement across the season
+    var impTxt = '', impCol = 'var(--muted)';
+    if (hist.length > 1 && first != null && latest != null && spec) {
+      var d = spec.lowerBetter ? first - latest : latest - first;
+      if (Math.abs(d) > 0.001) {
+        var better = d > 0;
+        impTxt = (better ? '▼ ' : '▲ ') + fmtResultVal(Math.abs(d), isTime)
+               + (better ? ' faster' : ' slower') + ' since ' + hist[0].d.slice(5);
+        impCol = better ? '#22C55E' : '#F87171';
+      }
+    }
+
+    html += '<div class="bench-row" style="flex-wrap:wrap">'
+      + '<div class="bench-icon">' + b.icon + '</div>'
+      + '<div class="bench-info">'
+        + '<div class="bench-phase">' + b.phase.toUpperCase() + ' · ' + b.group + '</div>'
+        + '<div class="bench-label">' + b.label + '</div>'
+        + (impTxt ? '<div style="font-size:10px;color:' + impCol + ';margin-top:3px">' + impTxt + '</div>' : '')
+      + '</div>'
+      + '<div class="bench-target">'
+        + '<div class="bench-tl">TARGET</div>'
+        + '<div class="bench-tv">' + b.target + '</div>'
+      + '</div>'
+      + '<div style="min-width:96px;text-align:right">'
+        + '<div class="bench-tl">BEST' + (hist.length ? ' · ' + hist.length + ' log' + (hist.length===1?'':'s') : '') + '</div>'
+        + '<div style="font-family:monospace;font-size:17px;color:' + (hit ? '#22C55E' : 'var(--text)') + '">'
+          + (best != null ? fmtResultVal(best, isTime) : '—') + '</div>'
+        + (deltaTxt ? '<div style="font-size:9px;color:' + deltaCol + ';margin-top:2px">' + deltaTxt + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-left:10px">'
+        + '<button class="note-btn" onclick="logBenchResult(\'' + esc + '\')" '
+          + 'style="border-color:rgba(249,115,22,0.4);color:var(--accent)">+ Log</button>'
+        + (hist.length ? '<button class="note-btn" onclick="toggleBenchHistory(\'' + esc + '\')">History</button>' : '')
+      + '</div>';
+
+    // Expandable dated history
+    if (hist.length) {
+      html += '<div id="bh-' + slug + '" style="display:none;width:100%;margin-top:10px;'
+           +  'border-top:1px solid var(--border);padding-top:8px">';
+      hist.slice().reverse().forEach(function(e, ri){
+        var idx = hist.length - 1 - ri;
+        var v = parseResultVal(e.v);
+        var ok = spec && v != null && (spec.lowerBetter ? v <= spec.val : v >= spec.val);
+        var isBest = v != null && best != null && Math.abs(v - best) < 0.0001;
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:4px 0">'
+          + '<span style="font-family:monospace;font-size:11px;color:var(--muted);min-width:78px">' + e.d + '</span>'
+          + '<span style="font-family:monospace;font-size:13px;color:' + (ok ? '#22C55E' : 'var(--text)') + '">' + e.v + '</span>'
+          + (isBest ? '<span style="font-size:9px;color:#22C55E;letter-spacing:1px">BEST</span>' : '')
+          + '<button class="note-btn" onclick="deleteBenchEntry(\'' + esc + '\',' + idx + ')" '
+            + 'style="margin-left:auto;color:#F87171;border-color:rgba(248,113,113,0.3)" title="Remove">&#10005;</button>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
   });
+
+  html = '<div style="font-size:11px;color:var(--muted);margin-bottom:14px">'
+       + filled + ' of ' + BENCHMARKS.length + ' benchmarks have a logged attempt'
+       + (filled === 0 ? ' — a baseline test week would fill these fast.' : '.')
+       + '</div>' + html;
+
   list.innerHTML = html;
 
   const raceEl = document.getElementById('race-targets');
@@ -2508,6 +2576,116 @@ function renderBenchmarks() {
 function saveBench(label, val) {
   benchInputs[label] = val;
   saveAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BENCHMARK ATTEMPT HISTORY
+// benchInputs previously held one value per benchmark and overwrote it,
+// so a September SkiErg test erased the August one. Attempts are now kept
+// as a dated list per benchmark so progress over the season is visible.
+// Stored under a reserved key inside benchInputs (already synced to A1).
+// ═══════════════════════════════════════════════════════════════
+var BENCH_HIST_KEY = '__benchHistory';
+
+function benchHistoryAll() {
+  var raw = benchInputs[BENCH_HIST_KEY];
+  if (!raw) return {};
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch(e){ return {}; }
+}
+function benchHistory(label) {
+  var h = benchHistoryAll()[label];
+  return Array.isArray(h) ? h : [];
+}
+function saveBenchHistoryAll(obj) {
+  benchInputs[BENCH_HIST_KEY] = JSON.stringify(obj);
+  saveAll();
+}
+
+// Parse a result the user typed: "4:45" → 285 s, "3:30.5" → 210.5, "215" → 215
+function parseResultVal(str) {
+  if (str == null) return null;
+  var s = String(str).trim().replace(',', '.');
+  if (!s) return null;
+  var t = /^(\d+):(\d{1,2}(?:\.\d+)?)$/.exec(s);
+  if (t) return parseInt(t[1],10)*60 + parseFloat(t[2]);
+  var n = parseFloat(s.replace(/[^\d.]/g,''));
+  return isNaN(n) ? null : n;
+}
+// Format seconds back to m:ss when the benchmark is time-based
+function fmtResultVal(v, isTime) {
+  if (v == null) return '—';
+  if (!isTime) return (Math.round(v*100)/100) + '';
+  var m = Math.floor(v/60), r = v % 60;
+  var rr = (r < 10 ? '0' : '') + (Math.round(r*10)/10).toString().replace(/\.0$/,'');
+  return m + ':' + rr;
+}
+
+// Interpret a target string: returns {val, lowerBetter, isTime} or null when
+// the target isn't numerically comparable (e.g. "≥ BW × 1.5", "120-140 bpm").
+function parseTargetSpec(target) {
+  if (!target) return null;
+  var s = String(target);
+  if (/BW/i.test(s)) return null;
+  if (/\d+\s*[-–]\s*\d+/.test(s)) return null;      // a range, not a threshold
+  var lowerBetter = /[<≤]|sub/i.test(s);
+  var higherBetter = /[>≥]|\+/.test(s);
+  if (!lowerBetter && !higherBetter) lowerBetter = true;
+
+  var t = /(\d+):(\d{1,2})/.exec(s);
+  if (t) return {val: parseInt(t[1],10)*60 + parseInt(t[2],10), lowerBetter: lowerBetter, isTime: true};
+
+  var n = /(\d+(?:\.\d+)?)/.exec(s);
+  if (!n) return null;
+  var v = parseFloat(n[1]);
+  if (/min/i.test(s)) return {val: v*60, lowerBetter: lowerBetter, isTime: true};
+  if (/\bs\b|sec/i.test(s)) return {val: v, lowerBetter: lowerBetter, isTime: true};
+  return {val: v, lowerBetter: lowerBetter, isTime: false};
+}
+
+function benchBest(label, spec) {
+  var h = benchHistory(label);
+  var vals = h.map(function(e){ return parseResultVal(e.v); }).filter(function(v){ return v != null; });
+  if (!vals.length) return null;
+  if (!spec) return vals[vals.length-1];
+  return spec.lowerBetter ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
+}
+
+function logBenchResult(label) {
+  var current = benchInputs[label] || '';
+  var val = prompt('Result for "' + label + '"\n(time as m:ss, or a number for reps/metres):', current);
+  if (val == null) return;
+  val = val.trim();
+  if (!val) return;
+  if (parseResultVal(val) == null) { toast('Could not read that value'); return; }
+  var date = prompt('Date of the attempt (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if (!date) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Use the format YYYY-MM-DD'); return; }
+
+  var all = benchHistoryAll();
+  if (!Array.isArray(all[label])) all[label] = [];
+  all[label].push({d:date, v:val});
+  all[label].sort(function(a,b){ return a.d.localeCompare(b.d); });
+  benchInputs[label] = val;               // keep the quick-view field in step
+  saveBenchHistoryAll(all);
+  renderBenchmarks();
+  toast('Logged ' + val + ' for ' + label);
+}
+
+function deleteBenchEntry(label, idx) {
+  var all = benchHistoryAll();
+  if (!Array.isArray(all[label])) return;
+  all[label].splice(idx,1);
+  if (!all[label].length) delete all[label];
+  saveBenchHistoryAll(all);
+  renderBenchmarks();
+}
+
+function toggleBenchHistory(label) {
+  var el = document.getElementById('bh-' + benchSlug(label));
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function benchSlug(label) {
+  return label.replace(/[^A-Za-z0-9]/g,'_');
 }
 
 function updateOverview() {
@@ -3210,19 +3388,24 @@ function buildTrendData() {
   });
 
   // ── Source 4: Weekly planner completions (Mar 30, 2026+) ──
+  // Completions are keyed by session ID which embeds the date+type.
+  // When PLAN_VERSION bumps, resetFutureWeeks() regenerates sessions with new IDs,
+  // but the user's existing ticks stay stored against the old IDs (orphaned).
+  // We count those too — the date+type embedded in the ID is sufficient.
   var comp = typeof completions !== 'undefined' ? completions : {};
   Object.keys(comp).forEach(function(id) {
     if (!comp[id].done) return;
-    var mo = id.slice(0,7);
-    if (mo.length !== 7 || mo[4] !== '-') return;
+    // IDs look like "2026-08-13_HERO_0" or "2026-08-13_HERO_extra_1787123456"
+    if (!/^\d{4}-\d{2}-\d{2}_/.test(id)) return;
+    var mo  = id.slice(0,7);
+    var iso = id.slice(0,10);
     var rest = id.slice(11);
     var type = extractPlannerType(rest);
     var cat = plannerToTrendCat(type);
     if (!cat) return;
-    var iso = id.slice(0,10);
     if (baselineSet.has(iso + '_' + cat)) return;
     if (preSet.has(iso + '_' + cat))      return;
-    if (stravaSet.has(iso + '_' + cat))   return; // Running/Yoga already counted via Strava
+    if (stravaSet.has(iso + '_' + cat))   return;
     if (!byMo[mo]) byMo[mo] = emptyMoRow();
     byMo[mo][cat]++;
   });
@@ -3863,7 +4046,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v15_phase3_race_specific_sep2026';
+  const PLAN_VERSION = 'v16_phase3_station_fixes_aug2026';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

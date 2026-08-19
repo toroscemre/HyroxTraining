@@ -3323,11 +3323,58 @@ function renderTrendChart() {
   });
 
   if (trendChartInst){trendChartInst.destroy();trendChartInst=null;}
+
+  // Value labels drawn manually — Chart.js 4 has no built-in datalabels and
+  // pulling in the plugin from a second CDN would add an offline failure mode.
+  // Each visible segment gets its count; the stack total sits above the bar.
+  var barLabels = {
+    id:'trendBarLabels',
+    afterDatasetsDraw: function(chart){
+      var ctx = chart.ctx;
+      var totals = [];
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      chart.data.datasets.forEach(function(ds, di){
+        var meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach(function(bar, i){
+          var v = ds.data[i] || 0;
+          totals[i] = (totals[i] || 0) + v;
+          if (!v) return;
+          var h = Math.abs(bar.base - bar.y);
+          // Only label a segment that has room for the digits
+          if (h < 15) return;
+          ctx.font = '600 10px ui-monospace,SFMono-Regular,Menlo,monospace';
+          ctx.fillStyle = isDark ? 'rgba(10,12,20,0.92)' : 'rgba(255,255,255,0.95)';
+          ctx.fillText(String(v), bar.x, (bar.y + bar.base) / 2);
+        });
+      });
+
+      // Stack totals above each bar
+      var first = chart.getDatasetMeta(0);
+      if (first && first.data) {
+        ctx.font = '700 11px ui-monospace,SFMono-Regular,Menlo,monospace';
+        ctx.fillStyle = muted;
+        first.data.forEach(function(bar, i){
+          var t = totals[i] || 0;
+          if (!t) return;
+          var top = chart.scales.y.getPixelForValue(t);
+          ctx.fillText(String(t), bar.x, top - 9);
+        });
+      }
+      ctx.restore();
+    }
+  };
+
   trendChartInst = new Chart(el,{
     type:'bar',
+    plugins:[barLabels],
     data:{labels:labels,datasets:datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:16}},
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},

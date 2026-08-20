@@ -160,7 +160,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess.dragging{opacity:0.25;cursor:grabbing}
 .sess.done{opacity:0.6}
 
-/* Compact session cards for month-grid cells — same card, same handlers,
+@media(max-width:600px){
+  .mv-compact{grid-template-columns:repeat(7,1fr)!important;gap:2px!important}
+  .mv-compact .mv-day{min-height:64px!important;padding:3px!important}
+  .mv-compact .sess{padding:2px 3px!important;font-size:8px!important}
+  .mv-compact .sess-title{font-size:8px!important}
+  .mv-compact .sess-actions{display:none!important}
+  .mv-compact .mv-add{display:none!important}
+  #mv-grid > div, #p2-grid > div, #p3-grid > div{min-height:64px!important;padding:2px!important}
+  .add-sess-grid{grid-template-columns:1fr!important}
+  #add-quick-row{grid-template-columns:repeat(4,1fr)!important}
+  .modal{padding:14px!important;max-height:85vh!important}
+  .bench-row{flex-wrap:wrap!important;gap:6px!important}
+}
+ — same card, same handlers,
    just with the long-form detail collapsed so 7 columns stay readable.
    Full detail remains available via the card's title tooltip. */
 .mv-compact .sess-detail,
@@ -339,9 +352,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* ── MODAL ── */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;
-  align-items:center;justify-content:center}
+  align-items:center;justify-content:center;padding:12px;overflow-y:auto}
 .modal-ov.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:26px;
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:20px;
+  width:100%;max-width:440px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   width:380px;box-shadow:0 24px 70px rgba(0,0,0,0.6)}
 .modal h3{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:14px}
 .modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
@@ -440,6 +454,7 @@ body.sb-collapsed #topbar{padding-left:76px}
   <div style="display:flex;align-items:center;gap:16px">
     <span id="sync-status" style="font-size:11px;font-weight:600;transition:color 0.3s"></span>
     <button onclick="forceSync()" title="Sync now" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--sub);font-size:11px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='var(--accent)';this.style.color='#fff'" onmouseout="this.style.background='var(--surface2)';this.style.color='var(--sub)'">↻ Sync</button>
+    <button onclick="syncStravaButton()" title="Re-sync all Strava activities" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:#FC4C02;font-size:11px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='#FC4C02';this.style.color='#fff'" onmouseout="this.style.background='var(--surface2)';this.style.color='#FC4C02'">⟲ Strava</button>
     <div style="text-align:right">
       <div class="countdown-num" id="top-days">—</div>
       <div class="countdown-sub">days to race · 1 Apr 2027</div>
@@ -709,7 +724,42 @@ body.sb-collapsed #topbar{padding-left:76px}
 <!-- BENCHMARKS -->
 <div class="view" id="view-benchmarks">
   <div class="page-title">Benchmarks</div>
-  <div class="page-sub">Test at end of each phase · click MY RESULT and type your time/result · auto-saved</div>
+  <div class="page-sub">Hedef: 1:40:00 · 6:00/km koşu temposu · kendi sonuçlarınla kıyasla</div>
+
+  <!-- Race time breakdown banner -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #8B5CF6;border-radius:var(--radius);padding:16px 20px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#8B5CF6;margin-bottom:10px">RACE TIME BREAKDOWN — HYROX ROTTERDAM 2027 · SUB 1:40:00 GOAL</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="background:#2563EB;color:#fff;font-family:monospace;font-size:15px;padding:4px 10px;border-radius:6px">48:00</span>
+      <span style="color:var(--muted)">Running</span>
+      <span style="color:var(--muted);font-size:18px">+</span>
+      <span style="background:#8B5CF6;color:#fff;font-family:monospace;font-size:15px;padding:4px 10px;border-radius:6px">43:42</span>
+      <span style="color:var(--muted)">Stations</span>
+      <span style="color:var(--muted);font-size:18px">+</span>
+      <span style="background:#0891B2;color:#fff;font-family:monospace;font-size:15px;padding:4px 10px;border-radius:6px">8:18</span>
+      <span style="color:var(--muted)">Roxzone</span>
+      <span style="color:var(--muted);font-size:18px">=</span>
+      <span style="background:#22C55E;color:#000;font-family:monospace;font-size:18px;font-weight:700;padding:4px 12px;border-radius:6px">1:40:00</span>
+    </div>
+    <!-- Time bar -->
+    <div style="display:flex;border-radius:6px;overflow:hidden;height:10px;gap:1px">
+      <div style="flex:48;background:#2563EB;border-radius:3px 0 0 3px" title="Running 48:00"></div>
+      <div style="flex:43.7;background:#8B5CF6" title="Stations 43:42"></div>
+      <div style="flex:8.3;background:#0891B2;border-radius:0 3px 3px 0" title="Roxzone 8:18"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:10px;color:#2563EB">Running · 48%</span>
+      <span style="font-size:10px;color:#8B5CF6">Stations · 44%</span>
+      <span style="font-size:10px;color:#0891B2">Roxzone · 8%</span>
+    </div>
+  </div>
+
+  <!-- Segment comparison table -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px">SEGMENT COMPARISON TABLE</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:16px">Referans yarışmacılar · senin en iyi sonucun · yeni değer gir</div>
+    <div id="seg-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
 
   <!-- 8×1km Run Tracker -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
@@ -717,7 +767,7 @@ body.sb-collapsed #topbar{padding-left:76px}
       <div>
         <div style="font-size:10px;letter-spacing:1.5px;color:#60A5FA;margin-bottom:4px">BASE FITNESS · PHASE 1</div>
         <div style="font-size:16px;font-weight:700">🏃 8 × 1 km Run Paces</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">Record your 1 km pace for each run segment after weekend sessions · target &lt; 5:30/km</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Record your 1 km pace for each run segment · race target &lt; 6:00/km · total 8 laps × 1 km = 48:00</div>
       </div>
       <button class="btn btn-g" onclick="addRunSession()" style="font-size:12px;white-space:nowrap">+ Add session</button>
     </div>
@@ -725,11 +775,6 @@ body.sb-collapsed #topbar{padding-left:76px}
   </div>
 
   <div id="bench-list"></div>
-  <div style="background:linear-gradient(135deg,rgba(26,10,26,0.8),var(--surface));
-    border:1px solid rgba(107,33,168,0.5);border-radius:var(--radius);padding:22px;margin-top:8px">
-    <div style="font-size:10px;letter-spacing:1.5px;color:#A78BFA;margin-bottom:16px">🏁 RACE DAY TARGETS</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px" id="race-targets"></div>
-  </div>
 </div>
 
 <!-- PHASE 1 -->
@@ -905,11 +950,26 @@ body.sb-collapsed #topbar{padding-left:76px}
 
 <!-- ADD SESSION MODAL -->
 <div class="modal-ov" id="add-modal">
-  <div class="modal" style="width:440px;max-width:95vw">
-    <h3>Add Extra Session</h3>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Choose a session to add to your selected day</div>
-    <div class="add-sess-grid" id="add-sess-grid"></div>
-    <select class="add-day-select" id="add-day-select"></select>
+  <div class="modal" style="width:440px;max-width:96vw">
+    <h3>Add Session</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Tap a type, then confirm the day</div>
+
+    <!-- Quick 4 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px" id="add-quick-row"></div>
+
+    <!-- Others collapse -->
+    <div id="add-others-wrap">
+      <button onclick="toggleAddOthers()" id="add-others-btn"
+        style="width:100%;padding:7px;border-radius:8px;background:var(--surface2);border:1px dashed var(--border2);
+               color:var(--sub);font-size:12px;cursor:pointer;margin-bottom:8px">
+        ＋ Others
+      </button>
+      <div id="add-others-grid" style="display:none">
+        <div class="add-sess-grid" id="add-sess-grid-others"></div>
+      </div>
+    </div>
+
+    <select class="add-day-select" id="add-day-select" style="margin-top:8px"></select>
     <div class="modal-btns">
       <button class="btn btn-g" onclick="closeAddModal()">Cancel</button>
       <button class="btn btn-p" onclick="confirmAddSession()">Add Session</button>
@@ -1029,32 +1089,73 @@ const STATIONS = [
 ];
 
 // Benchmarks covering all 8 HYROX stations + key fitness tests
+// ─── Race targets from official HYROX pace calculator ────────────────────────
+// Sub-100 min goal: 48:00 running + 43:42 stations + 8:18 transitions = 1:40:00
+// Each station target is the value shown on the calculator at 6:00/km run pace.
+// ─────────────────────────────────────────────────────────────────────────────
 const BENCHMARKS = [
-  // Running / Base fitness
-  {group:'BASE FITNESS', phase:'Phase 1', label:'Zone 2 HR stable 45 min',icon:'❤️', target:'120-140 bpm'},
-  // All 8 HYROX stations
-  {group:'HYROX STATIONS', phase:'Phase 1–2', label:'SkiErg — 1,000 m',         icon:'⛷️', target:'< 5:00'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Push — 4×12.5 m',      icon:'🔵', target:'< 3:00 (Open avg)'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sled Pull — 4×12.5 m',      icon:'🟣', target:'< 3:30 (Open avg)'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Burpee Broad Jump — 80 m',  icon:'🟡', target:'< 3:30'},
-  {group:'HYROX STATIONS', phase:'Phase 1–2', label:'Rowing — 1,000 m',          icon:'🚣', target:'< 4:10'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Farmers Carry — 200 m',     icon:'💼', target:'< 2:30'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Sandbag Lunges — 100 m',    icon:'🧱', target:'< 5:00'},
-  {group:'HYROX STATIONS', phase:'Phase 2',   label:'Wall Balls — 100 reps',      icon:'🟠', target:'< 6:00'},
-  // Strength
-  {group:'GYM STRENGTH', phase:'Phase 2', label:'Back Squat 5RM',    icon:'🏋️', target:'≥ BW × 1.5'},
-  {group:'GYM STRENGTH', phase:'Phase 2', label:'Deadlift 3RM',      icon:'🏋️', target:'≥ BW × 2.0'},
-  // Full race
-  {group:'RACE SIMULATION', phase:'Phase 3', label:'Full HYROX simulation', icon:'⏱️', target:'< 90 min'},
-  {group:'RACE SIMULATION', phase:'Phase 3', label:'Running pace (8×1 km)', icon:'📍', target:'< 5:30/km'},
+  // ── Running ──────────────────────────────────────────────────────────────
+  {group:'RUNNING',         phase:'All phases', label:'1 km run pace (avg)',       icon:'🏃', target:'< 6:00/km',  note:'8 laps × 1 km · average lap target'},
+  {group:'RUNNING',         phase:'All phases', label:'8 km total running',        icon:'🏃', target:'< 48:00',    note:'Total run time across all 8 laps'},
+  // ── 8 HYROX Stations ─────────────────────────────────────────────────────
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'SkiErg — 1,000 m',         icon:'⛷️', target:'< 4:50',    note:'Top 81.4% at this time · pace calculator target'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Sled Push — 4×12.5 m',     icon:'🔵', target:'< 3:22',    note:'Top 75.9% · 152 kg total incl. sled'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Sled Pull — 4×12.5 m',     icon:'🟣', target:'< 5:58',    note:'Top 79.1% · 103 kg total incl. sled'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Burpee Broad Jump — 80 m', icon:'🟡', target:'< 7:05',    note:'Top 82.1% · no weight, high HR spike'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Rowing — 1,000 m',         icon:'🚣', target:'< 5:09',    note:'Top 76.6% · target ~2:34/500m split'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Farmers Carry — 200 m',    icon:'💼', target:'< 2:48',    note:'Top 84.6% · 2×24 kg kettlebells'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Sandbag Lunges — 100 m',   icon:'🧱', target:'< 6:04',    note:'Top 73.4% · 20 kg sandbag'},
+  {group:'HYROX STATIONS',  phase:'Phase 3',    label:'Wall Balls — 100 reps',    icon:'🟠', target:'< 8:26',    note:'Top 74.6% · 6 kg / 3 m target'},
+  // ── Transitions & total ───────────────────────────────────────────────────
+  {group:'RACE TOTAL',      phase:'Phase 3',    label:'Roxzone (transitions)',      icon:'⚡', target:'< 8:18',    note:'Total transition + rest time across all stations'},
+  {group:'RACE TOTAL',      phase:'Phase 3',    label:'Stations total',            icon:'🏟️', target:'< 43:42',   note:'Sum of all 8 station times'},
+  {group:'RACE TOTAL',      phase:'Phase 3',    label:'Full race time',            icon:'⏱️', target:'< 1:40:00', note:'Target from pace calculator at 6:00/km pace'},
+  // ── Gym strength removed — not directly measurable in HYROX race context
 ];
 
 const RACE_TARGETS = [
-  {label:'Total Time',    val:'< 85 min',      sub:'competitive first-timer'},
-  {label:'Running Pace',  val:'< 5:30/km',     sub:'across 8 km total'},
-  {label:'Transitions',   val:'< 30 sec',      sub:'per station change'},
-  {label:'Wall Balls',    val:'50+ unbroken',  sub:'then sets of 2'},
+  {label:'Total Time',       val:'< 1:40:00',  sub:'pace calculator at 6:00/km'},
+  {label:'Running (8 km)',   val:'< 48:00',    sub:'6:00/km × 8 laps'},
+  {label:'All stations',     val:'< 43:42',    sub:'sum of 8 station targets'},
+  {label:'Transitions',      val:'< 8:18',     sub:'Roxzone budget'},
 ];
+
+// ── Reference athletes from HYROX Rotterdam (5 races avg vs 2 races avg) ──
+// Source: screenshot shared 20 Aug 2026 — segment comparison table
+// "Abali" = left column (5 races), "Dogan" = right column (2 races)
+const REF_ATHLETES = [
+  {key:'abali', name:'Abali', races:'5 races'},
+  {key:'dogan', name:'Dogan', races:'2 races'},
+];
+
+// Segments in race order (Run interspersed between stations)
+// val in seconds, null = not shown in reference screenshot
+const RACE_SEGMENTS = [
+  {id:'run1',    label:'Run 1',          isStation:false, abali:'4:19', dogan:'5:26'},
+  {id:'skierg',  label:'SkiErg',         isStation:true,  abali:'4:03', dogan:'4:05', benchLabel:'SkiErg — 1,000 m'},
+  {id:'run2',    label:'Run 2',          isStation:false, abali:'4:26', dogan:'4:35'},
+  {id:'sledpush',label:'Sled Push',      isStation:true,  abali:'3:12', dogan:'2:54', benchLabel:'Sled Push — 4×12.5 m'},
+  {id:'run3',    label:'Run 3',          isStation:false, abali:'4:44', dogan:'5:01'},
+  {id:'sledpull',label:'Sled Pull',      isStation:true,  abali:'4:08', dogan:'5:20', benchLabel:'Sled Pull — 4×12.5 m'},
+  {id:'run4',    label:'Run 4',          isStation:false, abali:'4:51', dogan:'5:03'},
+  {id:'burpee',  label:'Burpee BJ',      isStation:true,  abali:'3:49', dogan:'4:29', benchLabel:'Burpee Broad Jump — 80 m'},
+  {id:'run5',    label:'Run 5',          isStation:false, abali:'4:53', dogan:'5:08'},
+  {id:'row',     label:'Row',            isStation:true,  abali:'4:33', dogan:'4:24', benchLabel:'Rowing — 1,000 m'},
+  {id:'run6',    label:'Run 6',          isStation:false, abali:'4:40', dogan:'4:53'},
+  {id:'farmers', label:'Farmers C.',     isStation:true,  abali:'2:10', dogan:'2:10', benchLabel:'Farmers Carry — 200 m'},
+  {id:'run7',    label:'Run 7',          isStation:false, abali:'4:57', dogan:'5:07'},
+  {id:'lunges',  label:'S. Lunges',      isStation:true,  abali:'5:07', dogan:'4:18', benchLabel:'Sandbag Lunges — 100 m'},
+  {id:'run8',    label:'Run 8',          isStation:false, abali:'5:14', dogan:'5:46'},
+  {id:'wballs',  label:'Wall Balls',     isStation:true,  abali:'5:42', dogan:'4:35', benchLabel:'Wall Balls — 100 reps'},
+];
+
+// Totals row
+const REF_TOTALS = {
+  running: {abali:'38:01', dogan:'40:52'},
+  workouts:{abali:'32:44', dogan:'32:14'},
+  roxzone: {abali:'8:43',  dogan:'9:32'},
+  total:   {abali:'1:19:23', dogan:'1:22:32'},
+};
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -1173,6 +1274,23 @@ async function loadAll() {
   }
 }
 
+async function syncStravaButton() {
+  setSyncUI('loading', '🔄 Syncing Strava...');
+  toast('Syncing Strava — takes ~10s...');
+  try {
+    // Trigger the Apps Script syncStravaToSheet function via a special GET param
+    await fetch(SYNC_URL + '?action=syncStrava&nocache=' + Date.now());
+    // Wait a moment for it to complete, then re-fetch everything
+    await new Promise(r => setTimeout(r, 8000));
+    await forceSync();
+    setTimeout(() => { renderTrendChart(); renderTrendPie(buildTrendData(), Object.keys(buildTrendData()), false); }, 300);
+    toast('Strava sync complete ✓');
+  } catch(e) {
+    setSyncUI('error', '⚠️ Strava sync failed');
+    toast('Strava sync failed — try again');
+  }
+}
+
 async function forceSync() {
   setSyncUI('loading', '🔄 Syncing...');
   try {
@@ -1190,10 +1308,11 @@ async function forceSync() {
       }
       setSyncUI('ok', '☁️ Up to date');
       toast('Synced ✓');
-      renderWeek();
+      refreshAll();
       updateGlobalStats();
       updateOverview();
       updateLog();
+      setTimeout(() => { renderTrendChart(); }, 200);
       setTimeout(() => setSyncUI('idle'), 3000);
     } else {
       setSyncUI('error', '⚠️ Could not reach cloud');
@@ -1719,7 +1838,7 @@ function renderRunSessions() {
       + 'to see whether race pace is on track.</div>';
     return;
   }
-  var TARGET = 330; // 5:30/km in seconds
+  var TARGET = 360; // 6:00/km in seconds — race target from pace calculator
   var html = '';
   list.forEach(function(s, i){
     var secs = s.paces.map(paceToSec).filter(function(v){ return v != null; });
@@ -2462,7 +2581,147 @@ function renderStations() {
 // ═══════════════════════════════════════════════════════════════
 // BENCHMARKS
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// SEGMENT COMPARISON TABLE
+// Reference athletes (Abali / Dogan) are hardcoded from the
+// screenshot shared 20 Aug 2026. Your personal best for each
+// segment is pulled from benchHistory(). New values are entered
+// inline and logged immediately.
+// ═══════════════════════════════════════════════════════════════
+var SEG_INPUTS = {}; // transient input values per segment
+
+function secFromStr(s) {
+  if (!s) return null;
+  var t = /^(\d+):(\d{2})$/.exec(s.trim());
+  if (t) return parseInt(t[1],10)*60 + parseInt(t[2],10);
+  var h = /^(\d+):(\d{2}):(\d{2})$/.exec(s.trim());
+  if (h) return parseInt(h[1],10)*3600 + parseInt(h[2],10)*60 + parseInt(h[3],10);
+  return null;
+}
+function fmtSec(v) {
+  if (v == null) return '—';
+  if (v >= 3600) {
+    var hh=Math.floor(v/3600), mm=Math.floor((v%3600)/60), ss=Math.round(v%60);
+    return hh+':'+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+  }
+  var m=Math.floor(v/60), r=Math.round(v%60);
+  return m+':'+(r<10?'0':'')+r;
+}
+function deltaHtml(mine, ref) {
+  if (mine == null || ref == null) return '<span style="color:var(--muted)">—</span>';
+  var d = mine - ref;
+  var abs = fmtSec(Math.abs(d));
+  if (Math.abs(d) < 2) return '<span style="color:#22C55E">~0:00</span>';
+  return d > 0
+    ? '<span style="color:#F87171">+'+abs+'</span>'
+    : '<span style="color:#22C55E">-'+abs+'</span>';
+}
+
+function logSegResult(segId) {
+  var inp = document.getElementById('seg-inp-'+segId);
+  if (!inp) return;
+  var val = inp.value.trim();
+  if (!val) return;
+  if (secFromStr(val) == null) { toast('Use m:ss format e.g. 4:30'); inp.focus(); return; }
+  var seg = RACE_SEGMENTS.find(function(s){ return s.id === segId; });
+  if (!seg) return;
+  var label = seg.benchLabel || seg.label;
+  var date = new Date().toISOString().slice(0,10);
+  var all = benchHistoryAll();
+  if (!Array.isArray(all[label])) all[label] = [];
+  all[label].push({d:date, v:val});
+  all[label].sort(function(a,b){ return a.d.localeCompare(b.d); });
+  benchInputs[label] = val;
+  saveBenchHistoryAll(all);
+  inp.value = '';
+  renderSegmentTable();
+  toast('Logged ' + val + ' for ' + seg.label + ' ✓');
+}
+
+function renderSegmentTable() {
+  var wrap = document.getElementById('seg-table-wrap');
+  if (!wrap) return;
+
+  function bestFor(seg) {
+    var label = seg.benchLabel || seg.label;
+    var h = benchHistory(label);
+    if (!h.length) return null;
+    var secs = h.map(function(e){ return secFromStr(e.v); }).filter(function(v){ return v != null; });
+    if (!secs.length) return null;
+    return Math.min.apply(null, secs);
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">'
+    + '<thead><tr style="border-bottom:1px solid var(--border)">'
+    + '<th style="text-align:left;padding:8px 6px;color:var(--muted);font-weight:600;font-size:10px;letter-spacing:1px">SEGMENT</th>'
+    + '<th style="text-align:center;padding:8px 6px;color:#60A5FA;font-size:10px;font-weight:600">ABALI<br><span style="opacity:.6;font-weight:400">5 races</span></th>'
+    + '<th style="text-align:center;padding:8px 6px;color:#A78BFA;font-size:10px;font-weight:600">DOGAN<br><span style="opacity:.6;font-weight:400">2 races</span></th>'
+    + '<th style="text-align:center;padding:8px 6px;color:#22C55E;font-size:10px;font-weight:600">MY BEST<br><span style="opacity:.6;font-weight:400">logged</span></th>'
+    + '<th style="text-align:center;padding:8px 6px;color:#F97316;font-size:10px;font-weight:600">vs ABALI</th>'
+    + '<th style="text-align:center;padding:8px 6px;color:var(--muted);font-size:10px;font-weight:600">LOG NEW</th>'
+    + '</tr></thead><tbody>';
+
+  RACE_SEGMENTS.forEach(function(seg, idx) {
+    var isStation = seg.isStation;
+    var bg = isStation ? 'background:rgba(139,92,246,0.07)' : 'background:rgba(37,99,235,0.04)';
+    var numBadge = isStation
+      ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#374151;color:#E5E7EB;font-size:9px;font-weight:700;margin-right:5px">'
+        + (Math.ceil((idx+1)/2)) + '</span>'
+      : '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(37,99,235,0.2);color:#93C5FD;font-size:9px;margin-right:5px">⟳</span>';
+
+    var best = bestFor(seg);
+    var abaliSec = secFromStr(seg.abali);
+    var doganSec = secFromStr(seg.dogan);
+
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);' + bg + '">'
+      + '<td style="padding:7px 6px;color:var(--text);white-space:nowrap">' + numBadge + seg.label + '</td>'
+      + '<td style="text-align:center;padding:7px 6px;font-family:monospace;color:#93C5FD">' + (seg.abali||'—') + '</td>'
+      + '<td style="text-align:center;padding:7px 6px;font-family:monospace;color:#C4B5FD">' + (seg.dogan||'—') + '</td>'
+      + '<td style="text-align:center;padding:7px 6px;font-family:monospace;font-weight:700;color:' + (best!=null?'#22C55E':'var(--muted)') + '">'
+        + (best!=null ? fmtSec(best) : '—') + '</td>'
+      + '<td style="text-align:center;padding:7px 6px">' + deltaHtml(best, abaliSec) + '</td>'
+      + '<td style="padding:5px 4px;text-align:center">'
+        + '<div style="display:flex;gap:4px;align-items:center;justify-content:center">'
+        + '<input id="seg-inp-' + seg.id + '" type="text" placeholder="m:ss" '
+          + 'style="width:52px;padding:4px 6px;border-radius:6px;border:1px solid var(--border2);'
+          + 'background:var(--surface2);color:var(--text);font-family:monospace;font-size:11px;text-align:center" '
+          + 'onkeydown="if(event.key===\'Enter\')logSegResult(\'' + seg.id + '\')" />'
+        + '<button onclick="logSegResult(\'' + seg.id + '\')" '
+          + 'style="padding:4px 8px;border-radius:6px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);'
+          + 'color:var(--accent);font-size:10px;cursor:pointer;white-space:nowrap">✓</button>'
+        + '</div></td>'
+      + '</tr>';
+  });
+
+  // Totals section
+  html += '<tr style="border-top:2px solid var(--border);background:var(--surface2)">'
+    + '<td style="padding:8px 6px;color:var(--muted);font-size:10px;letter-spacing:1px;font-weight:700">RUNNING TOTAL</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#93C5FD;font-weight:700">' + REF_TOTALS.running.abali + '</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#C4B5FD;font-weight:700">' + REF_TOTALS.running.dogan + '</td>'
+    + '<td colspan="3"></td></tr>';
+  html += '<tr style="background:rgba(139,92,246,0.07)">'
+    + '<td style="padding:8px 6px;color:var(--muted);font-size:10px;letter-spacing:1px;font-weight:700">STATIONS TOTAL</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#93C5FD;font-weight:700">' + REF_TOTALS.workouts.abali + '</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#C4B5FD;font-weight:700">' + REF_TOTALS.workouts.dogan + '</td>'
+    + '<td colspan="3"></td></tr>';
+  html += '<tr style="background:rgba(8,145,178,0.07)">'
+    + '<td style="padding:8px 6px;color:var(--muted);font-size:10px;letter-spacing:1px;font-weight:700">ROXZONE</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#93C5FD;font-weight:700">' + REF_TOTALS.roxzone.abali + '</td>'
+    + '<td style="text-align:center;padding:8px 6px;font-family:monospace;color:#C4B5FD;font-weight:700">' + REF_TOTALS.roxzone.dogan + '</td>'
+    + '<td colspan="3"></td></tr>';
+  html += '<tr style="border-top:2px solid var(--accent);background:rgba(249,115,22,0.05)">'
+    + '<td style="padding:10px 6px;color:var(--text);font-weight:700;font-size:13px">🏁 TOTAL</td>'
+    + '<td style="text-align:center;padding:10px 6px;font-family:monospace;color:#93C5FD;font-weight:700;font-size:14px">' + REF_TOTALS.total.abali + '</td>'
+    + '<td style="text-align:center;padding:10px 6px;font-family:monospace;color:#C4B5FD;font-weight:700;font-size:14px">' + REF_TOTALS.total.dogan + '</td>'
+    + '<td colspan="3" style="text-align:center;font-size:10px;color:var(--muted)">Your target: <span style="color:#22C55E;font-family:monospace;font-weight:700">< 1:40:00</span></td>'
+    + '</tr>';
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 function renderBenchmarks() {
+  renderSegmentTable();
   renderRunSessions();
   const list = document.getElementById('bench-list');
   let html = '';
@@ -2615,6 +2874,12 @@ function parseResultVal(str) {
 function fmtResultVal(v, isTime) {
   if (v == null) return '—';
   if (!isTime) return (Math.round(v*100)/100) + '';
+  if (v >= 3600) {
+    var h = Math.floor(v/3600);
+    var m = Math.floor((v%3600)/60);
+    var sec = Math.round(v%60);
+    return h + ':' + (m<10?'0':'') + m + ':' + (sec<10?'0':'') + sec;
+  }
   var m = Math.floor(v/60), r = v % 60;
   var rr = (r < 10 ? '0' : '') + (Math.round(r*10)/10).toString().replace(/\.0$/,'');
   return m + ':' + rr;
@@ -2626,20 +2891,25 @@ function parseTargetSpec(target) {
   if (!target) return null;
   var s = String(target);
   if (/BW/i.test(s)) return null;
-  if (/\d+\s*[-–]\s*\d+/.test(s)) return null;      // a range, not a threshold
+  if (/\d+\s*[-–]\s*\d+/.test(s)) return null;
   var lowerBetter = /[<≤]|sub/i.test(s);
   var higherBetter = /[>≥]|\+/.test(s);
   if (!lowerBetter && !higherBetter) lowerBetter = true;
 
+  // h:mm:ss (e.g. "< 1:40:00")
+  var hms = /(\d+):(\d{2}):(\d{2})/.exec(s);
+  if (hms) return {val: parseInt(hms[1],10)*3600 + parseInt(hms[2],10)*60 + parseInt(hms[3],10), lowerBetter, isTime:true};
+
+  // m:ss (e.g. "< 4:50")
   var t = /(\d+):(\d{1,2})/.exec(s);
-  if (t) return {val: parseInt(t[1],10)*60 + parseInt(t[2],10), lowerBetter: lowerBetter, isTime: true};
+  if (t) return {val: parseInt(t[1],10)*60 + parseInt(t[2],10), lowerBetter, isTime:true};
 
   var n = /(\d+(?:\.\d+)?)/.exec(s);
   if (!n) return null;
   var v = parseFloat(n[1]);
-  if (/min/i.test(s)) return {val: v*60, lowerBetter: lowerBetter, isTime: true};
-  if (/\bs\b|sec/i.test(s)) return {val: v, lowerBetter: lowerBetter, isTime: true};
-  return {val: v, lowerBetter: lowerBetter, isTime: false};
+  if (/min/i.test(s)) return {val: v*60, lowerBetter, isTime:true};
+  if (/\bs\b|sec/i.test(s)) return {val: v, lowerBetter, isTime:true};
+  return {val: v, lowerBetter, isTime:false};
 }
 
 function benchBest(label, spec) {
@@ -2869,25 +3139,56 @@ const EXTRA_SESSIONS = [
 let addModalTargetISO = null;
 let addModalSelectedType = null;
 
+function toggleAddOthers() {
+  const grid = document.getElementById('add-others-grid');
+  const btn  = document.getElementById('add-others-btn');
+  const open = grid.style.display !== 'none';
+  grid.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? '＋ Others' : '－ Others';
+}
+
 function openAddModal(iso) {
   addModalTargetISO = iso;
   addModalSelectedType = null;
+  document.getElementById('add-others-grid').style.display = 'none';
+  document.getElementById('add-others-btn').textContent = '＋ Others';
 
-  // Build session buttons
-  const grid = document.getElementById('add-sess-grid');
-  grid.innerHTML = EXTRA_SESSIONS.map(s => `
-    <div class="add-sess-btn" data-type="${s.type}" onclick="selectAddSess(this,'${s.type}')">
-      <span class="add-sess-icon">${s.icon}</span>
-      <div>
-        <div class="add-sess-label">${s.label}</div>
-        <div class="add-sess-sub">${s.sub}</div>
-      </div>
-    </div>`).join('');
+  // Quick 4 — most-used types as large tap targets
+  const quickDefs = [
+    {type:'HYROX_STATION', icon:'🏟️', label:'HYROX'},
+    {type:'ZONE2_RUN',     icon:'🏃',  label:'Run'},
+    {type:'BIKE',          icon:'🚴',  label:'Bike'},
+    {type:'HERO',          icon:'🏋️', label:'Hero'},
+  ];
+  const qRow = document.getElementById('add-quick-row');
+  qRow.innerHTML = '';
+  quickDefs.forEach(function(q) {
+    const btn = document.createElement('button');
+    btn.className = 'add-sess-btn';
+    btn.dataset.type = q.type;
+    btn.style.cssText = 'padding:10px 4px;text-align:center;flex-direction:column;gap:4px;'
+      + 'display:flex;align-items:center;justify-content:center;border-radius:8px;width:100%;'
+      + 'background:var(--surface2);border:1px solid var(--border2);cursor:pointer;'
+      + '-webkit-tap-highlight-color:transparent;min-height:64px';
+    btn.innerHTML = '<span style="font-size:22px">' + q.icon + '</span>'
+      + '<span style="font-size:10px;color:var(--sub);line-height:1.2">' + q.label + '</span>';
+    btn.addEventListener('click', function() { selectAddSess(btn, q.type); });
+    qRow.appendChild(btn);
+  });
 
-  // Build day selector — show the week containing the clicked day.
-  // Previously this always used curMondayOff(), so pressing "+" on a day
-  // outside the planner's current week (now possible from the monthly and
-  // phase calendars) silently added the session to the wrong date.
+  // Others grid
+  const othersEl = document.getElementById('add-sess-grid-others');
+  const otherTypes = new Set(quickDefs.map(q => q.type));
+  const otherSessions = EXTRA_SESSIONS.filter(s => !otherTypes.has(s.type));
+  othersEl.innerHTML = otherSessions.map(s =>
+    '<div class="add-sess-btn" data-type="' + s.type + '" onclick="selectAddSess(this,\'' + s.type + '\')">'
+    + '<span class="add-sess-icon">' + s.icon + '</span>'
+    + '<div><div class="add-sess-label">' + s.label + '</div>'
+    + '<div class="add-sess-sub">' + s.sub + '</div></div>'
+    + '</div>'
+  ).join('');
+
+  // Day selector — week containing clicked date
   const baseMon = iso ? mondayOffset(new Date(iso + 'T00:00:00Z')) : curMondayOff();
   const sel = document.getElementById('add-day-select');
   sel.innerHTML = '';

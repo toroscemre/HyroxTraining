@@ -959,7 +959,7 @@ body.sb-collapsed #topbar{padding-left:76px}
 
     <!-- Others collapse -->
     <div id="add-others-wrap">
-      <button onclick="toggleAddOthers()" id="add-others-btn"
+      <button type="button" onclick="toggleAddOthers()" id="add-others-btn"
         style="width:100%;padding:7px;border-radius:8px;background:var(--surface2);border:1px dashed var(--border2);
                color:var(--sub);font-size:12px;cursor:pointer;margin-bottom:8px">
         ＋ Others
@@ -971,8 +971,8 @@ body.sb-collapsed #topbar{padding-left:76px}
 
     <select class="add-day-select" id="add-day-select" style="margin-top:8px"></select>
     <div class="modal-btns">
-      <button class="btn btn-g" onclick="closeAddModal()">Cancel</button>
-      <button class="btn btn-p" onclick="confirmAddSession()">Add Session</button>
+      <button type="button" class="btn btn-g" onclick="closeAddModal()">Cancel</button>
+      <button type="button" class="btn btn-p" onclick="confirmAddSession()">Add Session</button>
     </div>
   </div>
 </div>
@@ -3164,15 +3164,20 @@ function openAddModal(iso) {
   qRow.innerHTML = '';
   quickDefs.forEach(function(q) {
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'add-sess-btn';
     btn.dataset.type = q.type;
     btn.style.cssText = 'padding:10px 4px;text-align:center;flex-direction:column;gap:4px;'
       + 'display:flex;align-items:center;justify-content:center;border-radius:8px;width:100%;'
       + 'background:var(--surface2);border:1px solid var(--border2);cursor:pointer;'
-      + '-webkit-tap-highlight-color:transparent;min-height:64px';
+      + '-webkit-tap-highlight-color:transparent;min-height:64px;transition:border-color .1s,background .1s';
     btn.innerHTML = '<span style="font-size:22px">' + q.icon + '</span>'
       + '<span style="font-size:10px;color:var(--sub);line-height:1.2">' + q.label + '</span>';
-    btn.addEventListener('click', function() { selectAddSess(btn, q.type); });
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAddSess(btn, q.type);
+    });
     qRow.appendChild(btn);
   });
 
@@ -3208,8 +3213,16 @@ function openAddModal(iso) {
 }
 
 function selectAddSess(el, type) {
-  document.querySelectorAll('.add-sess-btn').forEach(b => b.classList.remove('selected'));
+  // Clear all selections
+  document.querySelectorAll('.add-sess-btn').forEach(function(b) {
+    b.classList.remove('selected');
+    b.style.borderColor = '';
+    b.style.background = '';
+  });
+  // Highlight selected
   el.classList.add('selected');
+  el.style.borderColor = 'var(--accent)';
+  el.style.background = 'rgba(249,115,22,0.12)';
   addModalSelectedType = type;
 }
 

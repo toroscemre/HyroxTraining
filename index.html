@@ -205,6 +205,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess[data-t="LONG_RUN"]      {background:var(--bg-longrun);  border-left-color:var(--c-longrun)}
 .sess[data-t="HYROX_STATION"]{background:var(--bg-station); border-left-color:var(--c-station)}
 .sess[data-t="HERO"]         {background:var(--bg-hero);    border-left-color:var(--c-hero)}
+.sess[data-t="HYROX_ENGINE"],
+.sess[data-t="HYROX_FOUND"],
+.sess[data-t="HYROX_COMPLETE"],
+.sess[data-t="HYROX_POWER"]  {background:rgba(127,119,221,0.12); border-left-color:#7F77DD}
+.sess[data-t="UPPER"]        {background:var(--bg-strength); border-left-color:var(--c-strength)}
 
 .sess-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .sess-icon{font-size:14px}
@@ -219,6 +224,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sess[data-t="LONG_RUN"]       .sess-title{color:var(--c-longrun)}
 .sess[data-t="HYROX_STATION"] .sess-title{color:var(--c-station)}
 .sess[data-t="HERO"]          .sess-title{color:var(--c-hero)}
+.sess[data-t="HYROX_ENGINE"]   .sess-title,
+.sess[data-t="HYROX_FOUND"]    .sess-title,
+.sess[data-t="HYROX_COMPLETE"] .sess-title,
+.sess[data-t="HYROX_POWER"]    .sess-title{color:#7F77DD}
+.sess[data-t="UPPER"]          .sess-title{color:var(--c-strength)}
 
 .sess-time{font-family:monospace;font-size:10px;color:var(--muted)}
 .sess-detail{font-size:11px;color:var(--sub);line-height:1.5;margin-top:3px}
@@ -607,10 +617,34 @@ body.sb-collapsed #topbar{padding-left:76px}
       <div style="flex:1;min-width:160px;display:flex;flex-direction:column;gap:10px" id="trend-pie-legend"></div>
     </div>
   </div>
+  <!-- Sub-type breakdown: monthly stacked bar -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">SUB-TYPE BREAKDOWN — 2026</div>
+      <select id="sub-cat-select" onchange="renderSubCharts()"
+        style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;
+               color:var(--text);font-size:11px;padding:4px 8px;cursor:pointer"></select>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:14px" id="sub-chart-hint"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px" id="sub-legend"></div>
+    <div style="position:relative;width:100%;height:240px">
+      <canvas id="sub-chart" role="img" aria-label="Monthly sessions broken down by sub-type"></canvas>
+    </div>
+  </div>
+
+  <!-- Sub-type total split -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">SUB-TYPE TOTAL — 2026</div>
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div style="position:relative;width:200px;height:200px;flex-shrink:0">
+        <canvas id="sub-pie" role="img" aria-label="Share of 2026 sessions by sub-type"></canvas>
+      </div>
+      <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:8px" id="sub-pie-legend"></div>
+    </div>
+  </div>
 
 </div>
 
-<!-- TRAINING HISTORY -->
 <div class="view" id="view-history">
   <div class="page-title">Training History</div>
   <div class="page-sub">2024 · 2025 · 2026 · 237 sessions · Your full fitness journey into Rotterdam</div>
@@ -951,25 +985,23 @@ body.sb-collapsed #topbar{padding-left:76px}
 <!-- ADD SESSION MODAL -->
 <div class="modal-ov" id="add-modal">
   <div class="modal" style="width:440px;max-width:96vw">
-    <h3>Add Session</h3>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Tap a type, then confirm the day</div>
+    <h3 id="add-modal-title">Add Session</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px" id="add-modal-hint">Pick a category</div>
 
-    <!-- Quick 4 -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px" id="add-quick-row"></div>
+    <!-- Level 1: main categories -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px" id="add-cat-row"></div>
 
-    <!-- Others collapse -->
-    <div id="add-others-wrap">
-      <button type="button" onclick="toggleAddOthers()" id="add-others-btn"
-        style="width:100%;padding:7px;border-radius:8px;background:var(--surface2);border:1px dashed var(--border2);
-               color:var(--sub);font-size:12px;cursor:pointer;margin-bottom:8px">
-        ＋ Others
+    <!-- Level 2: sub-types (hidden until a category is chosen) -->
+    <div id="add-sub-wrap" style="display:none">
+      <button type="button" onclick="addBackToCats()" id="add-back-btn"
+        style="width:100%;padding:7px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);
+               color:var(--sub);font-size:12px;cursor:pointer;margin-bottom:8px;text-align:left">
+        ‹ Back
       </button>
-      <div id="add-others-grid" style="display:none">
-        <div class="add-sess-grid" id="add-sess-grid-others"></div>
-      </div>
+      <div class="add-sess-grid" id="add-sub-grid"></div>
     </div>
 
-    <select class="add-day-select" id="add-day-select" style="margin-top:8px"></select>
+    <select class="add-day-select" id="add-day-select" style="margin-top:10px"></select>
     <div class="modal-btns">
       <button type="button" class="btn btn-g" onclick="closeAddModal()">Cancel</button>
       <button type="button" class="btn btn-p" onclick="confirmAddSession()">Add Session</button>
@@ -1047,23 +1079,35 @@ const WEEKS = [
 ];
 
 const SPORT_META = {
+  // ── HYROX classes (CrossFit Hofplein, Phase 3+) ──
+  HYROX_ENGINE:  {label:'Engine',         icon:'⚙️'},
+  HYROX_FOUND:   {label:'Foundational',   icon:'🏟️'},
+  HYROX_COMPLETE:{label:'Complete',       icon:'🔄'},
+  HYROX_POWER:   {label:'Power',          icon:'💥'},
+  // ── Run ──
   INTERVAL:      {label:'Interval Run',   icon:'⚡'},
   THRESHOLD:     {label:'Threshold Run',  icon:'🔥'},
   ZONE2_RUN:     {label:'Zone 2 Run',     icon:'🏃'},
+  // ── Home ──
+  UPPER:         {label:'Upper Body',     icon:'💪'},
+  CORE:          {label:'Core',           icon:'🎯'},
+  LEGS:          {label:'Legs',           icon:'🦵'},
+  // ── Single ──
+  BIKE:          {label:'Bike',           icon:'🚴'},
+  YOGA:          {label:'Yoga',           icon:'🧘'},
+  // ── Other ──
+  SWIM:          {label:'Swim',           icon:'🏊'},
+  SICK:          {label:'Sick',           icon:'🤒'},
+  HOLIDAY:       {label:'Holiday',        icon:'🏖️'},
+  // ── Legacy types — kept so historical sessions still render correctly.
+  //    No longer offered in the picker, but every past tick keeps its label.
   HYROX_STATION: {label:'HYROX',          icon:'🏟️'},
   HERO:          {label:'Hero',           icon:'🏋️'},
   STRENGTH:      {label:'Upper Body',     icon:'💪'},
   BOXING:        {label:'Arms',           icon:'💪'},
-  YOGA:          {label:'Yoga',           icon:'🧘'},
-  CORE:          {label:'Core',           icon:'🎯'},
   BOX:           {label:'Boxing',         icon:'🥊'},
-  LEGS:          {label:'Legs',           icon:'🦵'},
-  BIKE:          {label:'Bike',           icon:'🚴'},
   SKIERG:        {label:'SkiErg',         icon:'⛷️'},
   ROWERG:        {label:'RowErg',         icon:'🚣'},
-  SWIM:          {label:'Swim',           icon:'🏊'},
-  SICK:          {label:'Sick',           icon:'🤒'},
-  HOLIDAY:       {label:'Holiday',        icon:'🏖️'},
   LEGS_RL:       {label:'Legs',           icon:'🦵'},
   LEGS_BSS:      {label:'Legs',           icon:'🦵'},
   ZONE2:         {label:'Zone 2 Run',     icon:'🏃'},
@@ -1312,7 +1356,7 @@ async function forceSync() {
       updateGlobalStats();
       updateOverview();
       updateLog();
-      setTimeout(() => { renderTrendChart(); }, 200);
+      setTimeout(() => { renderTrendChart(); renderSubCharts(); }, 200);
       setTimeout(() => setSyncUI('idle'), 3000);
     } else {
       setSyncUI('error', '⚠️ Could not reach cloud');
@@ -1404,9 +1448,19 @@ function buildPhase3Template(mondayOff) {
   var deload = wn === P3_DELOAD_WK;
   var odd = wn % 2 === 1;
 
-  var gym = deload
-    ? {type:'HYROX_STATION', detail:'DELOAD · 60% load · 45 min · SkiErg, sled push/pull, wall balls, sandbag lunges, rowing · technique focus, no grinding'}
-    : {type:'HYROX_STATION', detail:'45 min · SkiErg, sled push/pull, wall balls, sandbag lunges, rowing · progressive load'};
+  // CrossFit Hofplein runs four named HYROX classes each week. Monday takes the
+  // station-focused class, Thursday the engine-focused one, alternating weekly so
+  // all four get covered across a two-week cycle.
+  var monClass = deload
+    ? {type:'HYROX_FOUND', detail:'DELOAD · 60% load · race-order station practice · technique focus, no grinding'}
+    : (odd
+        ? {type:'HYROX_FOUND', detail:'Foundational · race-order station practice · Wallballs, RowErg, Sled Push, SkiErg, Sandbag Lunges, Burpee Box Jumps'}
+        : {type:'HYROX_POWER', detail:'Power · chipper strength + zone intervals · KB swings, Bulgarian split squats, Arnold thrusters'});
+  var thuClass = deload
+    ? {type:'HYROX_ENGINE', detail:'DELOAD · easy machine work · Ski + Row + Run at conversational effort'}
+    : (odd
+        ? {type:'HYROX_ENGINE', detail:'Engine · machine intensity · 1 min work / 10s rest × 36 · Ski, Row, Run, Rest'}
+        : {type:'HYROX_COMPLETE', detail:'Complete · engine builder + leg finisher · Ski timer, Wallballs, Sled Pull, RowErg, Sandbag Lunges'});
 
   var recovery = {type:'BIKE', detail:'Active recovery · office commute ~7km · low intensity, conversational'};
 
@@ -1421,15 +1475,15 @@ function buildPhase3Template(mondayOff) {
 
   return [
     // 0 MON — Cycle 1 · Day 1
-    [Object.assign({}, gym, {cycle:'C1-D1'}),
-     {type:'STRENGTH', detail:'Upper body + grip · merge into gym session · Pull-ups, Row, OHP, Farmers Walk, Dead Hang', cycle:'C1-D1'}],
+    [Object.assign({}, monClass, {cycle:'C1-D1'}),
+     {type:'UPPER', detail:'Upper body + grip · merge into gym session · Pull-ups, Row, OHP, Farmers Walk, Dead Hang', cycle:'C1-D1'}],
     // 1 TUE — Cycle 1 · Day 2
     [Object.assign({}, recovery, {cycle:'C1-D2'}),
      {type:'CORE', detail:'Hernia-safe · Gentle Dead Bug + variations · stop on any lower-ab discomfort', cycle:'C1-D2'}],
     // 2 WED — Cycle 1 · Day 3
     [Object.assign({}, wed, {cycle:'C1-D3'})],
     // 3 THU — Cycle 2 · Day 1
-    [Object.assign({}, gym, {cycle:'C2-D1'})],
+    [Object.assign({}, thuClass, {cycle:'C2-D1'})],
     // 4 FRI — Cycle 2 · Day 2
     [Object.assign({}, recovery, {cycle:'C2-D2'}),
      {type:'CORE', detail:'Hernia-safe · Gentle Dead Bug + variations · stop on any lower-ab discomfort', cycle:'C2-D2'}],
@@ -2819,17 +2873,6 @@ function renderBenchmarks() {
 
   list.innerHTML = html;
 
-  const raceEl = document.getElementById('race-targets');
-  raceEl.innerHTML = '';
-  RACE_TARGETS.forEach(t => {
-    const div = document.createElement('div');
-    div.style.cssText = 'background:var(--surface);border-radius:8px;padding:14px';
-    div.innerHTML = `
-      <div style="font-size:9px;color:#7C3AED;letter-spacing:1.5px;margin-bottom:4px">${t.label.toUpperCase()}</div>
-      <div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:500;color:#A78BFA">${t.val}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">${t.sub}</div>`;
-    raceEl.appendChild(div);
-  });
 }
 
 function saveBench(label, val) {
@@ -3082,7 +3125,7 @@ function nav(id) {
   if (id==='p1found')  renderPhaseWeeks('p1-found-c',WEEKS.slice(0,5));
   if (id==='p1build')  renderPhaseWeeks('p1-build-c',WEEKS.slice(5,10));
   if (id==='p1peak')   renderPhaseWeeks('p1-peak-c', WEEKS.slice(10,14));
-  if (id==='overview') { updateOverview(); setTimeout(renderTrendChart, 200); }
+  if (id==='overview') { updateOverview(); setTimeout(function(){ renderTrendChart(); renderSubCharts(); }, 200); }
   if (id==='monthly') renderMonthlyView();
   if (id==='phase2')  renderPhase2();
   if (id==='phase3')  renderPhase3();
@@ -3116,84 +3159,111 @@ function closeSidebarMobile() {
 }
 
 // ── ADD EXTRA SESSION ──────────────────────────────────────────
-const EXTRA_SESSIONS = [
-  {type:'INTERVAL',      icon:'⚡',  label:'Interval Run',   sub:'4×4 min @ 90% HR · VO₂ Max · Whoop-validated'},
-  {type:'THRESHOLD',     icon:'🔥',  label:'Threshold Run',  sub:'Tempo · comfortably hard · lactate threshold'},
-  {type:'ZONE2_RUN',     icon:'🏃',  label:'Zone 2 Run',     sub:'Easy · HR 120–140 bpm · conversational'},
-  {type:'HYROX_STATION', icon:'🏟️', label:'HYROX',    sub:'All 8 stations · progressive loads'},
-  {type:'HERO',          icon:'🏋️', label:'Hero',      sub:'Full body group class · weights + kettlebells'},
-  {type:'STRENGTH',      icon:'💪',  label:'Upper Body',     sub:'Pull-ups, Row, Press, OHP, Farmers Walk'},
-  {type:'BOXING',        icon:'💪',  label:'Arms',           sub:'Hammer Curl, Tricep, Dead Hang · 45 min'},
-  {type:'YOGA',          icon:'🧘',  label:'Yoga',           sub:'Mobility · hips, hamstrings, thoracic'},
-  {type:'CORE',          icon:'🎯',  label:'Core',           sub:'Hernia-safe · Dead Bug · shadow boxing'},
-  {type:'BOX',           icon:'🥊',  label:'Boxing',         sub:'Shadow boxing · 3×3 min rounds'},
-  {type:'LEGS',          icon:'🦵',  label:'Legs',           sub:'Squat, lunge, calf raise'},
-  {type:'BIKE',          icon:'🚴',  label:'Bike',           sub:'Commute or training ride · Zone 2'},
-  {type:'SKIERG',        icon:'⛷️', label:'SkiErg',    sub:'Station work or test · 1,000m target < 5:00'},
-  {type:'ROWERG',        icon:'🚣',  label:'RowErg',         sub:'Station work or test · 1,000m target < 4:10'},
-  {type:'SWIM',          icon:'🏊',  label:'Swim',           sub:'Pool or open water · steady pace'},
-  {type:'SICK',          icon:'🤒',  label:'Sick',           sub:'No training · unwell'},
-  {type:'HOLIDAY',       icon:'🏖️', label:'Holiday',   sub:'No training · travel / time off'},
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY TREE — two-level picker
+// Six main categories; each either expands into sub-types or logs
+// directly. Legacy types (HERO, HYROX_STATION, STRENGTH, BOXING,
+// BOX, SKIERG, ROWERG, LEGS_RL, LEGS_BSS) are deliberately absent:
+// they still render in history and charts, but can't be added anew.
+// ═══════════════════════════════════════════════════════════════
+const ACTIVITY_TREE = [
+  {key:'HYROX', label:'HYROX', icon:'🏟️', colour:'#7F77DD', sub:[
+    {type:'HYROX_ENGINE',   icon:'⚙️', label:'Engine',       sub:'Ski + Row + Run · aerobic engine'},
+    {type:'HYROX_FOUND',    icon:'🏟️', label:'Foundational', sub:'Race-order station practice'},
+    {type:'HYROX_COMPLETE', icon:'🔄',  label:'Complete',     sub:'Engine + functional finisher'},
+    {type:'HYROX_POWER',    icon:'💥',  label:'Power',        sub:'Strength + conditioning'},
+  ]},
+  {key:'RUN', label:'Run', icon:'🏃', colour:'#2563EB', sub:[
+    {type:'ZONE2_RUN', icon:'🏃', label:'Zone 2',    sub:'Easy · HR 120–140 · conversational'},
+    {type:'INTERVAL',  icon:'⚡', label:'Interval',  sub:'4×4 min @ 90% HR · VO₂ Max'},
+    {type:'THRESHOLD', icon:'🔥', label:'Threshold', sub:'Tempo · comfortably hard'},
+  ]},
+  {key:'HOME', label:'Home', icon:'🏠', colour:'#EA580C', sub:[
+    {type:'UPPER', icon:'💪', label:'Upper Body', sub:'Pull-ups, Row, Press, OHP, grip'},
+    {type:'CORE',  icon:'🎯', label:'Core',       sub:'Hernia-safe · Gentle Dead Bug'},
+    {type:'LEGS',  icon:'🦵', label:'Legs',       sub:'Squat, lunge, calf raise'},
+  ]},
+  {key:'BIKE', label:'Bike', icon:'🚴', colour:'#DB2777', direct:'BIKE'},
+  {key:'YOGA', label:'Yoga', icon:'🧘', colour:'#0F6E56', direct:'YOGA'},
+  {key:'OTHER', label:'Other', icon:'⚪', colour:'#5F5E5A', sub:[
+    {type:'SWIM',    icon:'🏊', label:'Swim',    sub:'Pool or open water'},
+    {type:'SICK',    icon:'🤒', label:'Sick',    sub:'No training · unwell'},
+    {type:'HOLIDAY', icon:'🏖️', label:'Holiday', sub:'No training · travel'},
+  ]},
 ];
+
+// Flat list retained for any code that still iterates all addable types
+const EXTRA_SESSIONS = ACTIVITY_TREE.flatMap(function(c){
+  if (c.direct) return [{type:c.direct, icon:c.icon, label:c.label, sub:''}];
+  return c.sub;
+});
 
 let addModalTargetISO = null;
 let addModalSelectedType = null;
 
-function toggleAddOthers() {
-  const grid = document.getElementById('add-others-grid');
-  const btn  = document.getElementById('add-others-btn');
-  const open = grid.style.display !== 'none';
-  grid.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? '＋ Others' : '－ Others';
+function addRenderCategories() {
+  const row = document.getElementById('add-cat-row');
+  document.getElementById('add-sub-wrap').style.display = 'none';
+  row.style.display = 'grid';
+  document.getElementById('add-modal-hint').textContent = 'Pick a category';
+  row.innerHTML = '';
+  ACTIVITY_TREE.forEach(function(cat) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'add-sess-btn';
+    btn.dataset.cat = cat.key;
+    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;'
+      + 'padding:14px 6px;border-radius:10px;width:100%;min-height:76px;cursor:pointer;'
+      + 'background:var(--surface2);border:1px solid var(--border2);border-left:3px solid ' + cat.colour + ';'
+      + '-webkit-tap-highlight-color:transparent';
+    btn.innerHTML = '<span style="font-size:22px">' + cat.icon + '</span>'
+      + '<span style="font-size:12px;color:var(--text);line-height:1.2">' + cat.label + '</span>'
+      + (cat.direct ? '' : '<span style="font-size:9px;color:var(--muted)">' + cat.sub.length + ' types</span>');
+    btn.addEventListener('click', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      if (cat.direct) {
+        selectAddSess(btn, cat.direct);
+      } else {
+        addOpenCategory(cat.key);
+      }
+    });
+    row.appendChild(btn);
+  });
+}
+
+function addOpenCategory(key) {
+  const cat = ACTIVITY_TREE.find(function(c){ return c.key === key; });
+  if (!cat || !cat.sub) return;
+  addModalSelectedType = null;
+  document.getElementById('add-cat-row').style.display = 'none';
+  document.getElementById('add-sub-wrap').style.display = 'block';
+  document.getElementById('add-back-btn').textContent = '\u2039 ' + cat.label;
+  document.getElementById('add-modal-hint').textContent = 'Pick a ' + cat.label + ' session';
+  const grid = document.getElementById('add-sub-grid');
+  grid.innerHTML = '';
+  cat.sub.forEach(function(s) {
+    const el = document.createElement('div');
+    el.className = 'add-sess-btn';
+    el.dataset.type = s.type;
+    el.style.borderLeft = '3px solid ' + cat.colour;
+    el.innerHTML = '<span class="add-sess-icon">' + s.icon + '</span>'
+      + '<div><div class="add-sess-label">' + s.label + '</div>'
+      + '<div class="add-sess-sub">' + s.sub + '</div></div>';
+    el.addEventListener('click', function(){ selectAddSess(el, s.type); });
+    grid.appendChild(el);
+  });
+}
+
+function addBackToCats() {
+  addModalSelectedType = null;
+  addRenderCategories();
 }
 
 function openAddModal(iso) {
   addModalTargetISO = iso;
   addModalSelectedType = null;
-  document.getElementById('add-others-grid').style.display = 'none';
-  document.getElementById('add-others-btn').textContent = '＋ Others';
+  addRenderCategories();
 
-  // Quick 4 — most-used types as large tap targets
-  const quickDefs = [
-    {type:'HYROX_STATION', icon:'🏟️', label:'HYROX'},
-    {type:'ZONE2_RUN',     icon:'🏃',  label:'Run'},
-    {type:'BIKE',          icon:'🚴',  label:'Bike'},
-    {type:'HERO',          icon:'🏋️', label:'Hero'},
-  ];
-  const qRow = document.getElementById('add-quick-row');
-  qRow.innerHTML = '';
-  quickDefs.forEach(function(q) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'add-sess-btn';
-    btn.dataset.type = q.type;
-    btn.style.cssText = 'padding:10px 4px;text-align:center;flex-direction:column;gap:4px;'
-      + 'display:flex;align-items:center;justify-content:center;border-radius:8px;width:100%;'
-      + 'background:var(--surface2);border:1px solid var(--border2);cursor:pointer;'
-      + '-webkit-tap-highlight-color:transparent;min-height:64px;transition:border-color .1s,background .1s';
-    btn.innerHTML = '<span style="font-size:22px">' + q.icon + '</span>'
-      + '<span style="font-size:10px;color:var(--sub);line-height:1.2">' + q.label + '</span>';
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      selectAddSess(btn, q.type);
-    });
-    qRow.appendChild(btn);
-  });
-
-  // Others grid
-  const othersEl = document.getElementById('add-sess-grid-others');
-  const otherTypes = new Set(quickDefs.map(q => q.type));
-  const otherSessions = EXTRA_SESSIONS.filter(s => !otherTypes.has(s.type));
-  othersEl.innerHTML = otherSessions.map(s =>
-    '<div class="add-sess-btn" data-type="' + s.type + '" onclick="selectAddSess(this,\'' + s.type + '\')">'
-    + '<span class="add-sess-icon">' + s.icon + '</span>'
-    + '<div><div class="add-sess-label">' + s.label + '</div>'
-    + '<div class="add-sess-sub">' + s.sub + '</div></div>'
-    + '</div>'
-  ).join('');
-
-  // Day selector — week containing clicked date
   const baseMon = iso ? mondayOffset(new Date(iso + 'T00:00:00Z')) : curMondayOff();
   const sel = document.getElementById('add-day-select');
   sel.innerHTML = '';
@@ -3578,15 +3648,26 @@ function toast(msg) {
 //   Running · Strength (incl. Boxing + Core) · Legs · Yoga · Cycling (planner-only —
 //   Strava never gets a manual "Cycling" activity type from WHOOP, so bike rides land
 //   under generic "Workout"/Strength and would contaminate that category if trusted).
-var TREND_CATS = ['Running','Strength','Legs','Yoga','Cycling','Swim'];
+// Six main categories mirroring ACTIVITY_TREE. Sub-types roll up into
+// their parent here; the tooltip breaks each bar back down by sub-type.
+var TREND_CATS = ['HYROX','Run','Home','Bike','Yoga','Other'];
 var TREND_SERIES = [
-  {key:'Running',  light:'#2563EB', dark:'#93C5FD'},
-  {key:'Strength', light:'#EA580C', dark:'#FED7AA'},
-  {key:'Legs',     light:'#DC2626', dark:'#FCA5A5'},
-  {key:'Yoga',     light:'#7C3AED', dark:'#C4B5FD'},
-  {key:'Cycling',  light:'#DB2777', dark:'#F9A8D4'},
-  {key:'Swim',     light:'#0891B2', dark:'#67E8F9'},
+  {key:'HYROX', light:'#7F77DD', dark:'#AFA9EC'},
+  {key:'Run',   light:'#2563EB', dark:'#93C5FD'},
+  {key:'Home',  light:'#EA580C', dark:'#FED7AA'},
+  {key:'Bike',  light:'#DB2777', dark:'#F9A8D4'},
+  {key:'Yoga',  light:'#0F6E56', dark:'#5DCAA5'},
+  {key:'Other', light:'#5F5E5A', dark:'#B4B2A9'},
 ];
+// Shades used to split a parent bar by sub-type in the tooltip breakdown
+var TREND_SUBS = {
+  HYROX: ['HYROX_ENGINE','HYROX_FOUND','HYROX_COMPLETE','HYROX_POWER','HERO','HYROX_STATION','SKIERG','ROWERG'],
+  Run:   ['ZONE2_RUN','INTERVAL','THRESHOLD','ZONE2','LONG_RUN','VO2_MAX'],
+  Home:  ['UPPER','CORE','LEGS','STRENGTH','BOXING','BOX','LEGS_RL','LEGS_BSS'],
+  Bike:  ['BIKE'],
+  Yoga:  ['YOGA'],
+  Other: ['SWIM','SICK','HOLIDAY'],
+};
 var trendChartInst = null;
 
 // Category filter for the monthly activity chart.
@@ -3626,9 +3707,10 @@ function histToTrendCat(category, activity) {
 // the old "strip after last underscore" approach broke on any "_extra_<timestamp>" id
 // (yielding "HERO_extra", which matches nothing), silently dropping every manually-added
 // "extra" session from the trend chart. Matching against a known-type list fixes this.
-var KNOWN_PLANNER_TYPES = ['ZONE2_RUN','LONG_RUN','VO2_MAX','HYROX_STATION','LEGS_RL','LEGS_BSS',
+var KNOWN_PLANNER_TYPES = ['HYROX_ENGINE','HYROX_FOUND','HYROX_COMPLETE','HYROX_POWER',
+  'ZONE2_RUN','LONG_RUN','VO2_MAX','HYROX_STATION','LEGS_RL','LEGS_BSS',
   'ZONE2','INTERVAL','THRESHOLD','STRENGTH','HERO','BOXING','CORE','BOX','LEGS','YOGA','BIKE','SWIM',
-  'SKIERG','ROWERG']
+  'SKIERG','ROWERG','UPPER','SICK','HOLIDAY']
   .sort(function(a,b){ return b.length-a.length; });
 
 function extractPlannerType(rest) {
@@ -3639,16 +3721,19 @@ function extractPlannerType(rest) {
   return null;
 }
 
+// Maps every session type — current and legacy — onto one of the six
+// main categories, so historical data keeps counting after the regroup.
 function plannerToTrendCat(type) {
   if (type === 'YOGA') return 'Yoga';
-  if (type === 'SWIM') return 'Swim';
-  if (type === 'STRENGTH' || type === 'HERO' || type === 'HYROX_STATION'
-      || type === 'BOXING' || type === 'CORE' || type === 'BOX'
-      || type === 'SKIERG' || type === 'ROWERG') return 'Strength';
-  if (type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Legs';
-  if (type === 'BIKE') return 'Cycling';
+  if (type === 'BIKE') return 'Bike';
+  if (type === 'SWIM' || type === 'SICK' || type === 'HOLIDAY') return 'Other';
+  if (type === 'HYROX_ENGINE' || type === 'HYROX_FOUND' || type === 'HYROX_COMPLETE'
+      || type === 'HYROX_POWER' || type === 'HERO' || type === 'HYROX_STATION'
+      || type === 'SKIERG' || type === 'ROWERG') return 'HYROX';
+  if (type === 'UPPER' || type === 'STRENGTH' || type === 'BOXING' || type === 'BOX'
+      || type === 'CORE' || type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Home';
   if (type === 'ZONE2_RUN' || type === 'LONG_RUN' || type === 'VO2_MAX'
-      || type === 'ZONE2' || type === 'INTERVAL' || type === 'THRESHOLD') return 'Running';
+      || type === 'ZONE2' || type === 'INTERVAL' || type === 'THRESHOLD') return 'Run';
   return null;
 }
 
@@ -3725,6 +3810,208 @@ function buildTrendData() {
   });
 
   return byMo;
+}
+
+// Counts each sub-type inside a parent category for a given month, so the
+// tooltip can show "HYROX: 4 sessions (Engine 2, Foundational 2)".
+// ═══════════════════════════════════════════════════════════════
+// SUB-TYPE CHARTS
+// The two charts above show the six parent categories. These two
+// drill into whichever parent is selected, so a month that reads
+// "HYROX 4" can be seen as Engine 2 / Foundational 1 / Power 1.
+// Shades are derived from the parent colour so the link stays obvious.
+// ═══════════════════════════════════════════════════════════════
+var subChartInst = null, subPieInst = null;
+var subCatSelected = 'HYROX';
+
+function shadeOf(hex, i, total) {
+  var n = parseInt(hex.slice(1), 16);
+  var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  // Spread from 55% to 135% brightness across the sub-types
+  var f = total <= 1 ? 1 : 0.55 + (i / (total - 1)) * 0.8;
+  function cl(v){ return Math.max(0, Math.min(255, Math.round(v * f))); }
+  return 'rgb(' + cl(r) + ',' + cl(g) + ',' + cl(b) + ')';
+}
+
+// Sub-types that actually carry data, in a stable order
+function subTypesFor(catKey) {
+  var all = TREND_SUBS[catKey] || [];
+  var seen = {};
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    if (id.slice(0,4) !== '2026') return;
+    var t = extractPlannerType(id.slice(11));
+    if (t && all.indexOf(t) !== -1) seen[t] = true;
+  });
+  var used = all.filter(function(t){ return seen[t]; });
+  return used.length ? used : all.slice(0, 4);
+}
+
+// Legacy and current types often share a display name (UPPER and STRENGTH are
+// both "Upper Body"; LEGS, LEGS_RL and LEGS_BSS are all "Legs"). Group by the
+// label so the chart shows one series per real activity, not per internal id.
+function subCountsByMonth(catKey, months) {
+  var types = subTypesFor(catKey);
+  var order = [], byName = {};
+  types.forEach(function(t){
+    var name = (SPORT_META[t] || {}).label || t;
+    if (!byName[name]) { byName[name] = months.map(function(){ return 0; }); order.push(name); }
+  });
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    var idx = months.indexOf(id.slice(0,7));
+    if (idx === -1) return;
+    var t = extractPlannerType(id.slice(11));
+    if (!t || types.indexOf(t) === -1) return;
+    var name = (SPORT_META[t] || {}).label || t;
+    if (byName[name]) byName[name][idx]++;
+  });
+  return {types: order, data: byName};
+}
+
+function renderSubCharts() {
+  var el = document.getElementById('sub-chart');
+  if (!el || !window.Chart) return;
+
+  var sel = document.getElementById('sub-cat-select');
+  if (sel) {
+    if (!sel.options.length) {
+      TREND_SERIES.forEach(function(sv){
+        var o = document.createElement('option');
+        o.value = sv.key; o.textContent = sv.key;
+        sel.appendChild(o);
+      });
+      sel.value = subCatSelected;
+    }
+    subCatSelected = sel.value || subCatSelected;
+  }
+
+  var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var muted = '#898781';
+  var gridC = isDark ? '#272B3A' : '#E2E4EE';
+
+  var parent = TREND_SERIES.find(function(sv){ return sv.key === subCatSelected; }) || TREND_SERIES[0];
+  var base = isDark ? parent.dark : parent.light;
+
+  // Same month span as the main chart
+  var months = [], c = new Date('2026-01-01T00:00:00Z'), now = new Date();
+  while (c <= now) { months.push(c.toISOString().slice(0,7)); c.setUTCMonth(c.getUTCMonth()+1); }
+  var MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var labels = months.map(function(m){ return MO[parseInt(m.slice(5,7),10)-1]; });
+
+  var res = subCountsByMonth(subCatSelected, months);
+  var totals = res.types.map(function(t){
+    return res.data[t].reduce(function(a,b){ return a+b; }, 0);
+  });
+  var grand = totals.reduce(function(a,b){ return a+b; }, 0);
+
+  var hint = document.getElementById('sub-chart-hint');
+  if (hint) {
+    hint.textContent = grand
+      ? subCatSelected + ' · ' + grand + ' sessions across ' + res.types.length + ' sub-types'
+      : 'No ' + subCatSelected + ' sessions logged yet in 2026.';
+  }
+
+  var colours = res.types.map(function(_, i){ return shadeOf(base, i, res.types.length); });
+  var names = res.types;
+
+  // Legend
+  var leg = document.getElementById('sub-legend');
+  if (leg) {
+    leg.innerHTML = '';
+    res.types.forEach(function(t, i){
+      var sp = document.createElement('span');
+      sp.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)';
+      sp.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:'+colours[i]+';display:inline-block"></span>'
+        + names[i] + ' <span style="color:var(--muted)">'+totals[i]+'</span>';
+      leg.appendChild(sp);
+    });
+  }
+
+  var datasets = res.types.map(function(t, i){
+    return {label:names[i], data:res.data[t], backgroundColor:colours[i],
+            borderRadius:3, hoverBackgroundColor:colours[i], stack:'sub'};
+  });
+
+  if (subChartInst){ subChartInst.destroy(); subChartInst = null; }
+  subChartInst = new Chart(el, {
+    type:'bar',
+    data:{labels:labels, datasets:datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:12}},
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          if (!ctx.parsed.y) return null;
+          return '  ' + ctx.dataset.label + ': ' + ctx.parsed.y;
+        }}}
+      },
+      scales:{
+        x:{stacked:true, ticks:{color:muted, font:{size:10}, maxTicksLimit:13}, grid:{display:false}, border:{display:false}},
+        y:{stacked:true, ticks:{color:muted, font:{size:10}, stepSize:1, precision:0}, grid:{color:gridC}, border:{display:false}, min:0}
+      }
+    }
+  });
+
+  renderSubPie(names, totals, colours, grand);
+}
+
+function renderSubPie(names, totals, colours, grand) {
+  var el = document.getElementById('sub-pie');
+  if (!el || !window.Chart) return;
+
+  var leg = document.getElementById('sub-pie-legend');
+  if (leg) {
+    leg.innerHTML = '';
+    names.forEach(function(n, i){
+      var pct = grand ? Math.round(totals[i]/grand*100) : 0;
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px';
+      row.innerHTML = '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="width:10px;height:10px;border-radius:2px;background:'+colours[i]+';display:inline-block"></span>'
+        + '<span style="font-size:12px;color:var(--sub)">'+n+'</span></div>'
+        + '<div style="display:flex;align-items:baseline;gap:6px">'
+        + '<span style="font-family:monospace;font-size:14px;color:var(--text)">'+totals[i]+'</span>'
+        + '<span style="font-size:10px;color:var(--muted)">('+pct+'%)</span></div>';
+      leg.appendChild(row);
+    });
+  }
+
+  if (subPieInst){ subPieInst.destroy(); subPieInst = null; }
+  subPieInst = new Chart(el, {
+    type:'doughnut',
+    data:{labels:names, datasets:[{data:totals, backgroundColor:colours, borderColor:'var(--surface)', borderWidth:2}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          var pct = grand ? Math.round(ctx.parsed/grand*100) : 0;
+          return '  ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+        }}}
+      }
+    }
+  });
+}
+
+function trendSubBreakdown(catKey, mo) {
+  var subs = TREND_SUBS[catKey];
+  if (!subs || !mo) return '';
+  var counts = {};
+  Object.keys(completions).forEach(function(id) {
+    if (!completions[id].done) return;
+    if (id.slice(0,7) !== mo) return;
+    var t = extractPlannerType(id.slice(11));
+    if (!t || subs.indexOf(t) === -1) return;
+    var lbl = (SPORT_META[t] || {}).label || t;
+    counts[lbl] = (counts[lbl] || 0) + 1;
+  });
+  var keys = Object.keys(counts);
+  if (keys.length < 2) return '';
+  keys.sort(function(a,b){ return counts[b]-counts[a]; });
+  return keys.map(function(k){ return k + ' ' + counts[k]; }).join(', ');
 }
 
 function renderTrendChart() {
@@ -3876,7 +4163,11 @@ function renderTrendChart() {
       plugins:{
         legend:{display:false},
         tooltip:{
-          callbacks:{label:function(ctx){return '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions';}}
+          callbacks:{label:function(ctx){
+            var base = '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions';
+            var brk = trendSubBreakdown(ctx.dataset.label, allMo[ctx.dataIndex]);
+            return brk ? base + ' (' + brk + ')' : base;
+          }}
         }
       },
       scales:{
@@ -4360,7 +4651,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v16_phase3_station_fixes_aug2026';
+  const PLAN_VERSION = 'v17_activity_tree_hyrox_classes';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

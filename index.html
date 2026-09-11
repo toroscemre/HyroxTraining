@@ -599,7 +599,7 @@ body.sb-collapsed #topbar{padding-left:76px}
 
   <!-- Trend chart: monthly training activity, stacked bar -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
-    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px">MONTHLY TRAINING ACTIVITY — 2026</div>
+    <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px" id="trend-title">MONTHLY TRAINING ACTIVITY — 2026</div>
     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px" id="trend-kpi"></div>
     <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px" id="trend-legend"></div>
     <div style="position:relative;width:100%;height:260px;margin-bottom:8px">
@@ -641,6 +641,18 @@ body.sb-collapsed #topbar{padding-left:76px}
       </div>
       <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:8px" id="sub-pie-legend"></div>
     </div>
+  </div>
+
+  <!-- Projection to race day: tentative weekly plan carried forward -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="font-size:10px;letter-spacing:1.5px;color:var(--muted)">PROJECTION TO RACE DAY — 1 APR 2027</div>
+      <button type="button" id="fc-toggle" onclick="toggleForecast()"
+        style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;
+               color:var(--sub);font-size:11px;padding:4px 10px;cursor:pointer"></button>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:16px;line-height:1.6" id="proj-hint"></div>
+    <div id="proj-body"></div>
   </div>
 
 </div>
@@ -3021,7 +3033,10 @@ function updateOverview() {
   document.getElementById('ov-phase').textContent     = ph.n;
   document.getElementById('ov-phase-sub').textContent = ph.sub;
 
-  // Charts rendered separately via renderTrendChart()
+  // Charts rendered separately via renderTrendChart().
+  // The projection is plain DOM, so it is rendered here as well — it must
+  // still appear when Chart.js fails to load (offline, blocked CDN).
+  renderProjection();
 
   // Journey timeline
   var now2 = new Date();
@@ -3812,6 +3827,192 @@ function buildTrendData() {
   return byMo;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FORECAST — the tentative week, carried forward to race day
+//
+// Everything above counts only what is DONE. This projects the weekly
+// commitment forward instead of writing ~29 weeks of tentative sessions
+// into `state`: those would bloat localStorage, and resetFutureWeeks()
+// orphans every generated ID on the next PLAN_VERSION bump. Held as pure
+// computation, the forecast re-derives the moment the profile changes.
+//
+// Mon-first, matching the planner's week layout.
+// ═══════════════════════════════════════════════════════════════
+var FORECAST_PROFILE = [
+  [{cat:'Run',   label:'Run'}],                                   // Mon
+  [{cat:'Yoga',  label:'Yoga'}, {cat:'Bike', label:'Bike commute'}], // Tue
+  [{cat:'HYROX', label:'HYROX class'}],                           // Wed
+  [{cat:'Bike',  label:'Bike commute'}],                          // Thu
+  [{cat:'Home',  label:'Home · legs / core / upper / box'}],       // Fri
+  [{cat:'Run',   label:'Run'}],                                   // Sat
+  [],                                                              // Sun — rest
+];
+var FC_DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+var FORECAST_PER_WEEK = FORECAST_PROFILE.reduce(function(n,d){ return n + d.length; }, 0);
+
+function forecastEnabled() {
+  try { return localStorage.getItem('hyrox_forecast_off') !== '1'; } catch(e) { return true; }
+}
+function toggleForecast() {
+  try { localStorage.setItem('hyrox_forecast_off', forecastEnabled() ? '1' : '0'); } catch(e) {}
+  renderTrendChart();
+  renderProjection();
+}
+
+// Projected sessions per month, from tomorrow through race day.
+// Starts tomorrow so a day still in progress is never counted as achieved.
+function buildForecastData() {
+  var byMo = {};
+  if (!forecastEnabled()) return byMo;
+  var d = new Date();
+  d.setUTCHours(0,0,0,0);
+  d.setUTCDate(d.getUTCDate() + 1);
+  var end = new Date(RACE.getTime());
+  end.setUTCHours(0,0,0,0);
+  var guard = 0;
+  while (d <= end && guard++ < 800) {
+    var dow = (d.getUTCDay() + 6) % 7;   // 0 = Monday
+    var slots = FORECAST_PROFILE[dow] || [];
+    if (slots.length) {
+      var mo = d.toISOString().slice(0,7);
+      if (!byMo[mo]) byMo[mo] = emptyMoRow();
+      slots.forEach(function(s){ byMo[mo][s.cat] = (byMo[mo][s.cat] || 0) + 1; });
+    }
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return byMo;
+}
+
+// What has actually been logged since the plan era began, and the weekly
+// rate that implies. This is the honest counterweight to the profile's
+// ideal rate — the plan says 7/wk, the ticks say what really happens.
+// Counted from Apr 2026: March 2026 mixes pre-plan (prePlanner) rows with
+// the first two planner days, and month granularity cannot separate them.
+function actualSincePlanStart() {
+  var byMo = buildTrendData();
+  var byCat = emptyMoRow(), total = 0;
+  Object.keys(byMo).forEach(function(m){
+    if (m < '2026-04') return;
+    TREND_CATS.forEach(function(c){
+      var v = byMo[m][c] || 0;
+      byCat[c] += v; total += v;
+    });
+  });
+  var weeks = Math.max(1, (Date.now() - new Date('2026-04-01T00:00:00Z').getTime()) / 604800000);
+  return {byCat:byCat, total:total, weeks:weeks, rate:total / weeks};
+}
+
+function hexA(hex, a) {
+  var n = parseInt(String(hex).slice(1), 16);
+  return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+}
+
+// Diagonal hatch so a projected segment never reads as a logged one, even
+// in a screenshot where the legend has been cropped away.
+function fcPattern(ctx, hex) {
+  try {
+    var c = document.createElement('canvas');
+    c.width = c.height = 6;
+    var g = c.getContext('2d');
+    g.fillStyle = hexA(hex, 0.13); g.fillRect(0, 0, 6, 6);
+    g.strokeStyle = hexA(hex, 0.72); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(-1, 7); g.lineTo(7, -1); g.stroke();
+    g.beginPath(); g.moveTo(2, 10); g.lineTo(10, 2); g.stroke();
+    return ctx.createPattern(c, 'repeat');
+  } catch(e) { return hexA(hex, 0.32); }
+}
+
+function renderProjection() {
+  var body = document.getElementById('proj-body');
+  if (!body) return;
+  var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+  function sc(s){ return isDark ? s.dark : s.light; }
+
+  var btn = document.getElementById('fc-toggle');
+  var on  = forecastEnabled();
+  if (btn) {
+    btn.textContent = on ? '◧ Forecast on' : '◻ Forecast off';
+    btn.style.color = on ? 'var(--accent)' : 'var(--muted)';
+  }
+
+  var weekLine = FORECAST_PROFILE.map(function(slots, i){
+    if (!slots.length) return FC_DAY_NAMES[i] + ' rest';
+    return FC_DAY_NAMES[i] + ' ' + slots.map(function(s){ return s.cat; }).join(' + ');
+  }).join(' · ');
+
+  var hint = document.getElementById('proj-hint');
+  var wksLeft = Math.max(0, (RACE.getTime() - Date.now()) / 604800000);
+  if (hint) {
+    hint.innerHTML = on
+      ? 'Tentative week (' + FORECAST_PER_WEEK + ' sessions): <strong style="color:var(--text)">' + weekLine + '</strong>'
+        + '<br>Projected across the <strong style="color:var(--text)">' + wksLeft.toFixed(1) + ' weeks</strong> left. '
+        + 'Hatched bars are projected, solid bars are logged.'
+      : 'Forecast hidden — charts show logged sessions only.';
+  }
+
+  if (!on) { body.innerHTML = ''; return; }
+
+  var fc = buildForecastData();
+  var fcCat = emptyMoRow(), fcTotal = 0;
+  Object.keys(fc).forEach(function(m){
+    TREND_CATS.forEach(function(c){
+      var v = fc[m][c] || 0;
+      fcCat[c] += v; fcTotal += v;
+    });
+  });
+
+  var act = actualSincePlanStart();
+  var hasActual = act.total > 0;      // a freshly-synced device has no ticks yet
+  var atPlan  = act.total + fcTotal;
+  var atPace  = Math.round(act.total + act.rate * wksLeft);
+
+  var rows = '';
+  TREND_SERIES.forEach(function(s){
+    var a = act.byCat[s.key] || 0, f = fcCat[s.key] || 0;
+    if (!a && !f) return;
+    var col = sc(s);
+    rows += '<tr>'
+      + '<td style="padding:8px 10px;border-bottom:1px solid var(--border)">'
+        + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+';margin-right:8px"></span>'
+        + '<span style="font-size:12px;color:var(--sub)">'+s.key+'</span></td>'
+      + '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;color:var(--text)">'+a+'</td>'
+      + '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;color:'+col+'">+'+f+'</td>'
+      + '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:14px;font-weight:700;color:var(--text)">'+(a+f)+'</td>'
+      + '</tr>';
+  });
+
+  body.innerHTML =
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:340px">'
+    + '<thead><tr>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:9px;letter-spacing:1.2px;color:var(--muted);font-weight:700">CATEGORY</th>'
+      + '<th style="text-align:right;padding:6px 10px;font-size:9px;letter-spacing:1.2px;color:var(--muted);font-weight:700">LOGGED</th>'
+      + '<th style="text-align:right;padding:6px 10px;font-size:9px;letter-spacing:1.2px;color:var(--muted);font-weight:700">PROJECTED</th>'
+      + '<th style="text-align:right;padding:6px 10px;font-size:9px;letter-spacing:1.2px;color:var(--muted);font-weight:700">BY RACE DAY</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px">'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid var(--accent)">'
+        + '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">IF YOU HIT THE PLAN</div>'
+        + '<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'+atPlan+'</div>'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:5px">'+FORECAST_PER_WEEK+'/wk to race day</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid #FACC15">'
+        + '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">AT YOUR CURRENT PACE</div>'
+        + '<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'
+          + (hasActual ? atPace : '—') + '</div>'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:5px">'
+          + (hasActual ? act.rate.toFixed(1)+'/wk since Apr 2026' : 'nothing logged yet') + '</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid #F43F5E">'
+        + '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">GAP</div>'
+        + '<div style="font-family:monospace;font-size:24px;line-height:1;color:'
+          + (!hasActual ? 'var(--muted)' : (atPlan-atPace > 0 ? '#F43F5E' : '#4ADE80')) + '">'
+          + (hasActual ? (atPlan - atPace > 0 ? '−' : '+') + Math.abs(atPlan - atPace) : '—') + '</div>'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:5px">plan vs. pace</div></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6">'
+      + 'No training block exists between <strong style="color:var(--sub)">1 Nov 2026</strong> and the '
+      + '<strong style="color:var(--sub)">1 Mar 2027</strong> taper — 17 weeks of this projection assume the '
+      + 'tentative week simply continues.</div>';
+}
+
 // Counts each sub-type inside a parent category for a given month, so the
 // tooltip can show "HYROX: 4 sessions (Engine 2, Foundational 2)".
 // ═══════════════════════════════════════════════════════════════
@@ -4025,15 +4226,28 @@ function renderTrendChart() {
   function sc(s){ return isDark ? s.dark : s.light; }
 
   var byMo = buildTrendData();
+  var fcMo = buildForecastData();
+  var fcOn = forecastEnabled();
 
+  // With the forecast on the axis runs to race month, so the projected
+  // months have somewhere to land; otherwise it stops at today as before.
   var allMo = [];
   var c2 = new Date('2026-01-01T00:00:00Z');
   var now2 = new Date();
-  while (c2 <= now2) {
+  var axisEnd = fcOn ? new Date(RACE.getTime()) : now2;
+  var curMo = now2.toISOString().slice(0,7);
+  while (c2 <= axisEnd) {
     var k = c2.toISOString().slice(0,7);
     if (!byMo[k]) byMo[k] = emptyMoRow();
     allMo.push(k);
     c2.setUTCMonth(c2.getUTCMonth()+1);
+  }
+
+  var titleEl = document.getElementById('trend-title');
+  if (titleEl) {
+    titleEl.textContent = fcOn
+      ? 'MONTHLY TRAINING ACTIVITY — 2026 → RACE DAY (PROJECTED)'
+      : 'MONTHLY TRAINING ACTIVITY — 2026';
   }
 
   var MO_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4106,6 +4320,22 @@ function renderTrendChart() {
       hoverBackgroundColor:col,stack:'training'});
   });
 
+  // Projected sessions ride on the same stack in the same hue, hatched — so a
+  // bar's full height is "where this month lands", with the solid part being
+  // what is already true.
+  if (fcOn) {
+    var pctx = el.getContext('2d');
+    visible.forEach(function(s){
+      var vals = allMo.map(function(m){ return (fcMo[m] && fcMo[m][s.key]) || 0; });
+      if (!vals.some(function(v){ return v > 0; })) return;
+      var col = sc(s);
+      var pat = fcPattern(pctx, col);
+      datasets.push({label:s.key+' (projected)',data:vals,backgroundColor:pat,
+        hoverBackgroundColor:pat,borderColor:hexA(col,0.55),borderWidth:1,
+        borderRadius:3,stack:'training',_fc:true,_col:col});
+    });
+  }
+
   if (trendChartInst){trendChartInst.destroy();trendChartInst=null;}
 
   // Value labels drawn manually — Chart.js 4 has no built-in datalabels and
@@ -4131,7 +4361,11 @@ function renderTrendChart() {
           // Only label a segment that has room for the digits
           if (h < 15) return;
           ctx.font = '600 10px ui-monospace,SFMono-Regular,Menlo,monospace';
-          ctx.fillStyle = isDark ? 'rgba(10,12,20,0.92)' : 'rgba(255,255,255,0.95)';
+          // A hatched segment is mostly background, so white-on-solid would
+          // vanish — projected counts take the category colour instead.
+          ctx.fillStyle = ds._fc
+            ? ds._col
+            : (isDark ? 'rgba(10,12,20,0.92)' : 'rgba(255,255,255,0.95)');
           ctx.fillText(String(v), bar.x, (bar.y + bar.base) / 2);
         });
       });
@@ -4152,9 +4386,33 @@ function renderTrendChart() {
     }
   };
 
+  // Marks where logged history ends and projection begins, so the split is
+  // readable without consulting the legend.
+  var fcDivider = {
+    id:'fcDivider',
+    afterDatasetsDraw: function(chart){
+      if (!fcOn) return;
+      var idx = allMo.indexOf(curMo);
+      if (idx < 0 || idx >= allMo.length - 1) return;
+      var meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data[idx] || !meta.data[idx+1]) return;
+      var x = (meta.data[idx].x + meta.data[idx+1].x) / 2;
+      var c = chart.ctx, ya = chart.scales.y;
+      c.save();
+      c.strokeStyle = muted; c.lineWidth = 1; c.setLineDash([4,4]);
+      c.beginPath(); c.moveTo(x, ya.top); c.lineTo(x, ya.bottom); c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = muted;
+      c.font = '700 9px ui-monospace,SFMono-Regular,Menlo,monospace';
+      c.textAlign = 'left'; c.textBaseline = 'top';
+      c.fillText('PROJECTED', x + 5, ya.top + 2);
+      c.restore();
+    }
+  };
+
   trendChartInst = new Chart(el,{
     type:'bar',
-    plugins:[barLabels],
+    plugins:[barLabels, fcDivider],
     data:{labels:labels,datasets:datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
@@ -4163,7 +4421,12 @@ function renderTrendChart() {
       plugins:{
         legend:{display:false},
         tooltip:{
+          filter:function(item){ return item.parsed.y > 0; },
           callbacks:{label:function(ctx){
+            if (ctx.dataset._fc) {
+              return '  ' + ctx.dataset.label.replace(' (projected)','')
+                   + ': ' + ctx.parsed.y + ' projected';
+            }
             var base = '  '+ctx.dataset.label+': '+ctx.parsed.y+' sessions';
             var brk = trendSubBreakdown(ctx.dataset.label, allMo[ctx.dataIndex]);
             return brk ? base + ' (' + brk + ')' : base;
@@ -4178,6 +4441,7 @@ function renderTrendChart() {
   });
 
   renderTrendPie(byMo, allMo, isDark);
+  renderProjection();
 }
 
 var trendPieInst = null;
@@ -4651,7 +4915,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v17_activity_tree_hyrox_classes';
+  const PLAN_VERSION = 'v18_forecast_projection';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

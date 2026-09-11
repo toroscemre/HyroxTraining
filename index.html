@@ -1728,6 +1728,11 @@ function renderWeek() {
       if (completions[sess.id]?.done) wkDone++;
     });
 
+    // Tentative week — shown but not counted in the week's done/total
+    tentativeFor(iso).forEach(function(slot){
+      zone.appendChild(buildGhostCard(slot, iso, false));
+    });
+
     // + Add session button
     const addBtn = document.createElement('button');
     addBtn.style.cssText = 'width:100%;margin-top:6px;padding:9px 4px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;border:1.5px dashed rgba(249,115,22,0.4);background:rgba(249,115,22,0.05);color:var(--accent);letter-spacing:0.5px;-webkit-tap-highlight-color:transparent;';
@@ -3838,14 +3843,18 @@ function buildTrendData() {
 //
 // Mon-first, matching the planner's week layout.
 // ═══════════════════════════════════════════════════════════════
+// `type` is what a committed ghost becomes in the planner. Friday is null on
+// purpose — the sub-type is decided on the day, so clicking it opens the
+// normal Add Session picker instead of assuming one.
 var FORECAST_PROFILE = [
-  [{cat:'Run',   label:'Run'}],                                   // Mon
-  [{cat:'Yoga',  label:'Yoga'}, {cat:'Bike', label:'Bike commute'}], // Tue
-  [{cat:'HYROX', label:'HYROX class'}],                           // Wed
-  [{cat:'Bike',  label:'Bike commute'}],                          // Thu
-  [{cat:'Home',  label:'Home · legs / core / upper / box'}],       // Fri
-  [{cat:'Run',   label:'Run'}],                                   // Sat
-  [],                                                              // Sun — rest
+  [{cat:'Run',   type:'ZONE2_RUN',   icon:'🏃', label:'Run'}],                             // Mon
+  [{cat:'Yoga',  type:'YOGA',        icon:'🧘', label:'Yoga'},
+   {cat:'Bike',  type:'BIKE',        icon:'🚴', label:'Bike commute'}],                    // Tue
+  [{cat:'HYROX', type:'HYROX_FOUND', icon:'🏟️', label:'HYROX class'}],                     // Wed
+  [{cat:'Bike',  type:'BIKE',        icon:'🚴', label:'Bike commute'}],                     // Thu
+  [{cat:'Home',  type:null,          icon:'💪', label:'Home · legs / core / upper / box'}], // Fri
+  [{cat:'Run',   type:'ZONE2_RUN',   icon:'🏃', label:'Run'}],                              // Sat
+  [],                                                                                       // Sun — rest
 ];
 var FC_DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 var FORECAST_PER_WEEK = FORECAST_PROFILE.reduce(function(n,d){ return n + d.length; }, 0);
@@ -3857,6 +3866,63 @@ function toggleForecast() {
   try { localStorage.setItem('hyrox_forecast_off', forecastEnabled() ? '1' : '0'); } catch(e) {}
   renderTrendChart();
   renderProjection();
+  refreshAll();           // ghost cards in the planner and monthly view follow the same switch
+}
+
+// ── Tentative sessions in the calendars ──────────────────────────
+// The profile that drives the forecast also appears as ghost cards on
+// future days, so the weekly planner and monthly view say the same thing
+// the Overview does. Nothing reaches `state` until a ghost is clicked —
+// that is what keeps the projection editable and localStorage small.
+// A slot is skipped when the day already plans that category, so the
+// Phase 3 template and the tentative week never render duplicates.
+function tentativeFor(iso) {
+  if (typeof FORECAST_PROFILE === 'undefined' || !forecastEnabled()) return [];
+  if (iso <= new Date().toISOString().slice(0,10)) return [];   // future days only
+  if (iso > RACE.toISOString().slice(0,10)) return [];
+  var d = new Date(iso + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return [];
+  var slots = FORECAST_PROFILE[(d.getUTCDay() + 6) % 7] || [];
+  if (!slots.length) return [];
+  var have = {};
+  (state[iso] || []).forEach(function(s){
+    var c = plannerToTrendCat(s.type);
+    if (c) have[c] = true;
+  });
+  return slots.filter(function(s){ return !have[s.cat]; });
+}
+
+function commitTentative(iso, type, ev) {
+  if (ev) ev.stopPropagation();
+  if (!type) { openAddModal(iso); return; }
+  if (!state[iso]) state[iso] = [];
+  state[iso].push({
+    id: iso + '_' + type + '_t' + Date.now(),
+    type: type,
+    detail: 'Committed from the tentative week',
+    extra: true,
+  });
+  saveAll();
+  refreshAll();
+  toast('Added ' + ((SPORT_META[type]||{}).label || type));
+}
+
+// compact = monthly grid cell, which has far less room than a planner column
+function buildGhostCard(slot, iso, compact) {
+  var col = mvCatColour(slot.cat);
+  var el = document.createElement('div');
+  el.style.cssText = 'border:1px dashed '+hexA(col,0.5)+';border-left:3px dashed '+col+';'
+    + 'background:'+hexA(col,0.07)+';border-radius:6px;cursor:pointer;'
+    + (compact ? 'padding:2px 4px;margin-bottom:3px;' : 'padding:7px 9px;margin-bottom:6px;')
+    + '-webkit-tap-highlight-color:transparent';
+  el.title = 'Tentative · ' + slot.label + ' — click to add it to this day';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:5px">'
+    + '<span style="font-size:'+(compact?'9':'13')+'px;opacity:.75">'+slot.icon+'</span>'
+    + '<span style="font-size:'+(compact?'9':'11')+'px;color:'+col+';font-weight:600">'
+      + (compact ? slot.cat : slot.label) + '</span></div>'
+    + (compact ? '' : '<div style="font-size:8px;letter-spacing:1.2px;color:var(--muted);margin-top:4px;white-space:nowrap">TENTATIVE</div>');
+  el.addEventListener('click', function(e){ commitTentative(iso, slot.type, e); });
+  return el;
 }
 
 // Projected sessions per month, from tomorrow through race day.
@@ -4745,6 +4811,12 @@ function renderPlannerGrid(cfg) {
           var cat = plannerToTrendCat(sess.type);
           if (cat) catCount[cat] = (catCount[cat]||0) + 1;
         });
+
+        // Tentative week — deliberately outside planned/done and the category
+        // summary, so the month's completion rate stays a fact about real work
+        tentativeFor(iso).forEach(function(slot){
+          zone.appendChild(buildGhostCard(slot, iso, true));
+        });
         cell.appendChild(zone);
 
         var addBtn = document.createElement('button');
@@ -4915,7 +4987,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v18_forecast_projection';
+  const PLAN_VERSION = 'v19_tentative_calendar';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

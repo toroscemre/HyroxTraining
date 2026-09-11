@@ -1104,6 +1104,9 @@ const SPORT_META = {
   UPPER:         {label:'Upper Body',     icon:'💪'},
   CORE:          {label:'Core',           icon:'🎯'},
   LEGS:          {label:'Legs',           icon:'🦵'},
+  // Friday's slot: the plan commits to a home session, the kind is chosen
+  // on the day. Counts as Home either way.
+  HOME_PICK:     {label:'Home · your pick', icon:'🏠'},
   // ── Single ──
   BIKE:          {label:'Bike',           icon:'🚴'},
   YOGA:          {label:'Yoga',           icon:'🧘'},
@@ -1506,6 +1509,74 @@ function buildPhase3Template(mondayOff) {
   ];
 }
 
+// ════════════════════════════════════════════════════════════
+// THE WEEKLY PLAN — the actual week from today to race day
+// Mon run · Tue yoga + bike · Wed HYROX · Thu bike · Fri home · Sat run · Sun rest
+//
+// This supersedes the Phase 2/3 templates for every day from WEEKPLAN_FROM
+// onward. Earlier days keep whatever their phase template gave them, so
+// logged history is never rewritten. One plan now drives the calendars and
+// the forecast, which is the only way the two can agree.
+// ════════════════════════════════════════════════════════════
+var WEEKPLAN_FROM = new Date().toISOString().slice(0,10);
+
+function buildWeekPlanTemplate(mondayOff) {
+  // The single weekly HYROX rotates through the four Hofplein classes, so one
+  // session a week still covers stations, engine, power and the full chipper
+  // across a month rather than repeating the same class.
+  var HY = [
+    {type:'HYROX_FOUND',    d:'Foundational · race-order station practice · Wallballs, RowErg, Sled Push, SkiErg, Sandbag Lunges, Burpee Box Jumps'},
+    {type:'HYROX_ENGINE',   d:'Engine · machine intensity · 1 min work / 10s rest × 36 · Ski, Row, Run, Rest'},
+    {type:'HYROX_COMPLETE', d:'Complete · engine builder + leg finisher · Ski timer, Wallballs, Sled Pull, RowErg, Sandbag Lunges'},
+    {type:'HYROX_POWER',    d:'Power · chipper strength + zone intervals · KB swings, Bulgarian split squats, Arnold thrusters'},
+  ];
+  var hy = HY[((Math.floor(mondayOff / 7) % 4) + 4) % 4];
+
+  var deload = isPhase3(mondayOff) && p3WeekNum(mondayOff) === P3_DELOAD_WK;
+  var runDetail = deload
+    ? 'DELOAD · Zone 2 only · easy throughout, no intervals this week'
+    : 'Easy · HR 120–140 bpm · conversational pace';
+
+  return [
+    // 0 MON
+    [{type:'ZONE2_RUN', detail:runDetail}],
+    // 1 TUE
+    [{type:'YOGA', detail:'45 min · hips, hamstrings, thoracic · recovery focus'},
+     {type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'}],
+    // 2 WED
+    [{type:hy.type, detail:(deload ? 'DELOAD · 60% load · technique focus, no grinding · ' : '') + hy.d}],
+    // 3 THU
+    [{type:'BIKE', detail:'Commute · Zone 2 · easy pace both ways'}],
+    // 4 FRI
+    [{type:'HOME_PICK', detail:'Home session — decide on the day: legs, core, upper or box'}],
+    // 5 SAT
+    [{type:'ZONE2_RUN', detail:runDetail}],
+    // 6 SUN — rest
+    [],
+  ];
+}
+
+// Day templates for a week, resolved per day so the week containing the
+// switch-over is half programme, half weekly plan rather than all one.
+function dayTemplatesFor(mondayOff) {
+  var wp = buildWeekPlanTemplate(mondayOff);
+  var old = null, phase;
+  if (isPhase3(mondayOff))      { old = buildPhase3Template(mondayOff); phase = 'PHASE3'; }
+  else if (isPhase2(mondayOff)) { old = buildPhase2Template(mondayOff); phase = 'PHASE2'; }
+  else {
+    var idx = wkIdxFromMondayOffset(mondayOff);
+    if (idx >= 0 && idx < 14) old = buildTemplate(WEEKS[idx]);
+  }
+  var out = [];
+  for (var d = 0; d < 7; d++) {
+    var iso = isoFromOffset(mondayOff + d);
+    out.push(iso >= WEEKPLAN_FROM
+      ? {sessions: wp[d], phase: 'WEEKPLAN'}
+      : {sessions: (old ? old[d] : null), phase: phase});
+  }
+  return out;
+}
+
 function isPhase2(mondayOff) {
   var d = dateFromDayOffset(mondayOff);
   return d >= PHASE2_START && d <= PHASE2_END;
@@ -1541,69 +1612,44 @@ function buildPhase2Template(mondayOff) {
 }
 
 function ensureWeek(mondayOff) {
-  if (isPhase3(mondayOff)) {
-    var t3 = buildPhase3Template(mondayOff);
-    for (var d3=0;d3<7;d3++) {
-      var i3 = isoFromOffset(mondayOff+d3);
-      if (!state[i3]) state[i3] = t3[d3].map(function(s,i){return Object.assign({},s,{id:i3+'_'+s.type+'_'+i,phase:'PHASE3'});});
-    }
-    return;
-  }
-  if (isPhase2(mondayOff)) {
-    var t2 = buildPhase2Template(mondayOff);
-    for (var d2=0;d2<7;d2++) {
-      var i2 = isoFromOffset(mondayOff+d2);
-      if (!state[i2]) state[i2] = t2[d2].map(function(s,i){return Object.assign({},s,{id:i2+'_'+s.type+'_'+i,phase:'PHASE2'});});
-    }
-    return;
-  }
-  const idx = wkIdxFromMondayOffset(mondayOff);
-  if (idx < 0 || idx >= 14) return;
-  const tmpl = buildTemplate(WEEKS[idx]);
-  for (let d = 0; d < 7; d++) {
-    const iso = isoFromOffset(mondayOff + d);
-    if (!state[iso]) {
-      state[iso] = tmpl[d].map((s,i) => ({...s, id:`${iso}_${s.type}_${i}`}));
-    }
+  var days = dayTemplatesFor(mondayOff);
+  for (var d = 0; d < 7; d++) {
+    var iso = isoFromOffset(mondayOff + d);
+    if (state[iso] || !days[d].sessions) continue;
+    state[iso] = days[d].sessions.map(function(s, i){
+      return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
+    });
   }
 }
 
 // Force-reset a week with the new template, preserving only existing completions
 // Used when the plan changes mid-programme
 function forceResetWeek(mondayOff) {
-  if (isPhase3(mondayOff)) {
-    var t3 = buildPhase3Template(mondayOff);
-    for (var d3=0;d3<7;d3++) {
-      var i3 = isoFromOffset(mondayOff+d3);
-      var ex3 = (state[i3]||[]).filter(function(s){return s.extra===true;});
-      state[i3] = t3[d3].map(function(s,i){return Object.assign({},s,{id:i3+'_'+s.type+'_'+i,phase:'PHASE3'});}).concat(ex3);
-    }
-    return;
+  var days = dayTemplatesFor(mondayOff);
+  for (var d = 0; d < 7; d++) {
+    var iso = isoFromOffset(mondayOff + d);
+    if (!days[d].sessions) continue;
+    // Keep anything the user added by hand; replace only plan-generated sessions
+    var extras = (state[iso] || []).filter(function(s){ return s.extra === true; });
+    state[iso] = days[d].sessions.map(function(s, i){
+      return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
+    }).concat(extras);
   }
-  if (isPhase2(mondayOff)) {
-    var t2 = buildPhase2Template(mondayOff);
-    for (var d2=0;d2<7;d2++) {
-      var i2 = isoFromOffset(mondayOff+d2);
-      var ex = (state[i2]||[]).filter(function(s){return s.extra===true;});
-      state[i2] = t2[d2].map(function(s,i){return Object.assign({},s,{id:i2+'_'+s.type+'_'+i,phase:'PHASE2'});}).concat(ex);
-    }
-    return;
-  }
-  const idx = wkIdxFromMondayOffset(mondayOff);
-  if (idx < 0 || idx >= 14) return;
-  const tmpl = buildTemplate(WEEKS[idx]);
-  for (let d = 0; d < 7; d++) {
-    const iso = isoFromOffset(mondayOff + d);
-    // Keep any extra sessions the user manually added, discard old plan sessions
-    const extras = (state[iso] || []).filter(s => s.extra === true);
-    const newSessions = tmpl[d].map((s,i) => ({...s, id:`${iso}_${s.type}_${i}`}));
-    state[iso] = [...newSessions, ...extras];
-  }
+}
+
+// Every Monday from this week to race day. The weekly plan runs the whole
+// way to Rotterdam, so the calendar no longer stops dead at 1 Nov 2026.
+function weekPlanMondays() {
+  var out = [];
+  var end = daysSinceEpoch(RACE);
+  for (var m = mondayOffset(new Date()); m <= end; m += 7) out.push(m);
+  return out;
 }
 
 // Pre-load all 14 weeks
 function initState() {
   for (let w = 0; w < 14; w++) ensureWeek(w * 7);
+  weekPlanMondays().forEach(ensureWeek);
   // Phase 2: 6 Jul – 30 Aug 2026 (8 weeks, truncated where Phase 3 takes over)
   var p2off = daysSinceEpoch(PHASE2_START);
   for (var pw=0; pw<8; pw++) ensureWeek(p2off + pw*7);
@@ -1632,6 +1678,8 @@ function resetFutureWeeks() {
   for (var qw=0; qw<9; qw++) {
     if (p3off + qw*7 >= todayMon) forceResetWeek(p3off + qw*7);
   }
+  // ...and every remaining week to race day, which the phase ranges never covered
+  weekPlanMondays().forEach(forceResetWeek);
   saveAll();
 }
 
@@ -1660,7 +1708,15 @@ function renderWeek() {
     document.getElementById('wk-num').textContent   = 'PHASE 3 · WK ' + _w3;
     document.getElementById('wk-dates').textContent = fmtDate(monOff) + ' – ' + fmtDate(monOff+6);
     document.getElementById('ps-wk').textContent    = 'P3·W' + _w3;
-    pill.textContent      = _dl ? '🌙 DELOAD WEEK' : (_w3 % 2 === 1 ? '🏟️ WED Z2 · SAT INTERVAL' : '🏟️ WED INTERVAL · SAT Z2');
+    // From the weekly plan onward the old Wed/Sat interval alternation no
+    // longer applies — both runs are Zone 2 — so the pill names the week's
+    // rotating HYROX class instead of describing a structure that is gone.
+    var _wpMon = isoFromOffset(monOff) >= WEEKPLAN_FROM;
+    var _hyType = (buildWeekPlanTemplate(monOff)[2][0] || {}).type;
+    var _hyLbl  = (SPORT_META[_hyType] || {}).label || 'HYROX';
+    pill.textContent      = _dl ? '🌙 DELOAD WEEK'
+                          : (_wpMon ? '🏟️ WED · ' + _hyLbl.toUpperCase()
+                                    : (_w3 % 2 === 1 ? '🏟️ WED Z2 · SAT INTERVAL' : '🏟️ WED INTERVAL · SAT Z2'));
     pill.style.background = _dl ? '#F59E0B' : '#8B5CF6';
     pill.style.color      = _dl ? '#000' : '#fff';
   } else if (_isP2) {
@@ -3683,7 +3739,7 @@ var TREND_SERIES = [
 var TREND_SUBS = {
   HYROX: ['HYROX_ENGINE','HYROX_FOUND','HYROX_COMPLETE','HYROX_POWER','HERO','HYROX_STATION','SKIERG','ROWERG'],
   Run:   ['ZONE2_RUN','INTERVAL','THRESHOLD','ZONE2','LONG_RUN','VO2_MAX'],
-  Home:  ['UPPER','CORE','LEGS','STRENGTH','BOXING','BOX','LEGS_RL','LEGS_BSS'],
+  Home:  ['UPPER','CORE','LEGS','HOME_PICK','STRENGTH','BOXING','BOX','LEGS_RL','LEGS_BSS'],
   Bike:  ['BIKE'],
   Yoga:  ['YOGA'],
   Other: ['SWIM','SICK','HOLIDAY'],
@@ -3751,7 +3807,8 @@ function plannerToTrendCat(type) {
       || type === 'HYROX_POWER' || type === 'HERO' || type === 'HYROX_STATION'
       || type === 'SKIERG' || type === 'ROWERG') return 'HYROX';
   if (type === 'UPPER' || type === 'STRENGTH' || type === 'BOXING' || type === 'BOX'
-      || type === 'CORE' || type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS') return 'Home';
+      || type === 'CORE' || type === 'LEGS' || type === 'LEGS_RL' || type === 'LEGS_BSS'
+      || type === 'HOME_PICK') return 'Home';
   if (type === 'ZONE2_RUN' || type === 'LONG_RUN' || type === 'VO2_MAX'
       || type === 'ZONE2' || type === 'INTERVAL' || type === 'THRESHOLD') return 'Run';
   return null;
@@ -3876,6 +3933,33 @@ function toggleForecast() {
 // that is what keeps the projection editable and localStorage small.
 // A slot is skipped when the day already plans that category, so the
 // Phase 3 template and the tentative week never render duplicates.
+// Monday offset for an ISO date, in UTC throughout. daysSinceEpoch() reads
+// local date parts, which is fine for dates it is given elsewhere but would
+// drift by a day here for UTC-midnight dates west of Greenwich.
+function mondayOffsetFromISO(iso) {
+  var ds = Math.floor((new Date(iso + 'T00:00:00Z').getTime() - EPOCH.getTime()) / 86400000);
+  return ds - (((ds % 7) + 7) % 7);
+}
+
+// What the calendar holds for a day — from `state` when the week has been
+// visited, otherwise derived from the phase template. ensureWeek() fills
+// `state` lazily, so anything reading only `state` silently under-counts
+// every week the user has not opened yet. IDs match ensureWeek()'s scheme so
+// completion lookups line up either way.
+function plannedFor(iso) {
+  if (state[iso]) return state[iso];
+  var d = new Date(iso + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return [];
+  var di = (d.getUTCDay() + 6) % 7;
+  var day;
+  try {
+    day = (dayTemplatesFor(mondayOffsetFromISO(iso))[di] || {}).sessions;
+  } catch(e) { return []; }
+  return (day || []).map(function(s, i){
+    return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i});
+  });
+}
+
 function tentativeFor(iso) {
   if (typeof FORECAST_PROFILE === 'undefined' || !forecastEnabled()) return [];
   if (iso <= new Date().toISOString().slice(0,10)) return [];   // future days only
@@ -3885,7 +3969,7 @@ function tentativeFor(iso) {
   var slots = FORECAST_PROFILE[(d.getUTCDay() + 6) % 7] || [];
   if (!slots.length) return [];
   var have = {};
-  (state[iso] || []).forEach(function(s){
+  plannedFor(iso).forEach(function(s){
     var c = plannerToTrendCat(s.type);
     if (c) have[c] = true;
   });
@@ -3925,25 +4009,42 @@ function buildGhostCard(slot, iso, compact) {
   return el;
 }
 
-// Projected sessions per month, from tomorrow through race day.
-// Starts tomorrow so a day still in progress is never counted as achieved.
+// Projected sessions per month, through race day.
+//
+// The forecast is what the calendars show minus what is already ticked, so
+// the Overview cannot disagree with the planner:
+//   1. sessions on the calendar that are not ticked, from today onward — a
+//      day still in progress is still winnable, so today counts
+//   2. tentative slots for what the calendar does not cover, from tomorrow
+//      (tentativeFor() already drops a slot whose category that day plans,
+//      so the two sources never double-count the same session)
+// A missed session in the past is a miss, not a forecast, and is excluded.
 function buildForecastData() {
   var byMo = {};
   if (!forecastEnabled()) return byMo;
-  var d = new Date();
-  d.setUTCHours(0,0,0,0);
-  d.setUTCDate(d.getUTCDate() + 1);
-  var end = new Date(RACE.getTime());
-  end.setUTCHours(0,0,0,0);
+  var todayISO = new Date().toISOString().slice(0,10);
+  var raceISO  = RACE.toISOString().slice(0,10);
+
+  function add(iso, cat) {
+    if (!cat) return;
+    var mo = iso.slice(0,7);
+    if (!byMo[mo]) byMo[mo] = emptyMoRow();
+    byMo[mo][cat]++;
+  }
+
+  var d = new Date(todayISO + 'T00:00:00Z');
+  var end = new Date(raceISO + 'T00:00:00Z');
   var guard = 0;
   while (d <= end && guard++ < 800) {
-    var dow = (d.getUTCDay() + 6) % 7;   // 0 = Monday
-    var slots = FORECAST_PROFILE[dow] || [];
-    if (slots.length) {
-      var mo = d.toISOString().slice(0,7);
-      if (!byMo[mo]) byMo[mo] = emptyMoRow();
-      slots.forEach(function(s){ byMo[mo][s.cat] = (byMo[mo][s.cat] || 0) + 1; });
-    }
+    var iso = d.toISOString().slice(0,10);
+
+    plannedFor(iso).forEach(function(s){
+      if (completions[s.id] && completions[s.id].done) return;   // already logged
+      add(iso, plannerToTrendCat(s.type));
+    });
+
+    tentativeFor(iso).forEach(function(s){ add(iso, s.cat); });
+
     d.setUTCDate(d.getUTCDate() + 1);
   }
   return byMo;
@@ -4010,9 +4111,11 @@ function renderProjection() {
   var wksLeft = Math.max(0, (RACE.getTime() - Date.now()) / 604800000);
   if (hint) {
     hint.innerHTML = on
-      ? 'Tentative week (' + FORECAST_PER_WEEK + ' sessions): <strong style="color:var(--text)">' + weekLine + '</strong>'
-        + '<br>Projected across the <strong style="color:var(--text)">' + wksLeft.toFixed(1) + ' weeks</strong> left. '
-        + 'Hatched bars are projected, solid bars are logged.'
+      ? 'Everything on the calendar that is not ticked yet, across the '
+        + '<strong style="color:var(--text)">' + wksLeft.toFixed(1) + ' weeks</strong> to race day — '
+        + 'planned sessions plus the tentative week where no plan exists.'
+        + '<br>Tentative week: <strong style="color:var(--text)">' + weekLine + '</strong>'
+        + '<br>Hatched bars are projected, solid bars are logged.'
       : 'Forecast hidden — charts show logged sessions only.';
   }
 
@@ -4059,7 +4162,8 @@ function renderProjection() {
       + '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid var(--accent)">'
         + '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">IF YOU HIT THE PLAN</div>'
         + '<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'+atPlan+'</div>'
-        + '<div style="font-size:10px;color:var(--muted);margin-top:5px">'+FORECAST_PER_WEEK+'/wk to race day</div></div>'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:5px">≈'
+          + (wksLeft > 0 ? (fcTotal/wksLeft).toFixed(1) : '0') + '/wk to race day</div></div>'
       + '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border-top:3px solid #FACC15">'
         + '<div style="font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px">AT YOUR CURRENT PACE</div>'
         + '<div style="font-family:monospace;font-size:24px;line-height:1;color:var(--text)">'
@@ -4074,9 +4178,10 @@ function renderProjection() {
         + '<div style="font-size:10px;color:var(--muted);margin-top:5px">plan vs. pace</div></div>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6">'
-      + 'No training block exists between <strong style="color:var(--sub)">1 Nov 2026</strong> and the '
-      + '<strong style="color:var(--sub)">1 Mar 2027</strong> taper — 17 weeks of this projection assume the '
-      + 'tentative week simply continues.</div>';
+      + 'Between <strong style="color:var(--sub)">1 Nov 2026</strong> and the '
+      + '<strong style="color:var(--sub)">1 Mar 2027</strong> taper the calendar repeats this same week — '
+      + '17 weeks with no build progression, no periodisation and no planned deloads. '
+      + 'It keeps the projection honest, but it is not yet a training block.</div>';
 }
 
 // Counts each sub-type inside a parent category for a given month, so the
@@ -4987,7 +5092,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v19_tentative_calendar';
+  const PLAN_VERSION = 'v21_weekplan_everywhere';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

@@ -1234,9 +1234,13 @@ const SYNC_URL = 'https://script.google.com/macros/s/AKfycbzp5BakRJ1N01W0cUYPMw2
 
 let saveTimer = null;
 
+var syncIdleTimer = null;
 function setSyncUI(status, msg) {
   const el = document.getElementById('sync-status');
   if (!el) return;
+  // One idle timer at a time: a stale one from an earlier sync must not wipe
+  // a newer warning (e.g. "Offline") a couple of seconds after it appears.
+  if (syncIdleTimer) { clearTimeout(syncIdleTimer); syncIdleTimer = null; }
   const map = {
     saving:  { text: '⏳ Saving...',  col: '#FACC15' },
     loading: { text: '🔄 Syncing...', col: '#60A5FA' },
@@ -1249,41 +1253,278 @@ function setSyncUI(status, msg) {
   el.style.color = s.col;
 }
 
-function saveAll() {
-  setTimeout(renderTrendChart, 100);
-  // Save locally first — instant fallback if offline
+// ═══════════════════════════════════════════════════════════════
+// SYNC — merge, never replace
+//
+// What went wrong before: every pull replaced `completions`, `state` and
+// `benchInputs` wholesale with the cloud copy, and forceSync() did that
+// unguarded on a 60-second timer. A tick made locally raced the Apps Script
+// write (2–10 s, and unverifiable through a no-cors POST); when the timer
+// fired first, the cloud's pre-tick copy overwrote the local tick, and the
+// next save pushed the tickless copy back and made the loss permanent. Two
+// devices compounded it: each pushed its whole copy on load, last writer
+// wins, and the other device's ticks were gone.
+//
+// Now every entry carries a timestamp and every direction merges per key:
+// nothing is dropped because the other side lacks it, and the newer stamp
+// wins when both sides have it. Removals are tombstones so they merge like
+// everything else. A push is read → merge → write, then verified with a
+// read-back, so "Synced" means the sheet actually holds it.
+// ═══════════════════════════════════════════════════════════════
+
+function stableStringify(o) {
+  if (o === null || typeof o !== 'object') return JSON.stringify(o);
+  if (Array.isArray(o)) return '[' + o.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(o).sort().map(function(k){
+    return JSON.stringify(k) + ':' + stableStringify(o[k]);
+  }).join(',') + '}';
+}
+
+function entryTs(c) {
+  if (!c || c.ts === undefined || c.ts === null) return 0;
+  var n = typeof c.ts === 'number' ? c.ts : Date.parse(c.ts);
+  return isNaN(n) ? 0 : n;
+}
+
+// Per key, newer timestamp wins; a key only one side has is kept. Legacy
+// entries without a timestamp count as 0, so a stamped tick always beats
+// an unstamped one and a tie goes to local.
+function mergeCompletions(local, remote) {
+  local = local || {}; remote = remote || {};
+  var out = {};
+  Object.keys(local).forEach(function(k){ out[k] = local[k]; });
+  Object.keys(remote).forEach(function(k){
+    if (!(k in out)) { out[k] = remote[k]; return; }
+    if (entryTs(remote[k]) > entryTs(out[k])) out[k] = remote[k];
+  });
+  return out;
+}
+
+// Plan-generated sessions come from whichever side is newer — they are
+// regenerated deterministically from PLAN_VERSION, so unioning them would
+// resurrect every old-template session after a plan bump. Sessions the
+// user added by hand (`extra`) are unioned from both sides, minus any the
+// user removed (tombstoned in `completions`), so a manual addition can
+// never be lost to a device that had not seen it yet.
+function mergeState(local, remote, remoteNewer, comp) {
+  local = local || {}; remote = remote || {};
+  var out = {};
+  var days = {};
+  Object.keys(local).forEach(function(k){ days[k] = 1; });
+  Object.keys(remote).forEach(function(k){ days[k] = 1; });
+  Object.keys(days).forEach(function(iso){
+    var l = local[iso], r = remote[iso];
+    var base = remoteNewer ? (r !== undefined ? r : l) : (l !== undefined ? l : r);
+    var seen = {}, day = [];
+    (base || []).forEach(function(s){
+      if (s.extra) return;
+      if (comp[s.id] && comp[s.id].removed) return;
+      seen[s.id] = 1; day.push(s);
+    });
+    (l || []).concat(r || []).forEach(function(s){
+      if (!s.extra || seen[s.id]) return;
+      if (comp[s.id] && comp[s.id].removed) return;
+      seen[s.id] = 1; day.push(s);
+    });
+    out[iso] = day;
+  });
+  return out;
+}
+
+// Key union; the few JSON-list values (history, run sessions, benchmark
+// history) are unioned element-wise so an entry logged on one device is
+// never dropped by another. Any other clash goes to the newer side.
+var BENCH_LIST_KEYS = ['training_history', '__runSessions'];
+function unionList(a, b) {
+  var seen = {}, out = [];
+  (a || []).concat(b || []).forEach(function(x){
+    var k = stableStringify(x);
+    if (seen[k]) return;
+    seen[k] = 1; out.push(x);
+  });
+  return out;
+}
+function parseList(raw) {
+  try { var v = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(v) ? v : []; }
+  catch(e) { return []; }
+}
+function mergeBench(local, remote, remoteNewer) {
+  local = local || {}; remote = remote || {};
+  var out = {};
+  var keys = {};
+  Object.keys(local).forEach(function(k){ keys[k] = 1; });
+  Object.keys(remote).forEach(function(k){ keys[k] = 1; });
+  Object.keys(keys).forEach(function(k){
+    var l = local[k], r = remote[k];
+    if (l === undefined) { out[k] = r; return; }
+    if (r === undefined) { out[k] = l; return; }
+    if (BENCH_LIST_KEYS.indexOf(k) !== -1) {
+      out[k] = JSON.stringify(unionList(parseList(l), parseList(r)));
+      return;
+    }
+    if (k === '__benchHistory') {
+      var lo = {}, ro = {};
+      try { lo = JSON.parse(l) || {}; } catch(e) {}
+      try { ro = JSON.parse(r) || {}; } catch(e) {}
+      var merged = {};
+      Object.keys(lo).concat(Object.keys(ro)).forEach(function(label){
+        merged[label] = unionList(lo[label], ro[label]);
+      });
+      out[k] = JSON.stringify(merged);
+      return;
+    }
+    out[k] = remoteNewer ? r : l;
+  });
+  return out;
+}
+
+function persistLocal() {
   try {
     localStorage.setItem('hyrox3_state', JSON.stringify(state));
     localStorage.setItem('hyrox3_comp',  JSON.stringify(completions));
     localStorage.setItem('hyrox3_bench', JSON.stringify(benchInputs));
-    localStorage.setItem('hyrox_ts',     Date.now().toString());
   } catch(e) {}
-  // Debounce — wait 800ms after last change before saving to cloud
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveToCloud, 800);
 }
 
-async function saveToCloud() {
-  setSyncUI('saving');
+function rerenderAfterSync() {
+  try { refreshAll(); } catch(e) {}
+  try { updateGlobalStats(); } catch(e) {}
+  try { updateOverview(); } catch(e) {}
+  try { updateLog(); } catch(e) {}
+  try { if (typeof renderRunSessions === 'function') renderRunSessions(); } catch(e) {}
+  setTimeout(function(){
+    try { renderTrendChart(); } catch(e) {}
+    try { if (typeof renderSubCharts === 'function') renderSubCharts(); } catch(e) {}
+  }, 200);
+}
+
+async function fetchCloud() {
   try {
-    const payload = JSON.stringify({ state, completions, benchInputs, ts: Date.now() });
-    // Google Apps Script needs no-cors for POST from browser
-    await fetch(SYNC_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: payload,
-    });
-    setSyncUI('ok');
-    setTimeout(() => setSyncUI('idle'), 3000);
+    var res = await fetch(SYNC_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    var text = await res.text();
+    if (!text || !text.trim().startsWith('{')) return null;
+    return JSON.parse(text);
+  } catch(e) { return null; }
+}
+
+// Merge a cloud snapshot into memory. Returns whether memory changed (so
+// the UI must re-render) and whether the cloud lacks anything we hold (so
+// a push is due). Strava and prePlanner are cloud-owned and taken as-is.
+function applyCloud(data) {
+  var localTs = parseInt(localStorage.getItem('hyrox_ts') || '0', 10);
+  var cloudTs = data.ts || 0;
+  var remoteNewer = cloudTs > localTs;
+
+  var beforeSig = stableStringify({c: completions, s: state, b: benchInputs});
+  var cloudSig  = stableStringify({c: data.completions || {}, s: data.state || {}, b: data.benchInputs || {}});
+
+  completions = mergeCompletions(completions, data.completions);
+  state       = mergeState(state, data.state, remoteNewer, completions);
+  benchInputs = mergeBench(benchInputs, data.benchInputs, remoteNewer);
+
+  if (data.stravaActivities) {
+    stravaActivities = data.stravaActivities;
+    try { localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); } catch(e) {}
+  }
+  if (data.prePlanner) {
+    prePlanner = data.prePlanner;
+    try { localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); } catch(e) {}
+  }
+
+  var afterSig = stableStringify({c: completions, s: state, b: benchInputs});
+  return { localChanged: afterSig !== beforeSig, cloudLacks: afterSig !== cloudSig, cloudTs: cloudTs };
+}
+
+async function pushCloud(ts) {
+  var payload = JSON.stringify({ state: state, completions: completions, benchInputs: benchInputs, ts: ts });
+  // Apps Script only accepts a browser POST as no-cors: the response is
+  // opaque, so success is established by the read-back in syncNow().
+  await fetch(SYNC_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+}
+
+var syncBusy = false, syncDirty = false, syncRetries = 0;
+var SYNC_MAX_RETRIES = 2;
+
+// The one path every sync takes. `push` forces a write; otherwise a write
+// happens only when the merge shows the cloud is missing something. A write
+// is never blind: if the cloud cannot be read first, nothing is pushed —
+// local is already persisted, and the next successful cycle carries it.
+async function syncNow(opts) {
+  opts = opts || {};
+  if (syncBusy) { syncDirty = syncDirty || !!opts.push; return; }
+  syncBusy = true;
+  setSyncUI(opts.push ? 'saving' : 'loading');
+  var settled = false;
+  try {
+    var data = await fetchCloud();
+    if (!data) {
+      // Do not queue a retry: local is persisted, and the next user action or
+      // the 60 s auto-sync will carry it once the cloud answers again. A
+      // retry loop here hammers a dead connection every few milliseconds.
+      setSyncUI('error', '⚠️ Offline · saved locally');
+      settled = true;
+    } else {
+      var m = applyCloud(data);
+      if (m.localChanged) { persistLocal(); rerenderAfterSync(); }
+
+      if (opts.push || m.cloudLacks) {
+        var ts = Date.now();
+        await pushCloud(ts);
+        // Read back until the sheet shows our stamp. Apps Script usually has
+        // the row by the time the POST returns, but not always; three looks
+        // over ~6 s covers its slow tail without hanging the UI.
+        var back = null, waits = [1000, 2000, 3000];
+        for (var w = 0; w < waits.length; w++) {
+          await new Promise(function(r){ setTimeout(r, waits[w]); });
+          back = await fetchCloud();
+          if (back && (back.ts || 0) >= ts) break;
+        }
+        if (back && (back.ts || 0) >= ts) {
+          // Read-back may carry a concurrent device's changes — merge those too.
+          var m2 = applyCloud(back);
+          if (m2.localChanged) { persistLocal(); rerenderAfterSync(); }
+          localStorage.setItem('hyrox_ts', String(back.ts || ts));
+          syncRetries = 0;
+          setSyncUI('ok');
+          settled = true;
+        } else {
+          syncRetries++;
+          if (syncRetries <= SYNC_MAX_RETRIES) { syncDirty = true; setSyncUI('saving', '⏳ Confirming...'); }
+          else { syncRetries = 0; setSyncUI('error', '⚠️ Not confirmed · saved locally'); settled = true; }
+        }
+      } else {
+        localStorage.setItem('hyrox_ts', String(m.cloudTs));
+        setSyncUI('ok');
+        settled = true;
+      }
+    }
   } catch(e) {
-    console.warn('Cloud save error', e);
+    console.warn('Sync error', e);
     setSyncUI('error');
+    settled = true;
+  } finally {
+    syncBusy = false;
+    if (syncDirty) {
+      // Edits queued behind this sync go straight out; only an unconfirmed
+      // write waits, so the sheet has time to catch up before we look again.
+      syncDirty = false;
+      setTimeout(function(){ syncNow({ push: true }); }, syncRetries ? 3000 : 50);
+    } else if (settled) {
+      syncIdleTimer = setTimeout(function(){ syncIdleTimer = null; setSyncUI('idle'); }, 3000);
+    }
   }
 }
 
+function saveAll() {
+  setTimeout(renderTrendChart, 100);
+  persistLocal();                       // instant, and the fallback if offline
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){ syncNow({ push: true }); }, 800);
+}
+
 async function loadAll() {
-  // Load local data first so UI appears instantly
+  // Local first so the UI appears instantly
   try {
     const s = localStorage.getItem('hyrox3_state');
     const c = localStorage.getItem('hyrox3_comp');
@@ -1296,90 +1537,27 @@ async function loadAll() {
     if (sv) stravaActivities = JSON.parse(sv);
     if (pp) prePlanner       = JSON.parse(pp);
   } catch(e) {}
+  // Then merge the cloud in — never replace
+  await syncNow({ push: false });
+}
 
-  // Then pull from cloud and use if newer
-  setSyncUI('loading');
-  try {
-    const res = await fetch(SYNC_URL + '?nocache=' + Date.now());
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.trim().startsWith('{')) {
-        const data = JSON.parse(text);
-        const localTs = parseInt(localStorage.getItem('hyrox_ts') || '0');
-        const cloudTs = data.ts || 0;
-        if (cloudTs >= localTs) {
-          if (data.state)       state            = data.state;
-          if (data.completions) completions      = data.completions;
-          if (data.benchInputs) benchInputs      = data.benchInputs;
-          if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
-          if (data.prePlanner) { prePlanner = data.prePlanner; localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); }
-          localStorage.setItem('hyrox_ts', cloudTs.toString());
-        }
-      }
-      // Re-render everything with cloud data
-      if (document.getElementById('cal')) renderWeek();
-      updateGlobalStats();
-      updateOverview();
-      updateLog();
-      renderRunSessions();
-      setSyncUI('ok');
-      setTimeout(() => setSyncUI('idle'), 2000);
-    } else {
-      setSyncUI('error', '⚠️ Using local');
-    }
-  } catch(e) {
-    console.warn('Cloud load error', e);
-    setSyncUI('error', '⚠️ Offline');
-  }
+// Manual "↻ Sync" button and the 60-second auto-sync. A pull that finds
+// local changes the cloud lacks pushes them; it never discards them.
+async function forceSync() {
+  await syncNow({ push: false });
 }
 
 async function syncStravaButton() {
   setSyncUI('loading', '🔄 Syncing Strava...');
   toast('Syncing Strava — takes ~10s...');
   try {
-    // Trigger the Apps Script syncStravaToSheet function via a special GET param
     await fetch(SYNC_URL + '?action=syncStrava&nocache=' + Date.now());
-    // Wait a moment for it to complete, then re-fetch everything
     await new Promise(r => setTimeout(r, 8000));
     await forceSync();
-    setTimeout(() => { renderTrendChart(); renderTrendPie(buildTrendData(), Object.keys(buildTrendData()), false); }, 300);
     toast('Strava sync complete ✓');
   } catch(e) {
     setSyncUI('error', '⚠️ Strava sync failed');
     toast('Strava sync failed — try again');
-  }
-}
-
-async function forceSync() {
-  setSyncUI('loading', '🔄 Syncing...');
-  try {
-    const res = await fetch(SYNC_URL + '?nocache=' + Date.now());
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.trim().startsWith('{')) {
-        const data = JSON.parse(text);
-        if (data.state)       state            = data.state;
-        if (data.completions) completions      = data.completions;
-        if (data.benchInputs) benchInputs      = data.benchInputs;
-        if (data.stravaActivities) { stravaActivities = data.stravaActivities; localStorage.setItem('hyrox_strava', JSON.stringify(stravaActivities)); }
-        if (data.prePlanner) { prePlanner = data.prePlanner; localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); }
-        localStorage.setItem('hyrox_ts', (data.ts || Date.now()).toString());
-      }
-      setSyncUI('ok', '☁️ Up to date');
-      toast('Synced ✓');
-      refreshAll();
-      updateGlobalStats();
-      updateOverview();
-      updateLog();
-      setTimeout(() => { renderTrendChart(); renderSubCharts(); }, 200);
-      setTimeout(() => setSyncUI('idle'), 3000);
-    } else {
-      setSyncUI('error', '⚠️ Could not reach cloud');
-      toast('Using local data');
-    }
-  } catch(e) {
-    setSyncUI('error', '⚠️ Offline');
-    toast('Using local data — check connection');
   }
 }
 
@@ -1611,6 +1789,14 @@ function buildPhase2Template(mondayOff) {
   ];
 }
 
+// A session the user removed is tombstoned in `completions` (see
+// handleRemove). Regeneration must honour that, or the session flashes back
+// after every plan bump until the next merge takes it out again.
+function notRemoved(s) {
+  var c = completions && completions[s.id];
+  return !(c && c.removed);
+}
+
 function ensureWeek(mondayOff) {
   var days = dayTemplatesFor(mondayOff);
   for (var d = 0; d < 7; d++) {
@@ -1618,7 +1804,7 @@ function ensureWeek(mondayOff) {
     if (state[iso] || !days[d].sessions) continue;
     state[iso] = days[d].sessions.map(function(s, i){
       return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
-    });
+    }).filter(notRemoved);
   }
 }
 
@@ -1633,7 +1819,7 @@ function forceResetWeek(mondayOff) {
     var extras = (state[iso] || []).filter(function(s){ return s.extra === true; });
     state[iso] = days[d].sessions.map(function(s, i){
       return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
-    }).concat(extras);
+    }).filter(notRemoved).concat(extras);
   }
 }
 
@@ -2084,8 +2270,17 @@ function onDrop(e) {
   const [moved] = fromArr.splice(idx, 1);
 
   const newId = `${toISO}_${moved.type}_${Date.now()}`;
-  if (completions[moved.id]) { completions[newId] = completions[moved.id]; delete completions[moved.id]; }
+  if (completions[moved.id]) {
+    // Carry the tick to the new id, and tombstone the old one rather than
+    // deleting it — otherwise the cloud's copy of the old id merges back as
+    // a second "done" for the same day and double-counts in the charts.
+    completions[newId] = {...completions[moved.id], ts:new Date().toISOString(), iso:toISO};
+    completions[moved.id] = {done:false, removed:true, ts:new Date().toISOString(), iso:dragFrom};
+  }
   moved.id = newId;
+  // A deliberately moved session is a user decision, so it merges like a
+  // manual addition and survives another device's older copy of the week.
+  moved.extra = true;
 
   if (!state[toISO]) state[toISO] = [];
   state[toISO].push(moved);
@@ -2109,7 +2304,9 @@ function handleRemove(el) {
   var id = el.dataset.sid, iso = el.dataset.iso;
   if (!iso || !state[iso]) return;
   state[iso] = state[iso].filter(function(s){ return s.id !== id; });
-  if (completions[id]) delete completions[id];
+  // Tombstone, not delete: a deleted key is indistinguishable from "never
+  // seen" to another device, which would put the session straight back.
+  completions[id] = Object.assign({}, completions[id] || {}, {done:false, removed:true, ts:new Date().toISOString(), iso:iso});
   saveAll();
   refreshAll();
   toast('Session removed');
@@ -2131,7 +2328,8 @@ function openNote(e, id) {
 function closeModal() { document.getElementById('note-modal').classList.remove('open'); activeNoteId=null; }
 function saveNote() {
   if (!activeNoteId) return;
-  completions[activeNoteId] = {...(completions[activeNoteId]||{}), note:document.getElementById('note-ta').value.trim()};
+  // Stamped so a note edit wins the per-key merge like a tick does
+  completions[activeNoteId] = {...(completions[activeNoteId]||{}), note:document.getElementById('note-ta').value.trim(), ts:new Date().toISOString()};
   saveAll(); closeModal(); refreshAll(); updateLog(); toast('Note saved');
 }
 
@@ -5092,7 +5290,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v21_weekplan_everywhere';
+  const PLAN_VERSION = 'v22_merge_sync';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

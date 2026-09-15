@@ -1420,8 +1420,8 @@ function applyCloud(data) {
   var cloudTs = data.ts || 0;
   var remoteNewer = cloudTs > localTs;
 
-  var beforeSig = stableStringify({c: completions, s: state, b: benchInputs});
-  var cloudSig  = stableStringify({c: data.completions || {}, s: data.state || {}, b: data.benchInputs || {}});
+  var beforeSig = wireSig(state, completions, benchInputs);
+  var cloudSig  = wireSig(data.state, data.completions, data.benchInputs);
 
   completions = mergeCompletions(completions, data.completions);
   invalidateRemovedIdx();   // another device may have deleted something
@@ -1437,7 +1437,7 @@ function applyCloud(data) {
     try { localStorage.setItem('hyrox_preplanner', JSON.stringify(prePlanner)); } catch(e) {}
   }
 
-  var afterSig = stableStringify({c: completions, s: state, b: benchInputs});
+  var afterSig = wireSig(state, completions, benchInputs);
   return { localChanged: afterSig !== beforeSig, cloudLacks: afterSig !== cloudSig, cloudTs: cloudTs };
 }
 
@@ -1472,24 +1472,98 @@ function templateIndexFor(iso) {
   return out;
 }
 
-function leanState() {
-  var out = {};
-  Object.keys(state).forEach(function(iso){
-    var tmpl = templateIndexFor(iso);
-    out[iso] = (state[iso] || []).map(function(s){
-      var t = tmpl[s.type], o = {};
-      Object.keys(s).forEach(function(k){
-        if (t && DERIVED_FIELDS.indexOf(k) !== -1 && JSON.stringify(t[k]) === JSON.stringify(s[k])) return;
-        o[k] = s[k];
-      });
-      return o;
+function leanDay(iso, sessions) {
+  var tmpl = templateIndexFor(iso);
+  return (sessions || []).map(function(s){
+    var t = tmpl[s.type], o = {};
+    Object.keys(s).forEach(function(k){
+      if (t && DERIVED_FIELDS.indexOf(k) !== -1 && JSON.stringify(t[k]) === JSON.stringify(s[k])) return;
+      o[k] = s[k];
     });
+    return o;
+  });
+}
+
+// Exactly what ensureWeek() would put in state for this day on any device —
+// the same template, with the same deletions applied — in lean form.
+function templateDayLean(iso) {
+  try {
+    var di = (new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7;
+    var day = dayTemplatesFor(mondayOffsetFromISO(iso))[di];
+    if (!day || !day.sessions) return null;
+    var keep = keepsAfterRemoval(iso);
+    var gen = day.sessions.map(function(s, i){
+      return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: day.phase});
+    }).filter(keep);
+    return leanDay(iso, gen);
+  } catch(e) { return null; }
+}
+
+// A day every device can regenerate identically is not worth a single byte in
+// the sheet. Days carrying a tick, a note or a tombstone are always written
+// out: those are history, and pinning them keeps their session IDs — and so
+// the ticks attached to them — stable even if a template is ever edited.
+function dayHasHistory(iso, sessions) {
+  return (sessions || []).some(function(s){ return !!completions[s.id]; });
+}
+
+function leanState(src) {
+  src = src || state;
+  var out = {};
+  Object.keys(src).forEach(function(iso){
+    var lean = leanDay(iso, src[iso]);
+    if (!dayHasHistory(iso, src[iso])) {
+      var tmpl = templateDayLean(iso);
+      if (tmpl !== null && stableStringify(lean) === stableStringify(tmpl)) return;   // regenerable
+    }
+    out[iso] = lean;
   });
   return out;
 }
 
+// Completions are the fastest-growing part of the blob, so they travel in a
+// compact form: epoch milliseconds instead of a 24-character ISO string, and
+// one-letter flags. Anything written by an older build still reads back.
+function packComp(c) {
+  var o = {};
+  if (c.done)    o.d = 1;
+  if (c.removed) o.r = 1;
+  if (c.orphan)  o.o = 1;
+  if (c.note)    o.n = c.note;
+  if (c.ts)      { var t = Date.parse(c.ts); o.t = isNaN(t) ? c.ts : t; }
+  return o;
+}
+function unpackComp(e) {
+  if (!e || typeof e !== 'object') return e;
+  if (e.done !== undefined || e.ts !== undefined || e.removed !== undefined) return e;  // long form
+  var o = {done: !!e.d};
+  if (e.r) o.removed = true;
+  if (e.o) o.orphan = true;
+  if (e.n) o.note = e.n;
+  if (e.t) o.ts = typeof e.t === 'number' ? new Date(e.t).toISOString() : e.t;
+  return o;
+}
+function packComps(src) {
+  var out = {};
+  Object.keys(src || {}).forEach(function(k){ out[k] = packComp(src[k]); });
+  return out;
+}
+
+// Compare what WOULD be written, not the in-memory shape: local holds every
+// regenerable day while the sheet holds none of them, and comparing those
+// directly would report a difference forever and push on every single sync.
+function wireSig(s, c, b) {
+  return stableStringify({ s: leanState(s || {}), c: packComps(c || {}), b: b || {} });
+}
+
 function hydrateCloud(data) {
-  if (!data || !data.state) return data;
+  if (!data) return data;
+  if (data.completions) {
+    Object.keys(data.completions).forEach(function(k){
+      data.completions[k] = unpackComp(data.completions[k]);
+    });
+  }
+  if (!data.state) return data;
   Object.keys(data.state).forEach(function(iso){
     var tmpl = templateIndexFor(iso);
     data.state[iso] = (data.state[iso] || []).map(function(s){
@@ -1506,15 +1580,12 @@ function hydrateCloud(data) {
 }
 
 function syncPayload(ts) {
-  var comp = {};
-  Object.keys(completions).forEach(function(id){
-    var c = completions[id], o = {};
-    // The ID's first ten characters already carry the date, and the one
-    // reader of `iso` falls back to exactly that.
-    Object.keys(c).forEach(function(k){ if (k !== 'iso') o[k] = c[k]; });
-    comp[id] = o;
+  return JSON.stringify({
+    state: leanState(state),
+    completions: packComps(completions),   // `iso` is dropped: the ID's first ten characters are the date
+    benchInputs: benchInputs,
+    ts: ts,
   });
-  return JSON.stringify({ state: leanState(), completions: comp, benchInputs: benchInputs, ts: ts });
 }
 
 async function pushCloud(ts) {
@@ -5600,7 +5671,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v25_lean_sync';
+  const PLAN_VERSION = 'v26_diff_sync';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();

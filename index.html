@@ -155,6 +155,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   border-left:4px solid transparent;
   transition:transform 0.15s,box-shadow 0.15s,opacity 0.15s;
   user-select:none;
+  -webkit-touch-callout:none;
 }
 .sess:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .sess.dragging{opacity:0.25;cursor:grabbing}
@@ -1379,6 +1380,7 @@ function mergeBench(local, remote, remoteNewer) {
 }
 
 function persistLocal() {
+  invalidateRemovedIdx();   // completions just changed — drop the deletion index
   try {
     localStorage.setItem('hyrox3_state', JSON.stringify(state));
     localStorage.setItem('hyrox3_comp',  JSON.stringify(completions));
@@ -1420,6 +1422,7 @@ function applyCloud(data) {
   var cloudSig  = stableStringify({c: data.completions || {}, s: data.state || {}, b: data.benchInputs || {}});
 
   completions = mergeCompletions(completions, data.completions);
+  invalidateRemovedIdx();   // another device may have deleted something
   state       = mergeState(state, data.state, remoteNewer, completions);
   benchInputs = mergeBench(benchInputs, data.benchInputs, remoteNewer);
 
@@ -1797,6 +1800,43 @@ function notRemoved(s) {
   return !(c && c.removed);
 }
 
+// Deleting a session tombstones the ID it had at the time. The numeric suffix
+// in a generated ID shifts whenever a day's session list changes, so matching
+// on the ID alone lets a deleted session quietly reappear on the next
+// regeneration. Keyed by date + type instead, a deletion sticks for that day.
+var _removedIdx = null;
+function invalidateRemovedIdx() { _removedIdx = null; }
+function removedDayTypeKeys() {
+  if (_removedIdx) return _removedIdx;
+  var out = {};
+  Object.keys(completions || {}).forEach(function(id){
+    var c = completions[id];
+    if (!c || !c.removed) return;
+    if (!/^\d{4}-\d{2}-\d{2}_/.test(id)) return;
+    var t = extractPlannerType(id.slice(11));
+    if (t) out[id.slice(0,10) + '_' + t] = true;
+  });
+  _removedIdx = out;
+  return out;
+}
+function keepsAfterRemoval(iso) {
+  var gone = removedDayTypeKeys();
+  return function(s){ return notRemoved(s) && !gone[iso + '_' + s.type]; };
+}
+
+// Categories the user has deleted on a given day — the tentative week must not
+// offer them straight back, which is what made a deleted session look like it
+// had merely turned into a ghost card.
+function removedCatsFor(iso) {
+  var gone = removedDayTypeKeys(), out = {};
+  Object.keys(gone).forEach(function(k){
+    if (k.slice(0, 11) !== iso + '_') return;
+    var cat = plannerToTrendCat(k.slice(11));
+    if (cat) out[cat] = true;
+  });
+  return out;
+}
+
 function ensureWeek(mondayOff) {
   var days = dayTemplatesFor(mondayOff);
   for (var d = 0; d < 7; d++) {
@@ -1804,22 +1844,41 @@ function ensureWeek(mondayOff) {
     if (state[iso] || !days[d].sessions) continue;
     state[iso] = days[d].sessions.map(function(s, i){
       return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
-    }).filter(notRemoved);
+    }).filter(keepsAfterRemoval(iso));
   }
 }
 
 // Force-reset a week with the new template, preserving only existing completions
 // Used when the plan changes mid-programme
+//
+// A session that is already ticked done is history, not a plan slot. It keeps
+// its original object — and therefore its original ID — so the tick stored
+// against that ID stays attached to it. Re-generating it under a new ID was
+// what orphaned ticks: the planner reads `state` and showed the session
+// un-ticked, while every chart reads `completions` and still counted the old
+// tick, so re-ticking produced two done entries for one session.
 function forceResetWeek(mondayOff) {
   var days = dayTemplatesFor(mondayOff);
   for (var d = 0; d < 7; d++) {
     var iso = isoFromOffset(mondayOff + d);
     if (!days[d].sessions) continue;
+    var existing = (state[iso] || []);
     // Keep anything the user added by hand; replace only plan-generated sessions
-    var extras = (state[iso] || []).filter(function(s){ return s.extra === true; });
-    state[iso] = days[d].sessions.map(function(s, i){
+    var extras = existing.filter(function(s){ return s.extra === true; });
+    var ticked = existing.filter(function(s){
+      return s.extra !== true && completions[s.id] && completions[s.id].done;
+    });
+    var fresh = days[d].sessions.map(function(s, i){
       return Object.assign({}, s, {id: iso + '_' + s.type + '_' + i, phase: days[d].phase});
-    }).filter(notRemoved).concat(extras);
+    }).filter(keepsAfterRemoval(iso)).map(function(s){
+      // A plan slot the user has already completed is filled by the session
+      // they ticked, ID and all, rather than by a fresh copy of the slot.
+      var j = ticked.findIndex(function(k){ return k.type === s.type; });
+      return j === -1 ? s : ticked.splice(j, 1)[0];
+    });
+    // Anything ticked whose type the new plan no longer asks for still happened,
+    // so it stays on the calendar instead of being regenerated away.
+    state[iso] = fresh.concat(ticked).concat(extras);
   }
 }
 
@@ -2016,9 +2075,8 @@ function logEntries() {
     (state[iso]||[]).forEach(function(s){ idType[s.id] = s.type; });
   });
   var rows = [];
-  Object.keys(completions).forEach(function(id){
+  countableDoneIds().forEach(function(id){
     var c = completions[id];
-    if (!c || !c.done) return;
     var iso = c.iso || id.slice(0,10);
     var type = idType[id] || (typeof extractPlannerType === 'function' ? extractPlannerType(id.slice(11)) : null);
     if (!type) return;
@@ -2241,6 +2299,7 @@ function buildCard(sess, iso) {
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
+  card.addEventListener('touchstart', onCardTouchStart, {passive:true});
   return card;
 }
 
@@ -2261,12 +2320,17 @@ function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
 function onDrop(e) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
-  const toISO = e.currentTarget.dataset.iso;
-  if (!toISO || !dragFrom || toISO === dragFrom) return;
+  moveSession(dragId, dragFrom, e.currentTarget.dataset.iso);
+}
 
-  const fromArr = state[dragFrom] || [];
-  const idx = fromArr.findIndex(s => s.id === dragId);
-  if (idx === -1) return;
+// Shared by both the desktop HTML5 drag path above and the touch path below,
+// so a move behaves identically (tick carried, old id tombstoned, new id
+// flagged as a user-made extra) no matter which input moved the session.
+function moveSession(id, fromISO, toISO) {
+  if (!toISO || !fromISO || toISO === fromISO) return false;
+  const fromArr = state[fromISO] || [];
+  const idx = fromArr.findIndex(s => s.id === id);
+  if (idx === -1) return false;
   const [moved] = fromArr.splice(idx, 1);
 
   const newId = `${toISO}_${moved.type}_${Date.now()}`;
@@ -2275,7 +2339,7 @@ function onDrop(e) {
     // deleting it — otherwise the cloud's copy of the old id merges back as
     // a second "done" for the same day and double-counts in the charts.
     completions[newId] = {...completions[moved.id], ts:new Date().toISOString(), iso:toISO};
-    completions[moved.id] = {done:false, removed:true, ts:new Date().toISOString(), iso:dragFrom};
+    completions[moved.id] = {done:false, removed:true, ts:new Date().toISOString(), iso:fromISO};
   }
   moved.id = newId;
   // A deliberately moved session is a user decision, so it merges like a
@@ -2287,6 +2351,97 @@ function onDrop(e) {
 
   saveAll(); refreshAll();
   toast(`Moved ${SPORT_META[moved.type]?.label || moved.type} → ${fmtFull(daysSinceEpoch(new Date(toISO+'T00:00:00Z')))}`);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOUCH DRAG (mobile) — HTML5 dragstart/dragover/drop never fire on
+// touch devices, so phones/tablets get their own long-press-then-drag
+// gesture: hold a card ~1/3s, drag it, release over a day to move it.
+// ═══════════════════════════════════════════════════════════════
+let touchDrag = null; // {id, fromISO, card, ghost, startX, startY, offX, offY, timer, active, zone}
+
+function onCardTouchStart(e) {
+  if (e.touches.length !== 1) return;
+  // Let taps on the real controls (checkbox, note, remove) behave normally —
+  // only starting a card body / icon / title touch counts as a drag intent.
+  if (e.target.closest('.chk, .note-btn')) return;
+  const card = e.currentTarget;
+  const t = e.touches[0];
+  touchDrag = {
+    id: card.dataset.id, fromISO: card.dataset.iso, card,
+    startX: t.clientX, startY: t.clientY,
+    active: false, zone: null, ghost: null,
+  };
+  touchDrag.timer = setTimeout(startTouchDrag, 350);
+  card.addEventListener('touchmove',   onCardTouchMove, {passive:false});
+  card.addEventListener('touchend',    onCardTouchEnd);
+  card.addEventListener('touchcancel', onCardTouchEnd);
+}
+
+function startTouchDrag() {
+  if (!touchDrag) return;
+  touchDrag.active = true;
+  touchDrag.card.classList.add('dragging');
+  if (navigator.vibrate) navigator.vibrate(15);
+
+  const r = touchDrag.card.getBoundingClientRect();
+  const ghost = touchDrag.card.cloneNode(true);
+  ghost.style.cssText =
+    'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;'
+    + 'z-index:9999;pointer-events:none;opacity:0.92;transform:rotate(2deg) scale(1.03);'
+    + 'box-shadow:0 12px 28px rgba(0,0,0,0.4);margin:0;';
+  document.body.appendChild(ghost);
+  touchDrag.ghost = ghost;
+  touchDrag.offX  = touchDrag.startX - r.left;
+  touchDrag.offY  = touchDrag.startY - r.top;
+}
+
+function onCardTouchMove(e) {
+  if (!touchDrag) return;
+  const t = e.touches[0];
+  if (!touchDrag.active) {
+    // Finger moved before the long-press fired — that's a page scroll, not
+    // a drag attempt, so back off and let the browser scroll normally.
+    if (Math.abs(t.clientX - touchDrag.startX) > 10 || Math.abs(t.clientY - touchDrag.startY) > 10) {
+      clearTimeout(touchDrag.timer);
+      cleanupTouchDrag();
+    }
+    return;
+  }
+  e.preventDefault(); // dragging now — stop the page from scrolling under the finger
+  touchDrag.ghost.style.left = (t.clientX - touchDrag.offX) + 'px';
+  touchDrag.ghost.style.top  = (t.clientY - touchDrag.offY) + 'px';
+
+  touchDrag.ghost.style.display = 'none';
+  const under = document.elementFromPoint(t.clientX, t.clientY);
+  touchDrag.ghost.style.display = '';
+  const zone = under && under.closest ? under.closest('.drop-zone') : null;
+  if (zone !== touchDrag.zone) {
+    if (touchDrag.zone) touchDrag.zone.classList.remove('drag-over');
+    if (zone) zone.classList.add('drag-over');
+    touchDrag.zone = zone;
+  }
+}
+
+function onCardTouchEnd(e) {
+  if (!touchDrag) return;
+  clearTimeout(touchDrag.timer);
+  if (touchDrag.active && touchDrag.zone) {
+    moveSession(touchDrag.id, touchDrag.fromISO, touchDrag.zone.dataset.iso);
+  }
+  cleanupTouchDrag();
+}
+
+function cleanupTouchDrag() {
+  if (!touchDrag) return;
+  touchDrag.card.removeEventListener('touchmove',   onCardTouchMove);
+  touchDrag.card.removeEventListener('touchend',    onCardTouchEnd);
+  touchDrag.card.removeEventListener('touchcancel', onCardTouchEnd);
+  touchDrag.card.classList.remove('dragging');
+  if (touchDrag.zone)  touchDrag.zone.classList.remove('drag-over');
+  if (touchDrag.ghost) touchDrag.ghost.remove();
+  touchDrag = null;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3652,8 +3807,7 @@ function getMergedHistory() {
   var hist = getHistory();
   // Build from completions
   var hyroxSessions = [];
-  Object.keys(completions).forEach(function(id) {
-    if (!completions[id].done) return;
+  countableDoneIds().forEach(function(id) {
     var iso = id.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
     var rest = id.slice(11);
@@ -4012,6 +4166,79 @@ function plannerToTrendCat(type) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ORPHANED TICKS
+//
+// Completions are keyed by session ID. If a session ever loses that ID —
+// an older build regenerated the week under new IDs — the tick stays in
+// `completions` with no session pointing at it. The planner reads `state`,
+// so it showed the session un-ticked; every chart reads `completions`, so it
+// still counted the tick. Ticking again then created a SECOND done entry for
+// one real session, which is the "extra run" in the Overview.
+//
+// forceResetWeek no longer re-IDs a ticked session, so no new orphans appear.
+// These two helpers make the counters immune to any orphan already stored.
+// ═══════════════════════════════════════════════════════════════
+function boundSessionIds() {
+  var ids = {};
+  Object.keys(state).forEach(function(iso){
+    (state[iso] || []).forEach(function(s){ ids[s.id] = true; });
+  });
+  return ids;
+}
+
+// The done completions that should count, orphaned twins removed. An orphan is
+// only dropped where a real session already covers that day and category — an
+// orphan with no such twin is genuine history and still counts.
+function countableDoneIds() {
+  var bound = boundSessionIds();
+  var boundCat = {}, out = [], orphans = [];
+  Object.keys(completions).forEach(function(id){
+    var c = completions[id];
+    if (!c || !c.done) return;
+    if (!/^\d{4}-\d{2}-\d{2}_/.test(id)) return;
+    if (!bound[id]) { orphans.push(id); return; }
+    out.push(id);
+    var cat = plannerToTrendCat(extractPlannerType(id.slice(11)));
+    if (cat) boundCat[id.slice(0,10) + '_' + cat] = true;
+  });
+  orphans.forEach(function(id){
+    var cat = plannerToTrendCat(extractPlannerType(id.slice(11)));
+    if (cat && boundCat[id.slice(0,10) + '_' + cat]) return;   // stale twin — skip
+    out.push(id);
+  });
+  return out;
+}
+
+// Retire orphan twins for good, so they stop travelling between devices.
+// Deliberately narrow: only where the week really is materialised in `state`
+// and a real ticked session already covers that day and category, which is
+// exactly the case countableDoneIds() was already ignoring — so this changes
+// no number, it only clears the junk. Flagged `orphan`, never `removed`:
+// `removed` means the user deleted a session and would stop that slot from
+// ever being generated again.
+function repairOrphanTicks() {
+  var bound = boundSessionIds(), boundCat = {}, fixed = 0;
+  Object.keys(completions).forEach(function(id){
+    var c = completions[id];
+    if (!c || !c.done || !bound[id]) return;
+    var cat = plannerToTrendCat(extractPlannerType(id.slice(11)));
+    if (cat) boundCat[id.slice(0,10) + '_' + cat] = true;
+  });
+  Object.keys(completions).forEach(function(id){
+    var c = completions[id];
+    if (!c || !c.done || bound[id]) return;
+    if (!/^\d{4}-\d{2}-\d{2}_/.test(id)) return;
+    var iso = id.slice(0,10);
+    if (!state[iso] || !state[iso].length) return;     // week never built — leave it alone
+    var cat = plannerToTrendCat(extractPlannerType(id.slice(11)));
+    if (!cat || !boundCat[iso + '_' + cat]) return;    // real history, not a twin
+    completions[id] = Object.assign({}, c, {done:false, orphan:true, ts:new Date().toISOString(), iso:iso});
+    fixed++;
+  });
+  return fixed;
+}
+
 function buildTrendData() {
   var byMo = {};
   // HIST_BASELINE's own 2026-01..03 rows are superseded by the validated prePlanner
@@ -4062,15 +4289,11 @@ function buildTrendData() {
   });
 
   // ── Source 4: Weekly planner completions (Mar 30, 2026+) ──
-  // Completions are keyed by session ID which embeds the date+type.
-  // When PLAN_VERSION bumps, resetFutureWeeks() regenerates sessions with new IDs,
-  // but the user's existing ticks stay stored against the old IDs (orphaned).
-  // We count those too — the date+type embedded in the ID is sufficient.
-  var comp = typeof completions !== 'undefined' ? completions : {};
-  Object.keys(comp).forEach(function(id) {
-    if (!comp[id].done) return;
+  // Completions are keyed by session ID which embeds the date+type. An orphaned
+  // tick left behind by an older build's week regeneration is counted only when
+  // no real session covers that day and category — see countableDoneIds().
+  countableDoneIds().forEach(function(id) {
     // IDs look like "2026-08-13_HERO_0" or "2026-08-13_HERO_extra_1787123456"
-    if (!/^\d{4}-\d{2}-\d{2}_/.test(id)) return;
     var mo  = id.slice(0,7);
     var iso = id.slice(0,10);
     var rest = id.slice(11);
@@ -4171,7 +4394,8 @@ function tentativeFor(iso) {
     var c = plannerToTrendCat(s.type);
     if (c) have[c] = true;
   });
-  return slots.filter(function(s){ return !have[s.cat]; });
+  var gone = removedCatsFor(iso);
+  return slots.filter(function(s){ return !have[s.cat] && !gone[s.cat]; });
 }
 
 function commitTentative(iso, type, ev) {
@@ -4407,8 +4631,7 @@ function shadeOf(hex, i, total) {
 function subTypesFor(catKey) {
   var all = TREND_SUBS[catKey] || [];
   var seen = {};
-  Object.keys(completions).forEach(function(id) {
-    if (!completions[id].done) return;
+  countableDoneIds().forEach(function(id) {
     if (id.slice(0,4) !== '2026') return;
     var t = extractPlannerType(id.slice(11));
     if (t && all.indexOf(t) !== -1) seen[t] = true;
@@ -4427,8 +4650,7 @@ function subCountsByMonth(catKey, months) {
     var name = (SPORT_META[t] || {}).label || t;
     if (!byName[name]) { byName[name] = months.map(function(){ return 0; }); order.push(name); }
   });
-  Object.keys(completions).forEach(function(id) {
-    if (!completions[id].done) return;
+  countableDoneIds().forEach(function(id) {
     var idx = months.indexOf(id.slice(0,7));
     if (idx === -1) return;
     var t = extractPlannerType(id.slice(11));
@@ -4570,8 +4792,7 @@ function trendSubBreakdown(catKey, mo) {
   var subs = TREND_SUBS[catKey];
   if (!subs || !mo) return '';
   var counts = {};
-  Object.keys(completions).forEach(function(id) {
-    if (!completions[id].done) return;
+  countableDoneIds().forEach(function(id) {
     if (id.slice(0,7) !== mo) return;
     var t = extractPlannerType(id.slice(11));
     if (!t || subs.indexOf(t) === -1) return;
@@ -5290,11 +5511,21 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v22_merge_sync';
+  const PLAN_VERSION = 'v24_deletes_stick';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();
     localStorage.setItem('hyrox_plan_version', PLAN_VERSION);
+  }
+
+  // Clear ticks orphaned by earlier builds, so the Overview stops counting a
+  // session twice. Runs every load — it is idempotent and only touches twins.
+  var orphansFixed = repairOrphanTicks();
+  if (orphansFixed) {
+    console.log('Repaired ' + orphansFixed + ' orphaned tick(s)');
+    setTimeout(function(){
+      toast('Fixed ' + orphansFixed + ' duplicate tick' + (orphansFixed > 1 ? 's' : '') + ' in your history');
+    }, 1500);
   }
 
   saveAll();

@@ -1406,7 +1406,9 @@ async function fetchCloud() {
     if (!res.ok) return null;
     var text = await res.text();
     if (!text || !text.trim().startsWith('{')) return null;
-    return JSON.parse(text);
+    // Rebuild the template fields the write left out, so everything
+    // downstream sees a full-shape snapshot exactly as before.
+    return hydrateCloud(JSON.parse(text));
   } catch(e) { return null; }
 }
 
@@ -1439,11 +1441,91 @@ function applyCloud(data) {
   return { localChanged: afterSig !== beforeSig, cloudLacks: afterSig !== cloudSig, cloudTs: cloudTs };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PAYLOAD SIZE
+//
+// The planner blob lives in a single sheet cell, and a cell rejects anything
+// over 50,000 characters. Since the weekly plan was materialised all the way
+// to race day the blob holds ~456 sessions, and most of each one is template
+// text — `detail` alone is ~78 of ~111 characters — that the template
+// regenerates identically. At ~67k the write was failing silently: the POST
+// is no-cors so the browser saw no error, the read-back never found our
+// stamp, and both devices sat on "Saving..." while nothing propagated.
+//
+// So a field the template would rebuild byte-for-byte is not sent, and is
+// restored on arrival. Anything the user changed differs from the template
+// and is therefore kept verbatim.
+// ═══════════════════════════════════════════════════════════════
+var SHEET_CELL_LIMIT = 50000;
+var DERIVED_FIELDS = ['detail', 'time', 'phase', 'cycle', 'sq', 'lu', 'ca'];
+
+function templateIndexFor(iso) {
+  var out = {};
+  try {
+    var di = (new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7;
+    var day = dayTemplatesFor(mondayOffsetFromISO(iso))[di];
+    var list = (day && day.sessions) ? day.sessions : [];
+    list.forEach(function(s){
+      if (!out[s.type]) out[s.type] = Object.assign({}, s, {phase: day.phase});
+    });
+  } catch(e) {}
+  return out;
+}
+
+function leanState() {
+  var out = {};
+  Object.keys(state).forEach(function(iso){
+    var tmpl = templateIndexFor(iso);
+    out[iso] = (state[iso] || []).map(function(s){
+      var t = tmpl[s.type], o = {};
+      Object.keys(s).forEach(function(k){
+        if (t && DERIVED_FIELDS.indexOf(k) !== -1 && JSON.stringify(t[k]) === JSON.stringify(s[k])) return;
+        o[k] = s[k];
+      });
+      return o;
+    });
+  });
+  return out;
+}
+
+function hydrateCloud(data) {
+  if (!data || !data.state) return data;
+  Object.keys(data.state).forEach(function(iso){
+    var tmpl = templateIndexFor(iso);
+    data.state[iso] = (data.state[iso] || []).map(function(s){
+      var t = tmpl[s.type];
+      if (!t) return s;
+      var o = Object.assign({}, s);
+      DERIVED_FIELDS.forEach(function(k){
+        if (o[k] === undefined && t[k] !== undefined) o[k] = t[k];
+      });
+      return o;
+    });
+  });
+  return data;
+}
+
+function syncPayload(ts) {
+  var comp = {};
+  Object.keys(completions).forEach(function(id){
+    var c = completions[id], o = {};
+    // The ID's first ten characters already carry the date, and the one
+    // reader of `iso` falls back to exactly that.
+    Object.keys(c).forEach(function(k){ if (k !== 'iso') o[k] = c[k]; });
+    comp[id] = o;
+  });
+  return JSON.stringify({ state: leanState(), completions: comp, benchInputs: benchInputs, ts: ts });
+}
+
 async function pushCloud(ts) {
-  var payload = JSON.stringify({ state: state, completions: completions, benchInputs: benchInputs, ts: ts });
+  var payload = syncPayload(ts);
+  // Refuse a write the sheet cannot store rather than firing it into the void
+  // and leaving the status spinning — silence was the whole problem before.
+  if (payload.length > SHEET_CELL_LIMIT) return { ok: false, size: payload.length };
   // Apps Script only accepts a browser POST as no-cors: the response is
   // opaque, so success is established by the read-back in syncNow().
   await fetch(SYNC_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+  return { ok: true, size: payload.length };
 }
 
 var syncBusy = false, syncDirty = false, syncRetries = 0;
@@ -1473,28 +1555,35 @@ async function syncNow(opts) {
 
       if (opts.push || m.cloudLacks) {
         var ts = Date.now();
-        await pushCloud(ts);
-        // Read back until the sheet shows our stamp. Apps Script usually has
-        // the row by the time the POST returns, but not always; three looks
-        // over ~6 s covers its slow tail without hanging the UI.
-        var back = null, waits = [1000, 2000, 3000];
-        for (var w = 0; w < waits.length; w++) {
-          await new Promise(function(r){ setTimeout(r, waits[w]); });
-          back = await fetchCloud();
-          if (back && (back.ts || 0) >= ts) break;
-        }
-        if (back && (back.ts || 0) >= ts) {
-          // Read-back may carry a concurrent device's changes — merge those too.
-          var m2 = applyCloud(back);
-          if (m2.localChanged) { persistLocal(); rerenderAfterSync(); }
-          localStorage.setItem('hyrox_ts', String(back.ts || ts));
+        var put = await pushCloud(ts);
+        if (!put.ok) {
+          console.warn('Sync payload ' + put.size + ' chars exceeds the ' + SHEET_CELL_LIMIT + ' char sheet cell limit');
+          setSyncUI('error', '⚠️ Too large to save (' + Math.round(put.size / 1000) + 'k)');
           syncRetries = 0;
-          setSyncUI('ok');
           settled = true;
         } else {
-          syncRetries++;
-          if (syncRetries <= SYNC_MAX_RETRIES) { syncDirty = true; setSyncUI('saving', '⏳ Confirming...'); }
-          else { syncRetries = 0; setSyncUI('error', '⚠️ Not confirmed · saved locally'); settled = true; }
+          // Read back until the sheet shows our stamp. Apps Script usually has
+          // the row by the time the POST returns, but not always; three looks
+          // over ~6 s covers its slow tail without hanging the UI.
+          var back = null, waits = [1000, 2000, 3000];
+          for (var w = 0; w < waits.length; w++) {
+            await new Promise(function(r){ setTimeout(r, waits[w]); });
+            back = await fetchCloud();
+            if (back && (back.ts || 0) >= ts) break;
+          }
+          if (back && (back.ts || 0) >= ts) {
+            // Read-back may carry a concurrent device's changes — merge those too.
+            var m2 = applyCloud(back);
+            if (m2.localChanged) { persistLocal(); rerenderAfterSync(); }
+            localStorage.setItem('hyrox_ts', String(back.ts || ts));
+            syncRetries = 0;
+            setSyncUI('ok');
+            settled = true;
+          } else {
+            syncRetries++;
+            if (syncRetries <= SYNC_MAX_RETRIES) { syncDirty = true; setSyncUI('saving', '⏳ Confirming...'); }
+            else { syncRetries = 0; setSyncUI('error', '⚠️ Not confirmed · saved locally'); settled = true; }
+          }
         }
       } else {
         localStorage.setItem('hyrox_ts', String(m.cloudTs));
@@ -5511,7 +5600,7 @@ async function init() {
 
   // Plan version check — if plan changed, reset current+future weeks
   // Increment PLAN_VERSION when weekly structure changes
-  const PLAN_VERSION = 'v24_deletes_stick';
+  const PLAN_VERSION = 'v25_lean_sync';
   if (localStorage.getItem('hyrox_plan_version') !== PLAN_VERSION) {
     console.log('New plan detected — resetting current + future weeks');
     resetFutureWeeks();
